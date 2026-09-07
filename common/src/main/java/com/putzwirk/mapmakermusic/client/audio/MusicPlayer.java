@@ -170,6 +170,8 @@ public final class MusicPlayer {
 		}
 		this.currentMusicPath = null;
 		this.currentTrackKey = null;
+		this.desiredTrackKey = null;
+		this.desiredVolumePercent = 100;
 		this.isLoadingTrack = false;
 		stopSounds();
 	}
