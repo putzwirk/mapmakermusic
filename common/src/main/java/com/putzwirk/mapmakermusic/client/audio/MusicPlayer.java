@@ -7,6 +7,7 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -16,6 +17,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ServerData;
+import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundSource;
 import org.lwjgl.openal.AL10;
@@ -30,12 +32,13 @@ public final class MusicPlayer {
 	private static final float RESUME_MARGIN_SECONDS = 0.25f;
 	private static final float RESUME_MIN_SECONDS = 0.05f;
 	private static final String STATE_FILE = "state.properties";
-	private static final String KEY_TRACK = "desiredTrackKey";
-	private static final String KEY_VOLUME = "desiredVolumePercent";
-	private static final String KEY_POSITION = "desiredPosition";
+	private static final String SUFFIX_TRACK = ".track";
+	private static final String SUFFIX_VOLUME = ".volume";
+	private static final String SUFFIX_POSITION = ".position";
 
 	private final Map<String, Path> musicCache = new ConcurrentHashMap<>();
 	private final Map<String, Float> lastPositions = new ConcurrentHashMap<>();
+	private final Map<String, WorldState> worldStates = new ConcurrentHashMap<>();
 	private final List<Voice> activeSounds = new ArrayList<>();
 
 	private Voice currentMusic;
@@ -50,7 +53,6 @@ public final class MusicPlayer {
 	private long activeAlContext;
 
 	private String lastKnownWorldId = null;
-	private String pausedWorldId = null;
 
 	public void init() {
 		rescanMusicFolder();
@@ -77,6 +79,11 @@ public final class MusicPlayer {
 
 		this.desiredTrackKey = key;
 		this.desiredVolumePercent = volumePercent;
+
+		String worldId = currentWorldId();
+		if (worldId != null) {
+			this.worldStates.put(worldId, new WorldState(key, volumePercent, 0f));
+		}
 
 		boolean sameTrackAlreadyLive = key.equals(this.currentTrackKey) && (isPlaying(this.currentMusic) || this.isLoadingTrack);
 		if (sameTrackAlreadyLive) {
@@ -131,13 +138,15 @@ public final class MusicPlayer {
 
 	public void stopMusic() {
 		this.isLoadingTrack = false;
-		if (this.currentMusic != null) {
-			forceStop(this.currentMusic);
-			this.currentMusic = null;
-		}
 		if (this.previousMusic != null) {
 			forceStop(this.previousMusic);
 			this.previousMusic = null;
+		}
+		if (this.currentMusic != null) {
+			this.previousMusic = this.currentMusic;
+			this.previousMusic.ticksElapsed = 0;
+			this.previousMusic.fadeIn = false;
+			this.currentMusic = null;
 		}
 		if (this.currentTrackKey != null) {
 			this.lastPositions.remove(this.currentTrackKey);
@@ -145,6 +154,11 @@ public final class MusicPlayer {
 		this.currentMusicPath = null;
 		this.currentTrackKey = null;
 		this.desiredTrackKey = null;
+
+		String worldId = currentWorldId();
+		if (worldId != null) {
+			this.worldStates.remove(worldId);
+		}
 	}
 
 	public void stopSounds() {
@@ -163,9 +177,19 @@ public final class MusicPlayer {
 		if (this.currentMusic != null && this.currentTrackKey != null) {
 			savePositionOf(this.currentTrackKey, this.currentMusic);
 		}
-		this.pausedWorldId = this.lastKnownWorldId;
+
+		String worldId = this.lastKnownWorldId;
+		if (worldId != null) {
+			if (this.desiredTrackKey != null) {
+				float pos = this.lastPositions.getOrDefault(this.desiredTrackKey, 0f);
+				this.worldStates.put(worldId, new WorldState(this.desiredTrackKey, this.desiredVolumePercent, pos));
+			} else {
+				this.worldStates.remove(worldId);
+			}
+		}
 		this.lastKnownWorldId = null;
 		saveStateToDisk();
+
 		if (this.currentMusic != null) {
 			forceStop(this.currentMusic);
 			this.currentMusic = null;
@@ -176,27 +200,37 @@ public final class MusicPlayer {
 		}
 		this.currentMusicPath = null;
 		this.currentTrackKey = null;
+		this.desiredTrackKey = null;
 		this.isLoadingTrack = false;
 		stopSounds();
 	}
 
 	public void resumeDesiredMusic() {
-		if (this.desiredTrackKey == null || this.isLoadingTrack || !isInWorld()) {
+		if (this.isLoadingTrack || !isInWorld()) {
 			return;
 		}
-		if (this.pausedWorldId != null && !this.pausedWorldId.equals(currentWorldId())) {
+
+		String worldId = currentWorldId();
+		WorldState state = worldId != null ? this.worldStates.get(worldId) : null;
+		if (state == null) {
 			this.desiredTrackKey = null;
 			this.desiredVolumePercent = 100;
-			this.pausedWorldId = null;
 			return;
 		}
-		this.pausedWorldId = null;
-		float resumeOffset = this.lastPositions.getOrDefault(this.desiredTrackKey, 0f);
-		Path path = this.musicCache.get(this.desiredTrackKey);
-		if (path != null) {
-			float volumeMultiplier = clampVolume(this.desiredVolumePercent);
-			startTrack(path, this.desiredTrackKey, volumeMultiplier, resumeOffset);
+
+		Path path = this.musicCache.get(state.trackKey);
+		if (path == null) {
+			this.worldStates.remove(worldId);
+			this.desiredTrackKey = null;
+			return;
 		}
+
+		this.desiredTrackKey = state.trackKey;
+		this.desiredVolumePercent = state.volumePercent;
+		this.lastPositions.put(state.trackKey, state.position);
+
+		float volumeMultiplier = clampVolume(state.volumePercent);
+		startTrack(path, state.trackKey, volumeMultiplier, state.position);
 	}
 
 	public void onResourceReload() {
@@ -265,6 +299,10 @@ public final class MusicPlayer {
 		if (this.currentMusic != null && this.currentTrackKey != null) {
 			savePositionOf(this.currentTrackKey, this.currentMusic);
 		}
+		if (this.lastKnownWorldId != null && this.desiredTrackKey != null) {
+			float pos = this.lastPositions.getOrDefault(this.desiredTrackKey, 0f);
+			this.worldStates.put(this.lastKnownWorldId, new WorldState(this.desiredTrackKey, this.desiredVolumePercent, pos));
+		}
 		saveStateToDisk();
 		stopAll();
 	}
@@ -276,9 +314,7 @@ public final class MusicPlayer {
 		this.isLoadingTrack = false;
 		this.activeSounds.clear();
 
-		if (this.desiredTrackKey != null) {
-			resumeDesiredMusic();
-		}
+		resumeDesiredMusic();
 	}
 
 	private void recoverInterruptedMusic() {
@@ -309,13 +345,15 @@ public final class MusicPlayer {
 						return;
 					}
 
-					if (this.currentMusic != null) {
-						forceStop(this.currentMusic);
-						this.currentMusic = null;
-					}
 					if (this.previousMusic != null) {
 						forceStop(this.previousMusic);
 						this.previousMusic = null;
+					}
+					if (this.currentMusic != null) {
+						this.previousMusic = this.currentMusic;
+						this.previousMusic.ticksElapsed = 0;
+						this.previousMusic.fadeIn = false;
+						this.currentMusic = null;
 					}
 
 					int buffer = AL10.alGenBuffers();
@@ -327,8 +365,7 @@ public final class MusicPlayer {
 					AL10.alSource3f(source, AL10.AL_VELOCITY, 0f, 0f, 0f);
 					AL10.alSourcei(source, AL10.AL_BUFFER, buffer);
 
-					float initialGain = masterVolume() * volumeMultiplier;
-					AL10.alSourcef(source, AL10.AL_GAIN, initialGain);
+					AL10.alSourcef(source, AL10.AL_GAIN, 0f);
 					AL10.alSourcePlay(source);
 
 					float duration = trackDurationSeconds(data);
@@ -339,7 +376,7 @@ public final class MusicPlayer {
 						AL11.alSourcef(source, AL11.AL_SEC_OFFSET, safeOffset);
 					}
 
-					this.currentMusic = new Voice(source, buffer, false, volumeMultiplier);
+					this.currentMusic = new Voice(source, buffer, true, volumeMultiplier);
 					this.isLoadingTrack = false;
 				}, Minecraft.getInstance());
 	}
@@ -366,11 +403,12 @@ public final class MusicPlayer {
 	private void saveStateToDisk() {
 		Path file = MusicLibrary.getMusicDir().resolve(STATE_FILE);
 		Properties props = new Properties();
-		if (this.desiredTrackKey != null) {
-			float pos = this.lastPositions.getOrDefault(this.desiredTrackKey, 0f);
-			props.setProperty(KEY_TRACK, this.desiredTrackKey);
-			props.setProperty(KEY_VOLUME, String.valueOf(this.desiredVolumePercent));
-			props.setProperty(KEY_POSITION, String.format(Locale.ROOT, "%.3f", pos));
+		for (Map.Entry<String, WorldState> entry : this.worldStates.entrySet()) {
+			String worldId = entry.getKey();
+			WorldState state = entry.getValue();
+			props.setProperty(worldId + SUFFIX_TRACK, state.trackKey);
+			props.setProperty(worldId + SUFFIX_VOLUME, String.valueOf(state.volumePercent));
+			props.setProperty(worldId + SUFFIX_POSITION, String.format(Locale.ROOT, "%.3f", state.position));
 		}
 		try (Writer writer = Files.newBufferedWriter(file)) {
 			props.store(writer, null);
@@ -391,16 +429,33 @@ public final class MusicPlayer {
 			LOGGER.warn("Failed to load audio state: {}", e.getMessage());
 			return;
 		}
-		String track = props.getProperty(KEY_TRACK);
-		if (track == null || track.isEmpty() || !this.musicCache.containsKey(track)) {
-			return;
+
+		Map<String, String> tracks = new HashMap<>();
+		Map<String, String> volumes = new HashMap<>();
+		Map<String, String> positions = new HashMap<>();
+		for (String name : props.stringPropertyNames()) {
+			if (name.endsWith(SUFFIX_TRACK)) {
+				tracks.put(name.substring(0, name.length() - SUFFIX_TRACK.length()), props.getProperty(name));
+			} else if (name.endsWith(SUFFIX_VOLUME)) {
+				volumes.put(name.substring(0, name.length() - SUFFIX_VOLUME.length()), props.getProperty(name));
+			} else if (name.endsWith(SUFFIX_POSITION)) {
+				positions.put(name.substring(0, name.length() - SUFFIX_POSITION.length()), props.getProperty(name));
+			}
 		}
-		this.desiredTrackKey = track;
-		this.desiredVolumePercent = Math.max(0, Math.min(100, parseInt(props.getProperty(KEY_VOLUME), this.desiredVolumePercent)));
-		try {
-			float pos = Math.max(0f, Float.parseFloat(props.getProperty(KEY_POSITION, "0")));
-			this.lastPositions.put(track, pos);
-		} catch (NumberFormatException ignored) {
+
+		for (Map.Entry<String, String> entry : tracks.entrySet()) {
+			String worldId = entry.getKey();
+			String track = entry.getValue();
+			if (track == null || track.isEmpty() || !this.musicCache.containsKey(track)) {
+				continue;
+			}
+			int volume = Math.max(0, Math.min(100, parseInt(volumes.get(worldId), 100)));
+			float position = 0f;
+			try {
+				position = Math.max(0f, Float.parseFloat(positions.getOrDefault(worldId, "0")));
+			} catch (NumberFormatException ignored) {
+			}
+			this.worldStates.put(worldId, new WorldState(track, volume, position));
 		}
 	}
 
@@ -480,6 +535,18 @@ public final class MusicPlayer {
 		}
 	}
 
+	private static final class WorldState {
+		final String trackKey;
+		final int volumePercent;
+		final float position;
+
+		WorldState(String trackKey, int volumePercent, float position) {
+			this.trackKey = trackKey;
+			this.volumePercent = volumePercent;
+			this.position = position;
+		}
+	}
+
 	private boolean isInWorld() {
 		Minecraft client = Minecraft.getInstance();
 		return client != null && client.level != null && client.player != null;
@@ -493,7 +560,7 @@ public final class MusicPlayer {
 			return "mp:" + serverData.ip;
 		}
 		if (client.getSingleplayerServer() != null) {
-			return "sp:" + client.getSingleplayerServer().getWorldData().getLevelName();
+			return "sp:" + client.getSingleplayerServer().getWorldPath(LevelResource.ROOT).toAbsolutePath().normalize();
 		}
 		return null;
 	}
