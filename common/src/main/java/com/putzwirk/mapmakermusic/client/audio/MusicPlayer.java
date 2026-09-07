@@ -15,6 +15,7 @@ import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundSource;
 import org.lwjgl.openal.AL10;
@@ -47,6 +48,9 @@ public final class MusicPlayer {
 
 	private boolean isLoadingTrack = false;
 	private long activeAlContext;
+
+	private String lastKnownWorldId = null;
+	private String pausedWorldId = null;
 
 	public void init() {
 		rescanMusicFolder();
@@ -159,6 +163,8 @@ public final class MusicPlayer {
 		if (this.currentMusic != null && this.currentTrackKey != null) {
 			savePositionOf(this.currentTrackKey, this.currentMusic);
 		}
+		this.pausedWorldId = this.lastKnownWorldId;
+		this.lastKnownWorldId = null;
 		saveStateToDisk();
 		if (this.currentMusic != null) {
 			forceStop(this.currentMusic);
@@ -170,20 +176,26 @@ public final class MusicPlayer {
 		}
 		this.currentMusicPath = null;
 		this.currentTrackKey = null;
-		this.desiredTrackKey = null;
-		this.desiredVolumePercent = 100;
 		this.isLoadingTrack = false;
 		stopSounds();
 	}
 
 	public void resumeDesiredMusic() {
-		if (this.desiredTrackKey != null && !this.isLoadingTrack && isInWorld()) {
-			float resumeOffset = this.lastPositions.getOrDefault(this.desiredTrackKey, 0f);
-			Path path = this.musicCache.get(this.desiredTrackKey);
-			if (path != null) {
-				float volumeMultiplier = clampVolume(this.desiredVolumePercent);
-				startTrack(path, this.desiredTrackKey, volumeMultiplier, resumeOffset);
-			}
+		if (this.desiredTrackKey == null || this.isLoadingTrack || !isInWorld()) {
+			return;
+		}
+		if (this.pausedWorldId != null && !this.pausedWorldId.equals(currentWorldId())) {
+			this.desiredTrackKey = null;
+			this.desiredVolumePercent = 100;
+			this.pausedWorldId = null;
+			return;
+		}
+		this.pausedWorldId = null;
+		float resumeOffset = this.lastPositions.getOrDefault(this.desiredTrackKey, 0f);
+		Path path = this.musicCache.get(this.desiredTrackKey);
+		if (path != null) {
+			float volumeMultiplier = clampVolume(this.desiredVolumePercent);
+			startTrack(path, this.desiredTrackKey, volumeMultiplier, resumeOffset);
 		}
 	}
 
@@ -198,6 +210,10 @@ public final class MusicPlayer {
 		if (context != this.activeAlContext) {
 			handleContextChange(context);
 			return;
+		}
+
+		if (isInWorld()) {
+			this.lastKnownWorldId = currentWorldId();
 		}
 
 		float baseMaster = masterVolume();
@@ -467,5 +483,18 @@ public final class MusicPlayer {
 	private boolean isInWorld() {
 		Minecraft client = Minecraft.getInstance();
 		return client != null && client.level != null && client.player != null;
+	}
+
+	private String currentWorldId() {
+		Minecraft client = Minecraft.getInstance();
+		if (client == null) return null;
+		ServerData serverData = client.getCurrentServer();
+		if (serverData != null) {
+			return "mp:" + serverData.ip;
+		}
+		if (client.getSingleplayerServer() != null) {
+			return "sp:" + client.getSingleplayerServer().getWorldData().getLevelName();
+		}
+		return null;
 	}
 }
