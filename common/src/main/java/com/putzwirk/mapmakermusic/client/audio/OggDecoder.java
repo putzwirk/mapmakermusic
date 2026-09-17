@@ -31,18 +31,39 @@ public final class OggDecoder {
 		int channels = channelsBuf.get(0);
 		int sampleRate = sampleRateBuf.get(0);
 		int format = channels == 1 ? AL10.AL_FORMAT_MONO16 : AL10.AL_FORMAT_STEREO16;
-		return new OggData(pcm, format, sampleRate);
+		return new OggData(pcm, format, sampleRate, channels);
 	}
 
 	public static final class OggData {
 		public final ShortBuffer pcm;
 		public final int alFormat;
 		public final int sampleRate;
+		public final int channels;
 
-		public OggData(ShortBuffer pcm, int alFormat, int sampleRate) {
+		public OggData(ShortBuffer pcm, int alFormat, int sampleRate, int channels) {
 			this.pcm = pcm;
 			this.alFormat = alFormat;
 			this.sampleRate = sampleRate;
+			this.channels = channels;
+		}
+
+		public OggData asMono() {
+			if (this.channels <= 1) {
+				return this;
+			}
+
+			int start = this.pcm.position();
+			int frames = this.pcm.remaining() / this.channels;
+			ShortBuffer mono = BufferUtils.createShortBuffer(frames);
+			for (int frame = 0; frame < frames; frame++) {
+				int base = start + frame * this.channels;
+				int sum = 0;
+				for (int channel = 0; channel < this.channels; channel++) {
+					sum += this.pcm.get(base + channel);
+				}
+				mono.put(frame, (short) (sum / this.channels));
+			}
+			return new OggData(mono, AL10.AL_FORMAT_MONO16, this.sampleRate, 1);
 		}
 	}
 }

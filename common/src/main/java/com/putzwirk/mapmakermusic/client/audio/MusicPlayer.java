@@ -116,10 +116,12 @@ public final class MusicPlayer {
 		}
 
 		CompletableFuture.supplyAsync(() -> decodeOrNull(path))
-				.thenAcceptAsync(data -> {
-					if (data == null) {
+				.thenAcceptAsync(decoded -> {
+					if (decoded == null) {
 						return;
 					}
+
+					OggDecoder.OggData data = position == null ? decoded : decoded.asMono();
 
 					int buffer = AL10.alGenBuffers();
 					int source = AL10.alGenSources();
