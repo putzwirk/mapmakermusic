@@ -1,6 +1,7 @@
 package com.putzwirk.mapmakermusic.command;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.FloatArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -12,9 +13,11 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
 import net.minecraft.commands.arguments.EntityArgument;
+import net.minecraft.commands.arguments.coordinates.Vec3Argument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.Vec3;
 
 public final class MusicCommand {
 
@@ -41,9 +44,13 @@ public final class MusicCommand {
 						.then(Commands.argument("targets", EntityArgument.players())
 								.then(Commands.argument("name", StringArgumentType.word())
 										.suggests(TRACK_SUGGESTIONS)
-										.executes(ctx -> executePlaySound(ctx, 100))
+										.executes(ctx -> executePlaySound(ctx, 100, 1f, null))
 										.then(Commands.argument("volume", IntegerArgumentType.integer(0, 100))
-												.executes(ctx -> executePlaySound(ctx, IntegerArgumentType.getInteger(ctx, "volume")))))))
+												.executes(ctx -> executePlaySound(ctx, IntegerArgumentType.getInteger(ctx, "volume"), 1f, null))
+												.then(Commands.argument("pitch", FloatArgumentType.floatArg(0.5f, 2f))
+														.executes(ctx -> executePlaySound(ctx, IntegerArgumentType.getInteger(ctx, "volume"), FloatArgumentType.getFloat(ctx, "pitch"), null))
+														.then(Commands.argument("pos", Vec3Argument.vec3())
+																.executes(ctx -> executePlaySound(ctx, IntegerArgumentType.getInteger(ctx, "volume"), FloatArgumentType.getFloat(ctx, "pitch"), Vec3Argument.getVec3(ctx, "pos")))))))))
 				.then(Commands.literal("stopsound")
 						.then(Commands.argument("targets", EntityArgument.players())
 								.executes(MusicCommand::executeStopSound)))
@@ -79,16 +86,19 @@ public final class MusicCommand {
 		return targets.size();
 	}
 
-	private static int executePlaySound(CommandContext<CommandSourceStack> ctx, int volume) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+	private static int executePlaySound(CommandContext<CommandSourceStack> ctx, int volume, float pitch, Vec3 position) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
 		String name = StringArgumentType.getString(ctx, "name");
 		Collection<ServerPlayer> targets = EntityArgument.getPlayers(ctx, "targets");
 		CommandSourceStack source = ctx.getSource();
 
 		for (ServerPlayer player : targets) {
-			MusicRemotes.getRemote().playSound(player, name, volume);
+			MusicRemotes.getRemote().playSound(player, name, volume, pitch, position);
 		}
 
-		source.sendSuccess(() -> Component.literal("Playing custom sound '" + name + "' (Volume: " + volume + "%) for " + describeTargets(targets)), true);
+		String where = position == null
+				? "global"
+				: "at " + position.x + " " + position.y + " " + position.z;
+		source.sendSuccess(() -> Component.literal("Playing custom sound '" + name + "' (Volume: " + volume + "%, Pitch: " + pitch + ", " + where + ") for " + describeTargets(targets)), true);
 		return targets.size();
 	}
 

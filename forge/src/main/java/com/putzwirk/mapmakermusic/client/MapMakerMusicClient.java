@@ -9,6 +9,7 @@ import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraft.world.phys.Vec3;
 
 public final class MapMakerMusicClient {
 	private static final MusicPlayer MUSIC_PLAYER = new MusicPlayer();
@@ -35,8 +36,8 @@ public final class MapMakerMusicClient {
 		});
 	}
 
-	public static void onPlaySound(String name, int volume) {
-		Minecraft.getInstance().execute(() -> MUSIC_PLAYER.playSound(name, volume));
+	public static void onPlaySound(String name, int volume, float pitch, Vec3 position) {
+		Minecraft.getInstance().execute(() -> MUSIC_PLAYER.playSound(name, volume, pitch, position));
 	}
 
 	public static void onStopSound() {

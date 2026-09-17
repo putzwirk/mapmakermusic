@@ -14,6 +14,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.world.phys.Vec3;
 
 public class MapMakerMusicClient implements ClientModInitializer {
 	private final MusicPlayer musicPlayer = new MusicPlayer();
@@ -41,7 +42,9 @@ public class MapMakerMusicClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(MusicNetworking.PLAY_SOUND, (client, handler, buf, responseSender) -> {
 			String name = buf.readUtf();
 			int volume = buf.readInt();
-			client.execute(() -> this.musicPlayer.playSound(name, volume));
+			float pitch = buf.readFloat();
+			Vec3 position = buf.readBoolean() ? new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()) : null;
+			client.execute(() -> this.musicPlayer.playSound(name, volume, pitch, position));
 		});
 
 		ClientPlayNetworking.registerGlobalReceiver(MusicNetworking.STOP_SOUND, (client, handler, buf, responseSender) -> {

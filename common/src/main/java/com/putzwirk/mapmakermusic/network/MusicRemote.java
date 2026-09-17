@@ -1,6 +1,7 @@
 package com.putzwirk.mapmakermusic.network;
 
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.Vec3;
 
 public interface MusicRemote {
 
@@ -14,7 +15,7 @@ public interface MusicRemote {
 		}
 
 		@Override
-		public void playSound(ServerPlayer player, String name, int volume) {
+		public void playSound(ServerPlayer player, String name, int volume, float pitch, Vec3 position) {
 		}
 
 		@Override
@@ -34,7 +35,7 @@ public interface MusicRemote {
 
 	void stopMusic(ServerPlayer player);
 
-	void playSound(ServerPlayer player, String name, int volume);
+	void playSound(ServerPlayer player, String name, int volume, float pitch, Vec3 position);
 
 	void stopSound(ServerPlayer player);
 

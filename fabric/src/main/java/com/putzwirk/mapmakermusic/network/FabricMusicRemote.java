@@ -4,6 +4,7 @@ import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.Vec3;
 
 public final class FabricMusicRemote implements MusicRemote {
 
@@ -21,10 +22,17 @@ public final class FabricMusicRemote implements MusicRemote {
 	}
 
 	@Override
-	public void playSound(ServerPlayer player, String name, int volume) {
+	public void playSound(ServerPlayer player, String name, int volume, float pitch, Vec3 position) {
 		FriendlyByteBuf buf = PacketByteBufs.create();
 		buf.writeUtf(name);
 		buf.writeInt(volume);
+		buf.writeFloat(pitch);
+		buf.writeBoolean(position != null);
+		if (position != null) {
+			buf.writeDouble(position.x);
+			buf.writeDouble(position.y);
+			buf.writeDouble(position.z);
+		}
 		ServerPlayNetworking.send(player, MusicNetworking.PLAY_SOUND, buf);
 	}
 

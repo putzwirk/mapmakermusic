@@ -1,6 +1,7 @@
 package com.putzwirk.mapmakermusic.network;
 
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.phys.Vec3;
 
 public final class ForgeMusicRemote implements MusicRemote {
 
@@ -15,8 +16,8 @@ public final class ForgeMusicRemote implements MusicRemote {
 	}
 
 	@Override
-	public void playSound(ServerPlayer player, String name, int volume) {
-		MusicNetworking.sendToPlayer(player, new MusicNetworking.PlaySoundPacket(name, volume));
+	public void playSound(ServerPlayer player, String name, int volume, float pitch, Vec3 position) {
+		MusicNetworking.sendToPlayer(player, new MusicNetworking.PlaySoundPacket(name, volume, pitch, position));
 	}
 
 	@Override

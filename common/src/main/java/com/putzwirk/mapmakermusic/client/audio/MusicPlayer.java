@@ -20,6 +20,7 @@ import net.minecraft.client.multiplayer.ServerData;
 import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.phys.Vec3;
 import org.lwjgl.openal.AL10;
 import org.lwjgl.openal.AL11;
 import org.lwjgl.openal.ALC10;
@@ -29,6 +30,7 @@ import org.slf4j.LoggerFactory;
 public final class MusicPlayer {
 	private static final Logger LOGGER = LoggerFactory.getLogger("MapMakerMusic Audio");
 	private static final int FADE_TICKS = 40;
+	private static final float POSITIONAL_RANGE = 16f;
 	private static final float RESUME_MARGIN_SECONDS = 0.25f;
 	private static final float RESUME_MIN_SECONDS = 0.05f;
 	private static final String STATE_FILE = "state.properties";
@@ -102,7 +104,7 @@ public final class MusicPlayer {
 		startTrack(path, key, volumeMultiplier, 0f);
 	}
 
-	public void playSound(String rawName, int volumePercent) {
+	public void playSound(String rawName, int volumePercent, float pitch, Vec3 position) {
 		float volumeMultiplier = clampVolume(volumePercent);
 		String key = normalizeName(rawName);
 		Path path = this.musicCache.get(key);
@@ -120,16 +122,39 @@ public final class MusicPlayer {
 					}
 
 					int buffer = AL10.alGenBuffers();
+					int source = AL10.alGenSources();
+					if (buffer == 0 || source == 0) {
+						LOGGER.warn("Failed to allocate OpenAL resources for sound '{}'", rawName);
+						if (buffer != 0) {
+							AL10.alDeleteBuffers(buffer);
+						}
+						if (source != 0) {
+							AL10.alDeleteSources(source);
+						}
+						return;
+					}
+
 					AL10.alBufferData(buffer, data.alFormat, data.pcm, data.sampleRate);
 
-					int source = AL10.alGenSources();
 					AL10.alSourcei(source, AL10.AL_LOOPING, AL10.AL_FALSE);
-					AL10.alSource3f(source, AL10.AL_POSITION, 0f, 0f, 0f);
+					AL10.alSourcef(source, AL10.AL_PITCH, pitch);
 					AL10.alSource3f(source, AL10.AL_VELOCITY, 0f, 0f, 0f);
 					AL10.alSourcei(source, AL10.AL_BUFFER, buffer);
 
-					float initialGain = masterVolume() * volumeMultiplier;
-					AL10.alSourcef(source, AL10.AL_GAIN, initialGain);
+					if (position == null) {
+						AL10.alSourcei(source, AL10.AL_SOURCE_RELATIVE, AL10.AL_TRUE);
+						AL10.alSource3f(source, AL10.AL_POSITION, 0f, 0f, 0f);
+						AL10.alSourcei(source, AL10.AL_DISTANCE_MODEL, AL10.AL_NONE);
+					} else {
+						AL10.alSourcei(source, AL10.AL_SOURCE_RELATIVE, AL10.AL_FALSE);
+						AL10.alSource3f(source, AL10.AL_POSITION, (float) position.x, (float) position.y, (float) position.z);
+						AL10.alSourcei(source, AL10.AL_DISTANCE_MODEL, AL11.AL_LINEAR_DISTANCE);
+						AL10.alSourcef(source, AL10.AL_MAX_DISTANCE, POSITIONAL_RANGE);
+						AL10.alSourcef(source, AL10.AL_ROLLOFF_FACTOR, 1f);
+						AL10.alSourcef(source, AL10.AL_REFERENCE_DISTANCE, 0f);
+					}
+
+					AL10.alSourcef(source, AL10.AL_GAIN, masterVolume() * volumeMultiplier);
 					AL10.alSourcePlay(source);
 
 					this.activeSounds.add(new Voice(source, buffer, false, volumeMultiplier));
@@ -288,6 +313,7 @@ public final class MusicPlayer {
 		while (soundIterator.hasNext()) {
 			Voice sound = soundIterator.next();
 			if (!isPlaying(sound)) {
+				forceStop(sound);
 				soundIterator.remove();
 			} else {
 				AL10.alSourcef(sound.source, AL10.AL_GAIN, baseMaster * sound.volumeMultiplier);
@@ -328,7 +354,9 @@ public final class MusicPlayer {
 		float volume = this.currentMusic.volumeMultiplier;
 		float offset = this.lastPositions.getOrDefault(key, 0f);
 
+		Voice interrupted = this.currentMusic;
 		this.currentMusic = null;
+		forceStop(interrupted);
 
 		startTrack(path, key, volume, offset);
 	}

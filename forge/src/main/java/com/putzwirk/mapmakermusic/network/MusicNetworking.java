@@ -4,13 +4,14 @@ import com.putzwirk.mapmakermusic.MapMakerMusic;
 import com.putzwirk.mapmakermusic.client.MapMakerMusicClient;
 import java.util.function.Supplier;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 
 public final class MusicNetworking {
-	private static final String PROTOCOL_VERSION = "1";
+	private static final String PROTOCOL_VERSION = "2";
 	public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
 			MapMakerMusic.id("main"),
 			() -> PROTOCOL_VERSION,
@@ -83,25 +84,38 @@ public final class MusicNetworking {
 	public static class PlaySoundPacket {
 		public final String name;
 		public final int volume;
+		public final float pitch;
+		public final Vec3 position;
 
-		public PlaySoundPacket(String name, int volume) {
+		public PlaySoundPacket(String name, int volume, float pitch, Vec3 position) {
 			this.name = name;
 			this.volume = volume;
+			this.pitch = pitch;
+			this.position = position;
 		}
 
 		public PlaySoundPacket(FriendlyByteBuf buf) {
 			this.name = buf.readUtf();
 			this.volume = buf.readInt();
+			this.pitch = buf.readFloat();
+			this.position = buf.readBoolean() ? new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()) : null;
 		}
 
 		public void encode(FriendlyByteBuf buf) {
 			buf.writeUtf(this.name);
 			buf.writeInt(this.volume);
+			buf.writeFloat(this.pitch);
+			buf.writeBoolean(this.position != null);
+			if (this.position != null) {
+				buf.writeDouble(this.position.x);
+				buf.writeDouble(this.position.y);
+				buf.writeDouble(this.position.z);
+			}
 		}
 
 		public static void handle(PlaySoundPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
 			NetworkEvent.Context context = contextSupplier.get();
-			runOnMainThread(context, () -> MapMakerMusicClient.onPlaySound(msg.name, msg.volume));
+			runOnMainThread(context, () -> MapMakerMusicClient.onPlaySound(msg.name, msg.volume, msg.pitch, msg.position));
 		}
 	}
 
