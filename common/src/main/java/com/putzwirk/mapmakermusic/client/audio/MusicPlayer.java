@@ -7,6 +7,7 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -149,9 +150,11 @@ public final class MusicPlayer {
 			}
 		}
 
-		this.lastPositions.remove(key);
+		float resumeOffset = this.lastPositions.getOrDefault(key, 0f);
+		this.lastPositions.keySet().retainAll(Collections.singleton(key));
+		LOGGER.warn("[MMM-DEBUG] playMusic key={} resumeOffset={} fadeIn={} fadeOut={}", key, resumeOffset, enableFadeIn, enableFadeOut);
 
-		startTrack(path, key, volumeMultiplier, pitch, position, maxDistance, 0f, enableFadeIn, enableFadeOut);
+		startTrack(path, key, volumeMultiplier, pitch, position, maxDistance, resumeOffset, enableFadeIn, enableFadeOut);
 	}
 
 	public void playSound(String rawName, int volumePercent, float pitch, Vec3 position, float maxDistance) {
@@ -215,6 +218,10 @@ public final class MusicPlayer {
 
 	public void stopMusic(boolean enableFadeOut) {
 		this.isLoadingTrack = false;
+		if (this.currentTrackKey != null && this.currentMusic != null) {
+			savePositionOf(this.currentTrackKey, this.currentMusic);
+			LOGGER.warn("[MMM-DEBUG] stopMusic key={} savedOffset={}", this.currentTrackKey, this.lastPositions.getOrDefault(this.currentTrackKey, -1f));
+		}
 		if (this.previousMusic != null) {
 			forceStop(this.previousMusic);
 			this.previousMusic = null;
@@ -228,9 +235,6 @@ public final class MusicPlayer {
 				forceStop(this.currentMusic);
 			}
 			this.currentMusic = null;
-		}
-		if (this.currentTrackKey != null) {
-			this.lastPositions.remove(this.currentTrackKey);
 		}
 		this.currentMusicPath = null;
 		this.currentTrackKey = null;
@@ -483,8 +487,11 @@ public final class MusicPlayer {
 					float safeOffset = duration > 0f
 							? Math.max(0f, Math.min(resumeOffsetSeconds, Math.max(0f, duration - RESUME_MARGIN_SECONDS)))
 							: 0f;
+					LOGGER.warn("[MMM-DEBUG] startTrack key={} requestedOffset={} pcmRemaining={} duration={} safeOffset={}",
+							key, resumeOffsetSeconds, data.pcm.remaining(), duration, safeOffset);
 					if (safeOffset > RESUME_MIN_SECONDS) {
 						AL11.alSourcef(source, AL11.AL_SEC_OFFSET, safeOffset);
+						LOGGER.warn("[MMM-DEBUG] seek applied, readBack={}", AL11.alGetSourcef(source, AL11.AL_SEC_OFFSET));
 					}
 
 				this.currentMusic = new Voice(source, buffer, enableFadeIn, volumeMultiplier, pitch, position, maxDistance);

@@ -17,6 +17,7 @@ import net.minecraft.commands.arguments.coordinates.Vec3Argument;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
 
 public final class MusicCommand {
@@ -29,7 +30,7 @@ public final class MusicCommand {
 
 	public static void register(CommandDispatcher<CommandSourceStack> dispatcher) {
 		dispatcher.register(Commands.literal("mmmusic")
-				.requires(source -> source.hasPermission(2))
+				.requires(source -> source.hasPermission(2) || (source.getEntity() instanceof Player player && player.isCreative()))
 				.then(Commands.literal("playmusic")
 						.then(Commands.argument("targets", EntityArgument.players())
 								.then(Commands.argument("name", StringArgumentType.word())

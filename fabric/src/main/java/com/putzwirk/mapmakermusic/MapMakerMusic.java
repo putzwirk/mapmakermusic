@@ -4,6 +4,7 @@ import com.putzwirk.mapmakermusic.block.AreaWandHandler;
 import com.putzwirk.mapmakermusic.block.ModBlocks;
 import com.putzwirk.mapmakermusic.block.MusicBlock;
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
+import com.putzwirk.mapmakermusic.block.MusicBlockItem;
 import com.putzwirk.mapmakermusic.command.MusicCommand;
 import com.putzwirk.mapmakermusic.network.FabricMusicRemote;
 import com.putzwirk.mapmakermusic.network.MusicBlockServerHandler;
@@ -26,7 +27,6 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
@@ -46,7 +46,7 @@ public class MapMakerMusic implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		MUSIC_BLOCK_OBJ = Registry.register(BuiltInRegistries.BLOCK, id("music_block"), new MusicBlock());
-		MUSIC_BLOCK_ITEM_OBJ = Registry.register(BuiltInRegistries.ITEM, id("music_block"), new BlockItem(MUSIC_BLOCK_OBJ, new Item.Properties()));
+		MUSIC_BLOCK_ITEM_OBJ = Registry.register(BuiltInRegistries.ITEM, id("music_block"), new MusicBlockItem(MUSIC_BLOCK_OBJ, new Item.Properties()));
 
 		MUSIC_BLOCK_ENTITY_TYPE_OBJ = Registry.register(BuiltInRegistries.BLOCK_ENTITY_TYPE, id("music_block"),
 				BlockEntityType.Builder.of(MusicBlockEntity::new, MUSIC_BLOCK_OBJ).build(null));
@@ -103,6 +103,10 @@ public class MapMakerMusic implements ModInitializer {
 			}
 		});
 		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> AreaWandHandler.forgetPlayer(handler.getPlayer().getUUID()));
+		ServerPlayNetworking.registerGlobalReceiver(MusicNetworking.WAND_PUNCH_BLOCK, (server, player, handler, buf, responseSender) -> {
+			BlockPos pos = buf.readBlockPos();
+			server.execute(() -> AreaWandHandler.handleWandPunch(player, pos));
+		});
 		LOGGER.info("MapMakerMusic initialized");
 	}
 

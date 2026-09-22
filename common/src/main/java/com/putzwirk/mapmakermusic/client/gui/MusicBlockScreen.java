@@ -374,6 +374,10 @@ public class MusicBlockScreen extends Screen {
 
 	private void openMusicFolder() {
 		Util.getPlatform().openFile(MusicLibrary.getMusicDir().toFile());
+		Minecraft client = Minecraft.getInstance();
+		if (client != null) {
+			client.keyboardHandler.setClipboard(MusicLibrary.getMusicDir().toString());
+		}
 	}
 
 	@Override

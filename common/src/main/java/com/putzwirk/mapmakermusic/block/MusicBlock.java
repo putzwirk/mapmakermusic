@@ -54,7 +54,11 @@ public class MusicBlock extends Block implements EntityBlock {
 		if (!level.isClientSide) {
 			BlockEntity be = level.getBlockEntity(pos);
 			if (be instanceof MusicBlockEntity musicBe && player instanceof ServerPlayer serverPlayer) {
-				openConfigScreen(serverPlayer, musicBe);
+				if (serverPlayer.isCreative() || serverPlayer.hasPermissions(2)) {
+					openConfigScreen(serverPlayer, musicBe);
+				} else {
+					return InteractionResult.PASS;
+				}
 			}
 		}
 		return InteractionResult.sidedSuccess(level.isClientSide);

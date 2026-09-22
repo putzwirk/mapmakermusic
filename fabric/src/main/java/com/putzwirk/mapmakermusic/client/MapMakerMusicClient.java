@@ -1,6 +1,7 @@
 package com.putzwirk.mapmakermusic.client;
 
 import com.putzwirk.mapmakermusic.MapMakerMusic;
+import com.putzwirk.mapmakermusic.block.AreaWandHandler;
 import com.putzwirk.mapmakermusic.block.MusicBlock;
 import com.putzwirk.mapmakermusic.client.audio.MusicPlayer;
 import com.putzwirk.mapmakermusic.client.gui.MusicBlockScreen;
@@ -14,6 +15,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
+import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.fabric.api.resource.SimpleSynchronousResourceReloadListener;
 import net.minecraft.client.Minecraft;
@@ -21,6 +23,8 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.world.phys.Vec3;
 
 public class MapMakerMusicClient implements ClientModInitializer {
@@ -115,6 +119,19 @@ public class MapMakerMusicClient implements ClientModInitializer {
 				return;
 			}
 			AreaBoxRenderer.render(context.matrixStack(), context.camera().getPosition(), context.consumers());
+		});
+
+		AttackBlockCallback.EVENT.register((player, world, hand, pos, direction) -> {
+			if (!world.isClientSide() || hand != InteractionHand.MAIN_HAND) {
+				return InteractionResult.PASS;
+			}
+			if (!player.getAbilities().instabuild || !AreaWandHandler.isWandInMainHand(player)) {
+				return InteractionResult.PASS;
+			}
+			FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+			buf.writeBlockPos(pos);
+			ClientPlayNetworking.send(MusicNetworking.WAND_PUNCH_BLOCK, buf);
+			return InteractionResult.FAIL;
 		});
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> this.musicPlayer.tick());

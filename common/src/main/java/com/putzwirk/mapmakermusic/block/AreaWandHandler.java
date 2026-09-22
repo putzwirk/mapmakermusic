@@ -6,6 +6,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
@@ -47,6 +49,36 @@ public final class AreaWandHandler {
 	}
 
 	public static boolean handleLeftClick(ServerPlayer player, BlockPos clickedPos) {
+		if (!isWandUseValid(player)) {
+			return false;
+		}
+
+		if (player.isShiftKeyDown()) {
+			clearSelection(player);
+		} else {
+			selectPosition(player, clickedPos);
+		}
+		healClientPrediction(player, clickedPos);
+		return true;
+	}
+
+	public static void handleWandPunch(ServerPlayer player, BlockPos pos) {
+		if (!isWandUseValid(player)) {
+			return;
+		}
+		if (player.getEyePosition().distanceToSqr(Vec3.atCenterOf(pos)) > 64.0) {
+			return;
+		}
+
+		if (player.isShiftKeyDown()) {
+			clearSelection(player);
+		} else {
+			selectPosition(player, pos);
+		}
+		healClientPrediction(player, pos);
+	}
+
+	private static boolean isWandUseValid(ServerPlayer player) {
 		Level level = player.level();
 		if (level.isClientSide) {
 			return false;
@@ -54,40 +86,52 @@ public final class AreaWandHandler {
 		if (!player.getAbilities().instabuild) {
 			return false;
 		}
-		if (!isWandInMainHand(player)) {
-			return false;
-		}
+		return isWandInMainHand(player);
+	}
 
-		if (player.isShiftKeyDown()) {
-			if (POS1.remove(player.getUUID()) != null) {
-				notify(player, "Selection cleared.");
-			} else {
-				notify(player, "Nothing selected.");
+	private static void clearSelection(ServerPlayer player) {
+		if (POS1.remove(player.getUUID()) != null) {
+			notify(player, "Selection cleared.");
+		} else {
+			notify(player, "Nothing selected.");
+		}
+		sendSelection(player, null);
+	}
+
+	private static void healClientPrediction(ServerPlayer player, BlockPos pos) {
+		Level level = player.level();
+		player.connection.send(new ClientboundBlockUpdatePacket(pos, level.getBlockState(pos)));
+		BlockEntity be = level.getBlockEntity(pos);
+		if (be != null) {
+			Packet<?> updatePacket = be.getUpdatePacket();
+			if (updatePacket != null) {
+				player.connection.send(updatePacket);
 			}
-			sendSelection(player, null);
-			return true;
 		}
+	}
 
+	private static void selectPosition(ServerPlayer player, BlockPos pos) {
+		Level level = player.level();
 		BlockPos pos1 = POS1.get(player.getUUID());
 		if (pos1 == null) {
-			POS1.put(player.getUUID(), clickedPos);
+			POS1.put(player.getUUID(), pos);
 			notify(player, "Pos1 set.");
-			sendSelection(player, clickedPos);
-			return true;
+			sendSelection(player, pos);
+			return;
 		}
 
-		BlockPos pos2 = clickedPos;
+		BlockPos pos2 = pos;
 		BlockPos spot = findSpot(level, player, pos2);
 		if (spot == null) {
 			notify(player, "No space here.");
-			return true;
+			return;
 		}
 
 		boolean placed = level.setBlock(spot, ModBlocks.MUSIC_BLOCK.get().defaultBlockState(), 3);
 		BlockEntity be = level.getBlockEntity(spot);
 		if (!placed || !(be instanceof MusicBlockEntity musicBe)) {
 			notify(player, "Placement failed.");
-			return true;
+			return;
 		}
 
 		musicBe.setActivationType(MusicBlockEntity.ActivationType.AREA);
@@ -99,7 +143,6 @@ public final class AreaWandHandler {
 		sendSelection(player, null);
 		notify(player, "Audiobox placed.");
 		MusicBlock.openConfigScreen(player, musicBe);
-		return true;
 	}
 
 	private static void sendSelection(ServerPlayer player, BlockPos pos) {

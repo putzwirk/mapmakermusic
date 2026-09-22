@@ -12,6 +12,7 @@ public final class MusicNetworking {
 	public static final ResourceLocation RELOAD = MapMakerMusic.id("reload");
 	public static final ResourceLocation UPDATE_MUSIC_BLOCK = MapMakerMusic.id("update_music_block");
 	public static final ResourceLocation WAND_SELECTION = MapMakerMusic.id("wand_selection");
+	public static final ResourceLocation WAND_PUNCH_BLOCK = MapMakerMusic.id("wand_punch_block");
 
 	private MusicNetworking() {
 	}

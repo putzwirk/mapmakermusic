@@ -1,7 +1,6 @@
 package com.putzwirk.mapmakermusic.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.putzwirk.mapmakermusic.block.ModBlocks;
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.block.MusicBlockTicker;
@@ -22,14 +21,12 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Matrix4f;
 
 public final class AreaBoxRenderer {
 
 	private static final int SCAN_CHUNK_RADIUS = 4;
 	private static final int REFRESH_INTERVAL_TICKS = 20;
 	private static final int MAX_BOXES = 128;
-	private static final float FILL_ALPHA = 0.22f;
 	private static final double PREVIEW_GROW = 0.02;
 
 	private static BlockPos wandSelection;
@@ -62,21 +59,18 @@ public final class AreaBoxRenderer {
 		for (Entry entry : cachedBoxes) {
 			AABB grown = entry.area.inflate(growFor(entry.pos));
 			float[] rgb = colorFor(entry.pos);
-			fillBox(poseStack, buffers.getBuffer(RenderType.debugQuads()), grown, rgb[0], rgb[1], rgb[2], FILL_ALPHA);
 			LevelRenderer.renderLineBox(poseStack, buffers.getBuffer(RenderType.lines()), grown, rgb[0], rgb[1], rgb[2], 1f);
 		}
 
 		AABB preview = selectionPreview(client);
 		if (preview != null) {
 			AABB grownPreview = preview.inflate(PREVIEW_GROW);
-			fillBox(poseStack, buffers.getBuffer(RenderType.debugQuads()), grownPreview, 1f, 1f, 1f, FILL_ALPHA);
 			LevelRenderer.renderLineBox(poseStack, buffers.getBuffer(RenderType.lines()), grownPreview, 1f, 1f, 1f, 1f);
 		}
 
 		poseStack.popPose();
 
 		if (buffers instanceof MultiBufferSource.BufferSource immediate) {
-			immediate.endBatch(RenderType.debugQuads());
 			immediate.endBatch(RenderType.lines());
 		}
 	}
@@ -145,32 +139,6 @@ public final class AreaBoxRenderer {
 				((packed >> 8) & 0xFF) / 255f,
 				(packed & 0xFF) / 255f
 		};
-	}
-
-	private static void fillBox(PoseStack poseStack, VertexConsumer consumer, AABB box, float r, float g, float b, float a) {
-		Matrix4f matrix = poseStack.last().pose();
-		float x0 = (float) box.minX;
-		float y0 = (float) box.minY;
-		float z0 = (float) box.minZ;
-		float x1 = (float) box.maxX;
-		float y1 = (float) box.maxY;
-		float z1 = (float) box.maxZ;
-		quad(matrix, consumer, x0, y0, z0, x0, y1, z0, x1, y1, z0, x1, y0, z0, r, g, b, a);
-		quad(matrix, consumer, x0, y0, z1, x1, y0, z1, x1, y1, z1, x0, y1, z1, r, g, b, a);
-		quad(matrix, consumer, x0, y0, z0, x0, y0, z1, x0, y1, z1, x0, y1, z0, r, g, b, a);
-		quad(matrix, consumer, x1, y0, z0, x1, y1, z0, x1, y1, z1, x1, y0, z1, r, g, b, a);
-		quad(matrix, consumer, x0, y0, z0, x1, y0, z0, x1, y0, z1, x0, y0, z1, r, g, b, a);
-		quad(matrix, consumer, x0, y1, z0, x0, y1, z1, x1, y1, z1, x1, y1, z0, r, g, b, a);
-	}
-
-	private static void quad(Matrix4f matrix, VertexConsumer consumer,
-			float x0, float y0, float z0, float x1, float y1, float z1,
-			float x2, float y2, float z2, float x3, float y3, float z3,
-			float r, float g, float b, float a) {
-		consumer.vertex(matrix, x0, y0, z0).color(r, g, b, a).endVertex();
-		consumer.vertex(matrix, x1, y1, z1).color(r, g, b, a).endVertex();
-		consumer.vertex(matrix, x2, y2, z2).color(r, g, b, a).endVertex();
-		consumer.vertex(matrix, x3, y3, z3).color(r, g, b, a).endVertex();
 	}
 
 	private static final class Entry {

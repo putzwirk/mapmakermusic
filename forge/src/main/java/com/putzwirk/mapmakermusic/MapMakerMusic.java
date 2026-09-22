@@ -5,6 +5,7 @@ import com.putzwirk.mapmakermusic.block.AreaWandHandler;
 import com.putzwirk.mapmakermusic.block.ModBlocks;
 import com.putzwirk.mapmakermusic.block.MusicBlock;
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
+import com.putzwirk.mapmakermusic.block.MusicBlockItem;
 import com.putzwirk.mapmakermusic.client.MapMakerMusicClient;
 import com.putzwirk.mapmakermusic.command.MusicCommand;
 import com.putzwirk.mapmakermusic.network.ForgeMusicRemote;
@@ -15,7 +16,6 @@ import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
-import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
@@ -49,7 +49,7 @@ public class MapMakerMusic {
 	private static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES = DeferredRegister.create(ForgeRegistries.BLOCK_ENTITY_TYPES, MOD_ID);
 
 	public static final RegistryObject<Block> MUSIC_BLOCK_OBJ = BLOCKS.register("music_block", MusicBlock::new);
-	public static final RegistryObject<Item> MUSIC_BLOCK_ITEM_OBJ = ITEMS.register("music_block", () -> new BlockItem(MUSIC_BLOCK_OBJ.get(), new Item.Properties()));
+	public static final RegistryObject<Item> MUSIC_BLOCK_ITEM_OBJ = ITEMS.register("music_block", () -> new MusicBlockItem(MUSIC_BLOCK_OBJ.get(), new Item.Properties()));
 	public static final RegistryObject<BlockEntityType<MusicBlockEntity>> MUSIC_BLOCK_ENTITY_TYPE_OBJ = BLOCK_ENTITY_TYPES.register("music_block",
 			() -> BlockEntityType.Builder.of(MusicBlockEntity::new, MUSIC_BLOCK_OBJ.get()).build(null));
 

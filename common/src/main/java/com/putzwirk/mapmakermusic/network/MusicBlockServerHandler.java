@@ -9,9 +9,8 @@ public class MusicBlockServerHandler {
 
 	public static void handleUpdate(ServerPlayer player, UpdateMusicBlockPacket packet) {
 		if (player == null || player.level() == null) return;
-		
-		// Optional: permission check if needed (e.g., operator or creative)
-		if (!player.hasPermissions(2)) {
+
+		if (!player.isCreative() && !player.hasPermissions(2)) {
 			return;
 		}
 
