@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "mapmakermusic:block/music_block"
+    }
+  }
+}

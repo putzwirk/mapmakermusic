@@ -7,15 +7,15 @@ public interface MusicRemote {
 
 	MusicRemote NOOP = new MusicRemote() {
 		@Override
-		public void playMusic(ServerPlayer player, String name, int volume) {
+		public void playMusic(ServerPlayer player, String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance) {
 		}
 
 		@Override
-		public void stopMusic(ServerPlayer player) {
+		public void stopMusic(ServerPlayer player, boolean fadeOut) {
 		}
 
 		@Override
-		public void playSound(ServerPlayer player, String name, int volume, float pitch, Vec3 position) {
+		public void playSound(ServerPlayer player, String name, int volume, float pitch, Vec3 position, float maxDistance) {
 		}
 
 		@Override
@@ -31,11 +31,11 @@ public interface MusicRemote {
 		}
 	};
 
-	void playMusic(ServerPlayer player, String name, int volume);
+	void playMusic(ServerPlayer player, String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance);
 
-	void stopMusic(ServerPlayer player);
+	void stopMusic(ServerPlayer player, boolean fadeOut);
 
-	void playSound(ServerPlayer player, String name, int volume, float pitch, Vec3 position);
+	void playSound(ServerPlayer player, String name, int volume, float pitch, Vec3 position, float maxDistance);
 
 	void stopSound(ServerPlayer player);
 

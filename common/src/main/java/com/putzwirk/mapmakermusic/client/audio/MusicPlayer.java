@@ -36,6 +36,11 @@ public final class MusicPlayer {
 	private static final String STATE_FILE = "state.properties";
 	private static final String SUFFIX_TRACK = ".track";
 	private static final String SUFFIX_VOLUME = ".volume";
+	private static final String SUFFIX_PITCH = ".pitch";
+	private static final String SUFFIX_POS_X = ".posX";
+	private static final String SUFFIX_POS_Y = ".posY";
+	private static final String SUFFIX_POS_Z = ".posZ";
+	private static final String SUFFIX_RANGE = ".range";
 	private static final String SUFFIX_POSITION = ".position";
 
 	private final Map<String, Path> musicCache = new ConcurrentHashMap<>();
@@ -50,6 +55,9 @@ public final class MusicPlayer {
 
 	private String desiredTrackKey;
 	private int desiredVolumePercent = 100;
+	private float desiredPitch = 1f;
+	private Vec3 desiredPlaybackPos = null;
+	private float desiredMaxDistance = POSITIONAL_RANGE;
 
 	private boolean isLoadingTrack = false;
 	private long activeAlContext;
@@ -63,15 +71,31 @@ public final class MusicPlayer {
 	}
 
 	public void rescanMusicFolder() {
-		this.musicCache.clear();
-		this.musicCache.putAll(MusicLibrary.scanTracks());
-		notifyPlayer("Rescanned custom music folder. Found " + this.musicCache.size() + " tracks.");
+		rescanMusicFolder(true);
 	}
 
-	public void playMusic(String rawName, int volumePercent) {
-		float volumeMultiplier = clampVolume(volumePercent);
-		String key = normalizeName(rawName);
+	private void rescanMusicFolder(boolean notify) {
+		this.musicCache.clear();
+		this.musicCache.putAll(MusicLibrary.scanTracks());
+		if (notify) {
+			notifyPlayer("Rescanned custom music folder. Found " + this.musicCache.size() + " tracks.");
+		}
+	}
+
+	private Path resolveTrack(String key) {
 		Path path = this.musicCache.get(key);
+		if (path == null || !java.nio.file.Files.isRegularFile(path)) {
+			rescanMusicFolder(false);
+			path = this.musicCache.get(key);
+		}
+		return path;
+	}
+
+	public void playMusic(String rawName, int volumePercent, float pitch, boolean enableFadeIn, boolean enableFadeOut, Vec3 position, float maxDistance) {
+		float volumeMultiplier = clampVolume(volumePercent);
+		pitch = clampPitch(pitch);
+		String key = normalizeName(rawName);
+		Path path = resolveTrack(key);
 
 		if (path == null) {
 			LOGGER.warn("Custom music not found: {}", rawName);
@@ -81,33 +105,59 @@ public final class MusicPlayer {
 
 		this.desiredTrackKey = key;
 		this.desiredVolumePercent = volumePercent;
+		this.desiredPitch = pitch;
+		this.desiredPlaybackPos = position;
+		this.desiredMaxDistance = maxDistance;
 
 		String worldId = currentWorldId();
 		if (worldId != null) {
-			this.worldStates.put(worldId, new WorldState(key, volumePercent, 0f));
+			this.worldStates.put(worldId, new WorldState(key, volumePercent, pitch, position, maxDistance, 0f));
 		}
 
 		boolean sameTrackAlreadyLive = key.equals(this.currentTrackKey) && (isPlaying(this.currentMusic) || this.isLoadingTrack);
 		if (sameTrackAlreadyLive) {
-			if (this.currentMusic != null) {
+			if (!this.isLoadingTrack && this.currentMusic != null) {
 				this.currentMusic.volumeMultiplier = volumeMultiplier;
+				this.currentMusic.pitch = pitch;
+				AL10.alSourcef(this.currentMusic.source, AL10.AL_PITCH, pitch);
+				if (this.currentMusic.position == null && position == null) {
+					return;
+				}
+				if (this.currentMusic.position != null && position != null) {
+					applyMusicEmitter(this.currentMusic.source, position, maxDistance);
+					this.currentMusic.position = position;
+					this.currentMusic.maxDistance = maxDistance;
+					return;
+				}
+			} else {
+				return;
 			}
-			return;
 		}
 
 		if (this.currentTrackKey != null && this.currentMusic != null) {
 			savePositionOf(this.currentTrackKey, this.currentMusic);
 		}
 
+		if (!enableFadeOut) {
+			if (this.previousMusic != null) {
+				forceStop(this.previousMusic);
+				this.previousMusic = null;
+			}
+			if (this.currentMusic != null) {
+				forceStop(this.currentMusic);
+				this.currentMusic = null;
+			}
+		}
+
 		this.lastPositions.remove(key);
 
-		startTrack(path, key, volumeMultiplier, 0f);
+		startTrack(path, key, volumeMultiplier, pitch, position, maxDistance, 0f, enableFadeIn, enableFadeOut);
 	}
 
-	public void playSound(String rawName, int volumePercent, float pitch, Vec3 position) {
+	public void playSound(String rawName, int volumePercent, float pitch, Vec3 position, float maxDistance) {
 		float volumeMultiplier = clampVolume(volumePercent);
 		String key = normalizeName(rawName);
-		Path path = this.musicCache.get(key);
+		Path path = resolveTrack(key);
 
 		if (path == null) {
 			LOGGER.warn("Custom sound not found: {}", rawName);
@@ -151,7 +201,7 @@ public final class MusicPlayer {
 						AL10.alSourcei(source, AL10.AL_SOURCE_RELATIVE, AL10.AL_FALSE);
 						AL10.alSource3f(source, AL10.AL_POSITION, (float) position.x, (float) position.y, (float) position.z);
 						AL10.alSourcei(source, AL10.AL_DISTANCE_MODEL, AL11.AL_LINEAR_DISTANCE);
-						AL10.alSourcef(source, AL10.AL_MAX_DISTANCE, POSITIONAL_RANGE);
+						AL10.alSourcef(source, AL10.AL_MAX_DISTANCE, Math.max(1f, maxDistance));
 						AL10.alSourcef(source, AL10.AL_ROLLOFF_FACTOR, 1f);
 						AL10.alSourcef(source, AL10.AL_REFERENCE_DISTANCE, 0f);
 					}
@@ -159,20 +209,24 @@ public final class MusicPlayer {
 					AL10.alSourcef(source, AL10.AL_GAIN, masterVolume() * volumeMultiplier);
 					AL10.alSourcePlay(source);
 
-					this.activeSounds.add(new Voice(source, buffer, false, volumeMultiplier));
+					this.activeSounds.add(new Voice(source, buffer, false, volumeMultiplier, pitch, position, maxDistance));
 				}, Minecraft.getInstance());
 	}
 
-	public void stopMusic() {
+	public void stopMusic(boolean enableFadeOut) {
 		this.isLoadingTrack = false;
 		if (this.previousMusic != null) {
 			forceStop(this.previousMusic);
 			this.previousMusic = null;
 		}
 		if (this.currentMusic != null) {
-			this.previousMusic = this.currentMusic;
-			this.previousMusic.ticksElapsed = 0;
-			this.previousMusic.fadeIn = false;
+			if (enableFadeOut) {
+				this.previousMusic = this.currentMusic;
+				this.previousMusic.ticksElapsed = 0;
+				this.previousMusic.fadeIn = false;
+			} else {
+				forceStop(this.currentMusic);
+			}
 			this.currentMusic = null;
 		}
 		if (this.currentTrackKey != null) {
@@ -186,6 +240,10 @@ public final class MusicPlayer {
 		if (worldId != null) {
 			this.worldStates.remove(worldId);
 		}
+	}
+
+	public void stopMusic() {
+		stopMusic(true);
 	}
 
 	public void stopSounds() {
@@ -209,7 +267,7 @@ public final class MusicPlayer {
 		if (worldId != null) {
 			if (this.desiredTrackKey != null) {
 				float pos = this.lastPositions.getOrDefault(this.desiredTrackKey, 0f);
-				this.worldStates.put(worldId, new WorldState(this.desiredTrackKey, this.desiredVolumePercent, pos));
+				this.worldStates.put(worldId, new WorldState(this.desiredTrackKey, this.desiredVolumePercent, this.desiredPitch, this.desiredPlaybackPos, this.desiredMaxDistance, pos));
 			} else {
 				this.worldStates.remove(worldId);
 			}
@@ -242,10 +300,15 @@ public final class MusicPlayer {
 		if (state == null) {
 			this.desiredTrackKey = null;
 			this.desiredVolumePercent = 100;
+			this.desiredPitch = 1f;
 			return;
 		}
 
 		Path path = this.musicCache.get(state.trackKey);
+		if (path == null) {
+			rescanMusicFolder(false);
+			path = this.musicCache.get(state.trackKey);
+		}
 		if (path == null) {
 			this.worldStates.remove(worldId);
 			this.desiredTrackKey = null;
@@ -254,10 +317,13 @@ public final class MusicPlayer {
 
 		this.desiredTrackKey = state.trackKey;
 		this.desiredVolumePercent = state.volumePercent;
+		this.desiredPitch = state.pitch;
+		this.desiredPlaybackPos = state.playbackPos;
+		this.desiredMaxDistance = state.maxDistance;
 		this.lastPositions.put(state.trackKey, state.position);
 
 		float volumeMultiplier = clampVolume(state.volumePercent);
-		startTrack(path, state.trackKey, volumeMultiplier, state.position);
+		startTrack(path, state.trackKey, volumeMultiplier, state.pitch, state.playbackPos, state.maxDistance, state.position, true, true);
 	}
 
 	public void onResourceReload() {
@@ -329,7 +395,7 @@ public final class MusicPlayer {
 		}
 		if (this.lastKnownWorldId != null && this.desiredTrackKey != null) {
 			float pos = this.lastPositions.getOrDefault(this.desiredTrackKey, 0f);
-			this.worldStates.put(this.lastKnownWorldId, new WorldState(this.desiredTrackKey, this.desiredVolumePercent, pos));
+			this.worldStates.put(this.lastKnownWorldId, new WorldState(this.desiredTrackKey, this.desiredVolumePercent, this.desiredPitch, this.desiredPlaybackPos, this.desiredMaxDistance, pos));
 		}
 		saveStateToDisk();
 		stopAll();
@@ -354,35 +420,48 @@ public final class MusicPlayer {
 		String key = this.currentTrackKey;
 		Path path = this.currentMusicPath;
 		float volume = this.currentMusic.volumeMultiplier;
+		float pitch = this.currentMusic.pitch;
+		Vec3 position = this.currentMusic.position;
+		float maxDistance = this.currentMusic.maxDistance;
 		float offset = this.lastPositions.getOrDefault(key, 0f);
 
 		Voice interrupted = this.currentMusic;
 		this.currentMusic = null;
 		forceStop(interrupted);
 
-		startTrack(path, key, volume, offset);
+		startTrack(path, key, volume, pitch, position, maxDistance, offset, true, true);
 	}
 
-	private void startTrack(Path path, String key, float volumeMultiplier, float resumeOffsetSeconds) {
+	private void startTrack(Path path, String key, float volumeMultiplier, float pitch, float resumeOffsetSeconds) {
+		startTrack(path, key, volumeMultiplier, pitch, null, POSITIONAL_RANGE, resumeOffsetSeconds, true, true);
+	}
+
+	private void startTrack(Path path, String key, float volumeMultiplier, float pitch, Vec3 position, float maxDistance, float resumeOffsetSeconds, boolean enableFadeIn, boolean enableFadeOut) {
 		this.isLoadingTrack = true;
 		this.currentTrackKey = key;
 		this.currentMusicPath = path;
 
 		CompletableFuture.supplyAsync(() -> decodeOrNull(path))
-				.thenAcceptAsync(data -> {
-					if (data == null || !key.equals(this.desiredTrackKey)) {
+				.thenAcceptAsync(decoded -> {
+					if (decoded == null || !key.equals(this.desiredTrackKey)) {
 						this.isLoadingTrack = false;
 						return;
 					}
+
+					OggDecoder.OggData data = position == null ? decoded : decoded.asMono();
 
 					if (this.previousMusic != null) {
 						forceStop(this.previousMusic);
 						this.previousMusic = null;
 					}
 					if (this.currentMusic != null) {
-						this.previousMusic = this.currentMusic;
-						this.previousMusic.ticksElapsed = 0;
-						this.previousMusic.fadeIn = false;
+						if (enableFadeOut) {
+							this.previousMusic = this.currentMusic;
+							this.previousMusic.ticksElapsed = 0;
+							this.previousMusic.fadeIn = false;
+						} else {
+							forceStop(this.currentMusic);
+						}
 						this.currentMusic = null;
 					}
 
@@ -391,11 +470,13 @@ public final class MusicPlayer {
 
 					int source = AL10.alGenSources();
 					AL10.alSourcei(source, AL10.AL_LOOPING, AL10.AL_TRUE);
-					AL10.alSource3f(source, AL10.AL_POSITION, 0f, 0f, 0f);
+					AL10.alSourcef(source, AL10.AL_PITCH, pitch);
 					AL10.alSource3f(source, AL10.AL_VELOCITY, 0f, 0f, 0f);
+					applyMusicEmitter(source, position, maxDistance);
 					AL10.alSourcei(source, AL10.AL_BUFFER, buffer);
 
-					AL10.alSourcef(source, AL10.AL_GAIN, 0f);
+					float initialGain = enableFadeIn ? 0f : masterVolume() * volumeMultiplier;
+					AL10.alSourcef(source, AL10.AL_GAIN, initialGain);
 					AL10.alSourcePlay(source);
 
 					float duration = trackDurationSeconds(data);
@@ -406,9 +487,24 @@ public final class MusicPlayer {
 						AL11.alSourcef(source, AL11.AL_SEC_OFFSET, safeOffset);
 					}
 
-					this.currentMusic = new Voice(source, buffer, true, volumeMultiplier);
-					this.isLoadingTrack = false;
+				this.currentMusic = new Voice(source, buffer, enableFadeIn, volumeMultiplier, pitch, position, maxDistance);
+				this.isLoadingTrack = false;
 				}, Minecraft.getInstance());
+	}
+
+	private void applyMusicEmitter(int source, Vec3 position, float maxDistance) {
+		if (position == null) {
+			AL10.alSourcei(source, AL10.AL_SOURCE_RELATIVE, AL10.AL_TRUE);
+			AL10.alSource3f(source, AL10.AL_POSITION, 0f, 0f, 0f);
+			AL10.alSourcei(source, AL10.AL_DISTANCE_MODEL, AL10.AL_NONE);
+		} else {
+			AL10.alSourcei(source, AL10.AL_SOURCE_RELATIVE, AL10.AL_FALSE);
+			AL10.alSource3f(source, AL10.AL_POSITION, (float) position.x, (float) position.y, (float) position.z);
+			AL10.alSourcei(source, AL10.AL_DISTANCE_MODEL, AL11.AL_LINEAR_DISTANCE);
+			AL10.alSourcef(source, AL10.AL_MAX_DISTANCE, Math.max(1f, maxDistance));
+			AL10.alSourcef(source, AL10.AL_ROLLOFF_FACTOR, 1f);
+			AL10.alSourcef(source, AL10.AL_REFERENCE_DISTANCE, 0f);
+		}
 	}
 
 	private OggDecoder.OggData decodeOrNull(Path path) {
@@ -438,6 +534,13 @@ public final class MusicPlayer {
 			WorldState state = entry.getValue();
 			props.setProperty(worldId + SUFFIX_TRACK, state.trackKey);
 			props.setProperty(worldId + SUFFIX_VOLUME, String.valueOf(state.volumePercent));
+			props.setProperty(worldId + SUFFIX_PITCH, String.format(Locale.ROOT, "%.3f", state.pitch));
+			if (state.playbackPos != null) {
+				props.setProperty(worldId + SUFFIX_POS_X, String.format(Locale.ROOT, "%.3f", state.playbackPos.x));
+				props.setProperty(worldId + SUFFIX_POS_Y, String.format(Locale.ROOT, "%.3f", state.playbackPos.y));
+				props.setProperty(worldId + SUFFIX_POS_Z, String.format(Locale.ROOT, "%.3f", state.playbackPos.z));
+			}
+			props.setProperty(worldId + SUFFIX_RANGE, String.format(Locale.ROOT, "%.3f", state.maxDistance));
 			props.setProperty(worldId + SUFFIX_POSITION, String.format(Locale.ROOT, "%.3f", state.position));
 		}
 		try (Writer writer = Files.newBufferedWriter(file)) {
@@ -462,12 +565,27 @@ public final class MusicPlayer {
 
 		Map<String, String> tracks = new HashMap<>();
 		Map<String, String> volumes = new HashMap<>();
+		Map<String, String> pitches = new HashMap<>();
+		Map<String, String> posX = new HashMap<>();
+		Map<String, String> posY = new HashMap<>();
+		Map<String, String> posZ = new HashMap<>();
+		Map<String, String> ranges = new HashMap<>();
 		Map<String, String> positions = new HashMap<>();
 		for (String name : props.stringPropertyNames()) {
 			if (name.endsWith(SUFFIX_TRACK)) {
 				tracks.put(name.substring(0, name.length() - SUFFIX_TRACK.length()), props.getProperty(name));
 			} else if (name.endsWith(SUFFIX_VOLUME)) {
 				volumes.put(name.substring(0, name.length() - SUFFIX_VOLUME.length()), props.getProperty(name));
+			} else if (name.endsWith(SUFFIX_PITCH)) {
+				pitches.put(name.substring(0, name.length() - SUFFIX_PITCH.length()), props.getProperty(name));
+			} else if (name.endsWith(SUFFIX_POS_X)) {
+				posX.put(name.substring(0, name.length() - SUFFIX_POS_X.length()), props.getProperty(name));
+			} else if (name.endsWith(SUFFIX_POS_Y)) {
+				posY.put(name.substring(0, name.length() - SUFFIX_POS_Y.length()), props.getProperty(name));
+			} else if (name.endsWith(SUFFIX_POS_Z)) {
+				posZ.put(name.substring(0, name.length() - SUFFIX_POS_Z.length()), props.getProperty(name));
+			} else if (name.endsWith(SUFFIX_RANGE)) {
+				ranges.put(name.substring(0, name.length() - SUFFIX_RANGE.length()), props.getProperty(name));
 			} else if (name.endsWith(SUFFIX_POSITION)) {
 				positions.put(name.substring(0, name.length() - SUFFIX_POSITION.length()), props.getProperty(name));
 			}
@@ -480,12 +598,48 @@ public final class MusicPlayer {
 				continue;
 			}
 			int volume = Math.max(0, Math.min(100, parseInt(volumes.get(worldId), 100)));
+			float pitch = parsePitch(pitches.get(worldId), 1f);
+			Vec3 playbackPos = parsePlaybackPos(posX.get(worldId), posY.get(worldId), posZ.get(worldId));
+			float maxDistance = parseMaxDistance(ranges.get(worldId), POSITIONAL_RANGE);
 			float position = 0f;
 			try {
 				position = Math.max(0f, Float.parseFloat(positions.getOrDefault(worldId, "0")));
 			} catch (NumberFormatException ignored) {
 			}
-			this.worldStates.put(worldId, new WorldState(track, volume, position));
+			this.worldStates.put(worldId, new WorldState(track, volume, pitch, playbackPos, maxDistance, position));
+		}
+	}
+
+	private Vec3 parsePlaybackPos(String x, String y, String z) {
+		if (x == null || y == null || z == null) {
+			return null;
+		}
+		try {
+			return new Vec3(Double.parseDouble(x), Double.parseDouble(y), Double.parseDouble(z));
+		} catch (NumberFormatException e) {
+			return null;
+		}
+	}
+
+	private float parseMaxDistance(String value, float fallback) {
+		if (value == null) {
+			return fallback;
+		}
+		try {
+			return Math.max(1f, Float.parseFloat(value));
+		} catch (NumberFormatException e) {
+			return fallback;
+		}
+	}
+
+	private float parsePitch(String value, float fallback) {
+		if (value == null) {
+			return fallback;
+		}
+		try {
+			return clampPitch(Float.parseFloat(value));
+		} catch (NumberFormatException e) {
+			return fallback;
 		}
 	}
 
@@ -541,6 +695,10 @@ public final class MusicPlayer {
 		return Math.max(0f, Math.min(100f, volumePercent)) / 100f;
 	}
 
+	private float clampPitch(float pitch) {
+		return Math.max(0.1f, Math.min(4f, pitch));
+	}
+
 	private String normalizeName(String rawName) {
 		String wanted = rawName.trim();
 		if (wanted.toLowerCase(Locale.ROOT).endsWith(".ogg")) {
@@ -553,26 +711,38 @@ public final class MusicPlayer {
 		final int source;
 		final int buffer;
 		float volumeMultiplier;
+		float pitch;
+		Vec3 position;
+		float maxDistance;
 		int ticksElapsed;
 		boolean fadeIn;
 
-		Voice(int source, int buffer, boolean fadeIn, float volumeMultiplier) {
+		Voice(int source, int buffer, boolean fadeIn, float volumeMultiplier, float pitch, Vec3 position, float maxDistance) {
 			this.source = source;
 			this.buffer = buffer;
 			this.ticksElapsed = 0;
 			this.fadeIn = fadeIn;
 			this.volumeMultiplier = volumeMultiplier;
+			this.pitch = pitch;
+			this.position = position;
+			this.maxDistance = maxDistance;
 		}
 	}
 
 	private static final class WorldState {
 		final String trackKey;
 		final int volumePercent;
+		final float pitch;
+		final Vec3 playbackPos;
+		final float maxDistance;
 		final float position;
 
-		WorldState(String trackKey, int volumePercent, float position) {
+		WorldState(String trackKey, int volumePercent, float pitch, Vec3 playbackPos, float maxDistance, float position) {
 			this.trackKey = trackKey;
 			this.volumePercent = volumePercent;
+			this.pitch = pitch;
+			this.playbackPos = playbackPos;
+			this.maxDistance = maxDistance;
 			this.position = position;
 		}
 	}

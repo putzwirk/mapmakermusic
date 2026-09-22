@@ -34,9 +34,15 @@ public final class MusicCommand {
 						.then(Commands.argument("targets", EntityArgument.players())
 								.then(Commands.argument("name", StringArgumentType.word())
 										.suggests(TRACK_SUGGESTIONS)
-										.executes(ctx -> executePlayMusic(ctx, 100))
+										.executes(ctx -> executePlayMusic(ctx, 100, 1f, null, 16f))
 										.then(Commands.argument("volume", IntegerArgumentType.integer(0, 100))
-												.executes(ctx -> executePlayMusic(ctx, IntegerArgumentType.getInteger(ctx, "volume")))))))
+												.executes(ctx -> executePlayMusic(ctx, IntegerArgumentType.getInteger(ctx, "volume"), 1f, null, 16f))
+												.then(Commands.argument("pitch", FloatArgumentType.floatArg(0.1f, 4f))
+														.executes(ctx -> executePlayMusic(ctx, IntegerArgumentType.getInteger(ctx, "volume"), FloatArgumentType.getFloat(ctx, "pitch"), null, 16f))
+														.then(Commands.argument("pos", Vec3Argument.vec3())
+																.executes(ctx -> executePlayMusic(ctx, IntegerArgumentType.getInteger(ctx, "volume"), FloatArgumentType.getFloat(ctx, "pitch"), Vec3Argument.getVec3(ctx, "pos"), 16f))
+																.then(Commands.argument("range", IntegerArgumentType.integer(1, 64))
+																		.executes(ctx -> executePlayMusic(ctx, IntegerArgumentType.getInteger(ctx, "volume"), FloatArgumentType.getFloat(ctx, "pitch"), Vec3Argument.getVec3(ctx, "pos"), IntegerArgumentType.getInteger(ctx, "range"))))))))))
 				.then(Commands.literal("stopmusic")
 						.then(Commands.argument("targets", EntityArgument.players())
 								.executes(MusicCommand::executeStopMusic)))
@@ -44,13 +50,15 @@ public final class MusicCommand {
 						.then(Commands.argument("targets", EntityArgument.players())
 								.then(Commands.argument("name", StringArgumentType.word())
 										.suggests(TRACK_SUGGESTIONS)
-										.executes(ctx -> executePlaySound(ctx, 100, 1f, null))
+										.executes(ctx -> executePlaySound(ctx, 100, 1f, null, 16f))
 										.then(Commands.argument("volume", IntegerArgumentType.integer(0, 100))
-												.executes(ctx -> executePlaySound(ctx, IntegerArgumentType.getInteger(ctx, "volume"), 1f, null))
+												.executes(ctx -> executePlaySound(ctx, IntegerArgumentType.getInteger(ctx, "volume"), 1f, null, 16f))
 												.then(Commands.argument("pitch", FloatArgumentType.floatArg(0.5f, 2f))
-														.executes(ctx -> executePlaySound(ctx, IntegerArgumentType.getInteger(ctx, "volume"), FloatArgumentType.getFloat(ctx, "pitch"), null))
+														.executes(ctx -> executePlaySound(ctx, IntegerArgumentType.getInteger(ctx, "volume"), FloatArgumentType.getFloat(ctx, "pitch"), null, 16f))
 														.then(Commands.argument("pos", Vec3Argument.vec3())
-																.executes(ctx -> executePlaySound(ctx, IntegerArgumentType.getInteger(ctx, "volume"), FloatArgumentType.getFloat(ctx, "pitch"), Vec3Argument.getVec3(ctx, "pos")))))))))
+																.executes(ctx -> executePlaySound(ctx, IntegerArgumentType.getInteger(ctx, "volume"), FloatArgumentType.getFloat(ctx, "pitch"), Vec3Argument.getVec3(ctx, "pos"), 16f))
+																.then(Commands.argument("range", IntegerArgumentType.integer(1, 256))
+																		.executes(ctx -> executePlaySound(ctx, IntegerArgumentType.getInteger(ctx, "volume"), FloatArgumentType.getFloat(ctx, "pitch"), Vec3Argument.getVec3(ctx, "pos"), IntegerArgumentType.getInteger(ctx, "range"))))))))))
 				.then(Commands.literal("stopsound")
 						.then(Commands.argument("targets", EntityArgument.players())
 								.executes(MusicCommand::executeStopSound)))
@@ -61,16 +69,19 @@ public final class MusicCommand {
 						.executes(MusicCommand::executeReload)));
 	}
 
-	private static int executePlayMusic(CommandContext<CommandSourceStack> ctx, int volume) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+	private static int executePlayMusic(CommandContext<CommandSourceStack> ctx, int volume, float pitch, Vec3 position, float maxDistance) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
 		String name = StringArgumentType.getString(ctx, "name");
 		Collection<ServerPlayer> targets = EntityArgument.getPlayers(ctx, "targets");
 		CommandSourceStack source = ctx.getSource();
 
 		for (ServerPlayer player : targets) {
-			MusicRemotes.getRemote().playMusic(player, name, volume);
+			MusicRemotes.getRemote().playMusic(player, name, volume, pitch, true, true, position, maxDistance);
 		}
 
-		source.sendSuccess(() -> Component.literal("Playing custom music '" + name + "' (Volume: " + volume + "%) for " + describeTargets(targets)), true);
+		String where = position == null
+				? "global"
+				: "at " + position.x + " " + position.y + " " + position.z + " (range " + maxDistance + ")";
+		source.sendSuccess(() -> Component.literal("Playing custom music '" + name + "' (Volume: " + volume + "%, Pitch: " + pitch + ", " + where + ") for " + describeTargets(targets)), true);
 		return targets.size();
 	}
 
@@ -79,25 +90,25 @@ public final class MusicCommand {
 		CommandSourceStack source = ctx.getSource();
 
 		for (ServerPlayer player : targets) {
-			MusicRemotes.getRemote().stopMusic(player);
+			MusicRemotes.getRemote().stopMusic(player, true);
 		}
 
 		source.sendSuccess(() -> Component.literal("Stopped custom music for " + describeTargets(targets)), true);
 		return targets.size();
 	}
 
-	private static int executePlaySound(CommandContext<CommandSourceStack> ctx, int volume, float pitch, Vec3 position) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
+	private static int executePlaySound(CommandContext<CommandSourceStack> ctx, int volume, float pitch, Vec3 position, float maxDistance) throws com.mojang.brigadier.exceptions.CommandSyntaxException {
 		String name = StringArgumentType.getString(ctx, "name");
 		Collection<ServerPlayer> targets = EntityArgument.getPlayers(ctx, "targets");
 		CommandSourceStack source = ctx.getSource();
 
 		for (ServerPlayer player : targets) {
-			MusicRemotes.getRemote().playSound(player, name, volume, pitch, position);
+			MusicRemotes.getRemote().playSound(player, name, volume, pitch, position, maxDistance);
 		}
 
 		String where = position == null
 				? "global"
-				: "at " + position.x + " " + position.y + " " + position.z;
+				: "at " + position.x + " " + position.y + " " + position.z + " (range " + maxDistance + ")";
 		source.sendSuccess(() -> Component.literal("Playing custom sound '" + name + "' (Volume: " + volume + "%, Pitch: " + pitch + ", " + where + ") for " + describeTargets(targets)), true);
 		return targets.size();
 	}

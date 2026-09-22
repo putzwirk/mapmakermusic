@@ -1,15 +1,21 @@
 package com.putzwirk.mapmakermusic.client;
 
-import com.putzwirk.mapmakermusic.MapMakerMusic;
+import com.putzwirk.mapmakermusic.block.MusicBlock;
 import com.putzwirk.mapmakermusic.client.audio.MusicPlayer;
+import com.putzwirk.mapmakermusic.client.gui.MusicBlockScreen;
+import com.putzwirk.mapmakermusic.client.render.AreaBoxRenderer;
+import com.putzwirk.mapmakermusic.network.MusicNetworking;
+import com.putzwirk.mapmakermusic.network.UpdateMusicBlockPacket;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
 import net.minecraftforge.client.event.RegisterClientReloadListenersEvent;
+import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraft.world.phys.Vec3;
 
 public final class MapMakerMusicClient {
 	private static final MusicPlayer MUSIC_PLAYER = new MusicPlayer();
@@ -20,24 +26,35 @@ public final class MapMakerMusicClient {
 	public static void init() {
 		MUSIC_PLAYER.init();
 		MinecraftForge.EVENT_BUS.register(new MapMakerMusicClient());
-	}
 
-	public static void onPlayMusic(String name, int volume) {
-		Minecraft.getInstance().execute(() -> {
-			stopVanillaMusic();
-			MUSIC_PLAYER.playMusic(name, volume);
+		MusicBlock.setScreenOpener((player, blockEntity) -> {
+			Minecraft.getInstance().execute(() -> {
+				Minecraft.getInstance().setScreen(new MusicBlockScreen(blockEntity));
+			});
+		});
+
+		MusicBlockScreen.setPacketSender((pos, activationType, audioType, pos1, pos2, audioTrack, volume, pitch, loop, persistent, fadeIn, fadeOut, playbackMode, listenerSelector, playbackPos, radius) -> {
+			UpdateMusicBlockPacket packet = new UpdateMusicBlockPacket(pos, activationType, audioType, pos1, pos2, audioTrack, volume, pitch, loop, persistent, fadeIn, fadeOut, playbackMode, listenerSelector, playbackPos, radius);
+			MusicNetworking.sendToServer(new MusicNetworking.ForgeUpdateMusicBlockPacket(packet));
 		});
 	}
 
-	public static void onStopMusic() {
+	public static void onPlayMusic(String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance) {
 		Minecraft.getInstance().execute(() -> {
 			stopVanillaMusic();
-			MUSIC_PLAYER.stopMusic();
+			MUSIC_PLAYER.playMusic(name, volume, pitch, fadeIn, fadeOut, position, maxDistance);
 		});
 	}
 
-	public static void onPlaySound(String name, int volume, float pitch, Vec3 position) {
-		Minecraft.getInstance().execute(() -> MUSIC_PLAYER.playSound(name, volume, pitch, position));
+	public static void onStopMusic(boolean fadeOut) {
+		Minecraft.getInstance().execute(() -> {
+			stopVanillaMusic();
+			MUSIC_PLAYER.stopMusic(fadeOut);
+		});
+	}
+
+	public static void onPlaySound(String name, int volume, float pitch, Vec3 position, float maxDistance) {
+		Minecraft.getInstance().execute(() -> MUSIC_PLAYER.playSound(name, volume, pitch, position, maxDistance));
 	}
 
 	public static void onStopSound() {
@@ -53,6 +70,22 @@ public final class MapMakerMusicClient {
 
 	public static void onReload() {
 		Minecraft.getInstance().execute(MUSIC_PLAYER::rescanMusicFolder);
+	}
+
+	public static void onWandSelection(BlockPos pos) {
+		Minecraft.getInstance().execute(() -> AreaBoxRenderer.setWandSelection(pos));
+	}
+
+	@SubscribeEvent
+	public void onRenderLevelStage(RenderLevelStageEvent event) {
+		if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
+			return;
+		}
+		Minecraft client = Minecraft.getInstance();
+		if (client.level == null || client.player == null) {
+			return;
+		}
+		AreaBoxRenderer.render(event.getPoseStack(), event.getCamera().getPosition(), client.renderBuffers().bufferSource());
 	}
 
 	@SubscribeEvent
