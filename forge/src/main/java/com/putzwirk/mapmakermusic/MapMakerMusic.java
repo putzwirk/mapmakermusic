@@ -6,8 +6,10 @@ import com.putzwirk.mapmakermusic.block.ModBlocks;
 import com.putzwirk.mapmakermusic.block.MusicBlock;
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.block.MusicBlockItem;
+import com.putzwirk.mapmakermusic.block.MusicBlockTicker;
 import com.putzwirk.mapmakermusic.client.MapMakerMusicClient;
 import com.putzwirk.mapmakermusic.command.MusicCommand;
+import com.putzwirk.mapmakermusic.library.MusicLibrary;
 import com.putzwirk.mapmakermusic.network.ForgeMusicRemote;
 import com.putzwirk.mapmakermusic.network.MusicNetworking;
 import com.putzwirk.mapmakermusic.network.MusicRemotes;
@@ -119,9 +121,17 @@ public class MapMakerMusic {
 	}
 
 	@SubscribeEvent
+	public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
+		if (event.getEntity() instanceof ServerPlayer player) {
+			MusicRemotes.getRemote().syncLibrary(player, MusicLibrary.scanTrackSizes());
+		}
+	}
+
+	@SubscribeEvent
 	public void onPlayerLogout(PlayerEvent.PlayerLoggedOutEvent event) {
 		if (event.getEntity() instanceof ServerPlayer player) {
 			AreaWandHandler.forgetPlayer(player.getUUID());
+			MusicBlockTicker.forgetPlayer(player.getUUID());
 		}
 	}
 

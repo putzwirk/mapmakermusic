@@ -1,13 +1,22 @@
 package com.putzwirk.mapmakermusic.client;
 
-import com.putzwirk.mapmakermusic.block.MusicBlock;
+import com.putzwirk.mapmakermusic.Constants;
+import com.putzwirk.mapmakermusic.block.ModBlocks;
+import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.client.audio.MusicPlayer;
 import com.putzwirk.mapmakermusic.client.gui.MusicBlockScreen;
 import com.putzwirk.mapmakermusic.client.render.AreaBoxRenderer;
+import com.putzwirk.mapmakermusic.library.MusicLibrary;
 import com.putzwirk.mapmakermusic.network.MusicNetworking;
 import com.putzwirk.mapmakermusic.network.UpdateMusicBlockPacket;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
 import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.client.event.ClientPlayerNetworkEvent;
@@ -19,19 +28,15 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 
 public final class MapMakerMusicClient {
 	private static final MusicPlayer MUSIC_PLAYER = new MusicPlayer();
+	private static final Map<String, ByteArrayOutputStream> PENDING_DOWNLOADS = new ConcurrentHashMap<>();
 
 	private MapMakerMusicClient() {
 	}
 
 	public static void init() {
 		MUSIC_PLAYER.init();
+		MusicPlayer.setTrackRequester(name -> MusicNetworking.sendToServer(new MusicNetworking.TrackRequestPacket(name)));
 		MinecraftForge.EVENT_BUS.register(new MapMakerMusicClient());
-
-		MusicBlock.setScreenOpener((player, blockEntity) -> {
-			Minecraft.getInstance().execute(() -> {
-				Minecraft.getInstance().setScreen(new MusicBlockScreen(blockEntity));
-			});
-		});
 
 		MusicBlockScreen.setPacketSender((pos, activationType, audioType, pos1, pos2, audioTrack, volume, pitch, loop, persistent, fadeIn, fadeOut, playbackMode, listenerSelector, playbackPos, radius) -> {
 			UpdateMusicBlockPacket packet = new UpdateMusicBlockPacket(pos, activationType, audioType, pos1, pos2, audioTrack, volume, pitch, loop, persistent, fadeIn, fadeOut, playbackMode, listenerSelector, playbackPos, radius);
@@ -39,10 +44,10 @@ public final class MapMakerMusicClient {
 		});
 	}
 
-	public static void onPlayMusic(String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance) {
+	public static void onPlayMusic(String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance, boolean restart) {
 		Minecraft.getInstance().execute(() -> {
 			stopVanillaMusic();
-			MUSIC_PLAYER.playMusic(name, volume, pitch, fadeIn, fadeOut, position, maxDistance);
+			MUSIC_PLAYER.playMusic(name, volume, pitch, fadeIn, fadeOut, position, maxDistance, restart);
 		});
 	}
 
@@ -76,6 +81,47 @@ public final class MapMakerMusicClient {
 		Minecraft.getInstance().execute(() -> AreaBoxRenderer.setWandSelection(pos));
 	}
 
+	public static void onLibrarySync(Map<String, Long> tracks) {
+		MusicLibrary.setServerTracks(tracks);
+	}
+
+	public static void onTrackData(String name, int totalLength, byte[] data, boolean last) {
+		ByteArrayOutputStream out = PENDING_DOWNLOADS.computeIfAbsent(name, k -> new ByteArrayOutputStream(Math.max(0, totalLength)));
+		out.write(data, 0, data.length);
+		if (last) {
+			PENDING_DOWNLOADS.remove(name);
+			writeTrackFile(name, out.toByteArray());
+			MUSIC_PLAYER.onTrackDownloaded(name);
+		}
+	}
+
+	private static void writeTrackFile(String name, byte[] data) {
+		try {
+			Files.write(MusicLibrary.getMusicDir().resolve(name + ".ogg"), data);
+		} catch (IOException e) {
+			Constants.LOG.warn("Failed to save downloaded track {}: {}", name, e.getMessage());
+		}
+	}
+
+	public static void onOpenMusicScreen(BlockPos pos, CompoundTag tag) {
+		Minecraft.getInstance().execute(() -> {
+			Minecraft client = Minecraft.getInstance();
+			if (client.level == null) {
+				return;
+			}
+			MusicBlockEntity musicBe;
+			if (client.level.getBlockEntity(pos) instanceof MusicBlockEntity existing) {
+				musicBe = existing;
+			} else {
+				musicBe = new MusicBlockEntity(pos, ModBlocks.MUSIC_BLOCK.get().defaultBlockState());
+			}
+			if (tag != null) {
+				musicBe.load(tag);
+			}
+			client.setScreen(new MusicBlockScreen(musicBe));
+		});
+	}
+
 	@SubscribeEvent
 	public void onRenderLevelStage(RenderLevelStageEvent event) {
 		if (event.getStage() != RenderLevelStageEvent.Stage.AFTER_TRANSLUCENT_BLOCKS) {
@@ -98,6 +144,8 @@ public final class MapMakerMusicClient {
 	@SubscribeEvent
 	public void onClientLogout(ClientPlayerNetworkEvent.LoggingOut event) {
 		MUSIC_PLAYER.pauseForSessionEnd();
+		MusicLibrary.setServerTracks(null);
+		PENDING_DOWNLOADS.clear();
 	}
 
 	@SubscribeEvent

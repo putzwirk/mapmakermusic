@@ -5,11 +5,14 @@ import com.putzwirk.mapmakermusic.block.ModBlocks;
 import com.putzwirk.mapmakermusic.block.MusicBlock;
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.block.MusicBlockItem;
+import com.putzwirk.mapmakermusic.block.MusicBlockTicker;
 import com.putzwirk.mapmakermusic.command.MusicCommand;
+import com.putzwirk.mapmakermusic.library.MusicLibrary;
 import com.putzwirk.mapmakermusic.network.FabricMusicRemote;
 import com.putzwirk.mapmakermusic.network.MusicBlockServerHandler;
 import com.putzwirk.mapmakermusic.network.MusicNetworking;
 import com.putzwirk.mapmakermusic.network.MusicRemotes;
+import com.putzwirk.mapmakermusic.network.TrackTransfer;
 import com.putzwirk.mapmakermusic.network.UpdateMusicBlockPacket;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -102,10 +105,19 @@ public class MapMakerMusic implements ModInitializer {
 				AreaWandHandler.tickPlayerSelection(player);
 			}
 		});
-		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> AreaWandHandler.forgetPlayer(handler.getPlayer().getUUID()));
+		ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
+			AreaWandHandler.forgetPlayer(handler.getPlayer().getUUID());
+			MusicBlockTicker.forgetPlayer(handler.getPlayer().getUUID());
+		});
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
+				MusicRemotes.getRemote().syncLibrary(handler.getPlayer(), MusicLibrary.scanTrackSizes()));
 		ServerPlayNetworking.registerGlobalReceiver(MusicNetworking.WAND_PUNCH_BLOCK, (server, player, handler, buf, responseSender) -> {
 			BlockPos pos = buf.readBlockPos();
 			server.execute(() -> AreaWandHandler.handleWandPunch(player, pos));
+		});
+		ServerPlayNetworking.registerGlobalReceiver(MusicNetworking.TRACK_REQUEST, (server, player, handler, buf, responseSender) -> {
+			String name = buf.readUtf();
+			server.execute(() -> TrackTransfer.sendTrack(player, name));
 		});
 		LOGGER.info("MapMakerMusic initialized");
 	}

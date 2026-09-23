@@ -10,10 +10,6 @@ public class MusicBlockServerHandler {
 	public static void handleUpdate(ServerPlayer player, UpdateMusicBlockPacket packet) {
 		if (player == null || player.level() == null) return;
 
-		if (!player.isCreative() && !player.hasPermissions(2)) {
-			return;
-		}
-
 		BlockEntity be = player.level().getBlockEntity(packet.pos);
 		if (be instanceof MusicBlockEntity musicBe) {
 			musicBe.setActivationType(packet.activationType == 1 ? MusicBlockEntity.ActivationType.AREA : MusicBlockEntity.ActivationType.REDSTONE);

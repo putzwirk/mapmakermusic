@@ -17,6 +17,8 @@ import org.slf4j.LoggerFactory;
 public final class MusicLibrary {
 	private static final Logger LOGGER = LoggerFactory.getLogger("MapMakerMusic Library");
 
+	private static volatile Map<String, Long> serverManifest = null;
+
 	private MusicLibrary() {
 	}
 
@@ -28,6 +30,34 @@ public final class MusicLibrary {
 			LOGGER.warn("Failed to create music folder: {}", e.getMessage());
 		}
 		return dir;
+	}
+
+	public static void setServerTracks(Map<String, Long> manifest) {
+		serverManifest = manifest == null ? null : Collections.unmodifiableMap(new LinkedHashMap<>(manifest));
+	}
+
+	public static boolean hasServerTrack(String key) {
+		Map<String, Long> manifest = serverManifest;
+		return manifest != null && manifest.containsKey(key);
+	}
+
+	public static Long serverTrackSize(String key) {
+		Map<String, Long> manifest = serverManifest;
+		return manifest == null ? null : manifest.get(key);
+	}
+
+	public static Map<String, Long> scanTrackSizes() {
+		Map<String, Long> sizes = new LinkedHashMap<>();
+		for (Map.Entry<String, Path> entry : scanTracks().entrySet()) {
+			long size = 0L;
+			try {
+				size = Files.size(entry.getValue());
+			} catch (IOException e) {
+				LOGGER.warn("Failed to read size of {}: {}", entry.getValue(), e.getMessage());
+			}
+			sizes.put(entry.getKey(), size);
+		}
+		return sizes;
 	}
 
 	public static Map<String, Path> scanTracks() {
@@ -64,6 +94,10 @@ public final class MusicLibrary {
 	}
 
 	public static List<String> scanTrackNames() {
+		Map<String, Long> manifest = serverManifest;
+		if (manifest != null) {
+			return Collections.unmodifiableList(new ArrayList<>(manifest.keySet()));
+		}
 		return Collections.unmodifiableList(new ArrayList<>(scanTracks().keySet()));
 	}
 }

@@ -1,5 +1,6 @@
 package com.putzwirk.mapmakermusic.block;
 
+import com.putzwirk.mapmakermusic.network.MusicRemotes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
@@ -20,16 +21,6 @@ import javax.annotation.Nullable;
 
 public class MusicBlock extends Block implements EntityBlock {
 
-	public interface ScreenOpener {
-		void openMusicBlockScreen(ServerPlayer player, MusicBlockEntity blockEntity);
-	}
-
-	private static ScreenOpener screenOpener;
-
-	public static void setScreenOpener(ScreenOpener opener) {
-		screenOpener = opener;
-	}
-
 	public MusicBlock() {
 		super(BlockBehaviour.Properties.of()
 				.mapColor(MapColor.WOOD)
@@ -44,9 +35,7 @@ public class MusicBlock extends Block implements EntityBlock {
 	}
 
 	public static void openConfigScreen(ServerPlayer player, MusicBlockEntity blockEntity) {
-		if (screenOpener != null) {
-			screenOpener.openMusicBlockScreen(player, blockEntity);
-		}
+		MusicRemotes.getRemote().openMusicScreen(player, blockEntity.getBlockPos(), blockEntity.getUpdateTag());
 	}
 
 	@Override
@@ -54,11 +43,7 @@ public class MusicBlock extends Block implements EntityBlock {
 		if (!level.isClientSide) {
 			BlockEntity be = level.getBlockEntity(pos);
 			if (be instanceof MusicBlockEntity musicBe && player instanceof ServerPlayer serverPlayer) {
-				if (serverPlayer.isCreative() || serverPlayer.hasPermissions(2)) {
-					openConfigScreen(serverPlayer, musicBe);
-				} else {
-					return InteractionResult.PASS;
-				}
+				openConfigScreen(serverPlayer, musicBe);
 			}
 		}
 		return InteractionResult.sidedSuccess(level.isClientSide);
@@ -73,7 +58,6 @@ public class MusicBlock extends Block implements EntityBlock {
 				if (musicBe.getActivationType() == MusicBlockEntity.ActivationType.REDSTONE) {
 					boolean wasPowered = musicBe.isPoweredLastTick();
 					if (hasSignal && !wasPowered) {
-						// Edge triggered redstone activation
 						MusicBlockTicker.triggerRedstoneActivation(level, musicBe);
 					}
 				}

@@ -44,6 +44,18 @@ public final class MusicPlayer {
 	private static final String SUFFIX_RANGE = ".range";
 	private static final String SUFFIX_POSITION = ".position";
 
+	public interface TrackRequester {
+		void requestTrack(String name);
+	}
+
+	private static volatile TrackRequester trackRequester;
+
+	public static void setTrackRequester(TrackRequester requester) {
+		trackRequester = requester;
+	}
+
+	private Runnable pendingPlayback;
+
 	private final Map<String, Path> musicCache = new ConcurrentHashMap<>();
 	private final Map<String, Float> lastPositions = new ConcurrentHashMap<>();
 	private final Map<String, WorldState> worldStates = new ConcurrentHashMap<>();
@@ -92,15 +104,56 @@ public final class MusicPlayer {
 		return path;
 	}
 
-	public void playMusic(String rawName, int volumePercent, float pitch, boolean enableFadeIn, boolean enableFadeOut, Vec3 position, float maxDistance) {
+	private boolean isStale(String key, Path path) {
+		Long expected = MusicLibrary.serverTrackSize(key);
+		if (expected == null) {
+			return false;
+		}
+		try {
+			return Files.size(path) != expected;
+		} catch (IOException e) {
+			return true;
+		}
+	}
+
+	private void requestTrack(String key) {
+		TrackRequester requester = trackRequester;
+		if (requester != null) {
+			requester.requestTrack(key);
+		}
+	}
+
+	public void onTrackDownloaded(String name) {
+		rescanMusicFolder(false);
+		Runnable pending = this.pendingPlayback;
+		this.pendingPlayback = null;
+		if (pending != null) {
+			pending.run();
+		}
+	}
+
+	public void playMusic(String rawName, int volumePercent, float pitch, boolean enableFadeIn, boolean enableFadeOut, Vec3 position, float maxDistance, boolean restart) {
 		float volumeMultiplier = clampVolume(volumePercent);
 		pitch = clampPitch(pitch);
 		String key = normalizeName(rawName);
 		Path path = resolveTrack(key);
+		if (path != null && isStale(key, path)) {
+			path = null;
+		}
 
 		if (path == null) {
-			LOGGER.warn("Custom music not found: {}", rawName);
-			notifyPlayer("⚠ Custom music not found: " + rawName);
+			if (MusicLibrary.hasServerTrack(key)) {
+				final String retryName = rawName;
+				final int retryVolume = volumePercent;
+				final float retryPitch = pitch;
+				final Vec3 retryPosition = position;
+				this.pendingPlayback = () -> playMusic(retryName, retryVolume, retryPitch, enableFadeIn, enableFadeOut, retryPosition, maxDistance, restart);
+				requestTrack(key);
+				notifyPlayer("Downloading custom music: " + rawName);
+			} else {
+				LOGGER.warn("Custom music not found: {}", rawName);
+				notifyPlayer("⚠ Custom music not found: " + rawName);
+			}
 			return;
 		}
 
@@ -116,7 +169,7 @@ public final class MusicPlayer {
 		}
 
 		boolean sameTrackAlreadyLive = key.equals(this.currentTrackKey) && (isPlaying(this.currentMusic) || this.isLoadingTrack);
-		if (sameTrackAlreadyLive) {
+		if (sameTrackAlreadyLive && !restart) {
 			if (!this.isLoadingTrack && this.currentMusic != null) {
 				this.currentMusic.volumeMultiplier = volumeMultiplier;
 				this.currentMusic.pitch = pitch;
@@ -150,9 +203,11 @@ public final class MusicPlayer {
 			}
 		}
 
-		float resumeOffset = this.lastPositions.getOrDefault(key, 0f);
+		float resumeOffset = restart ? 0f : this.lastPositions.getOrDefault(key, 0f);
 		this.lastPositions.keySet().retainAll(Collections.singleton(key));
-		LOGGER.warn("[MMM-DEBUG] playMusic key={} resumeOffset={} fadeIn={} fadeOut={}", key, resumeOffset, enableFadeIn, enableFadeOut);
+		if (restart) {
+			this.lastPositions.remove(key);
+		}
 
 		startTrack(path, key, volumeMultiplier, pitch, position, maxDistance, resumeOffset, enableFadeIn, enableFadeOut);
 	}
@@ -161,14 +216,25 @@ public final class MusicPlayer {
 		float volumeMultiplier = clampVolume(volumePercent);
 		String key = normalizeName(rawName);
 		Path path = resolveTrack(key);
+		if (path != null && isStale(key, path)) {
+			path = null;
+		}
 
 		if (path == null) {
-			LOGGER.warn("Custom sound not found: {}", rawName);
-			notifyPlayer("⚠ Custom sound not found: " + rawName);
+			if (MusicLibrary.hasServerTrack(key)) {
+				final String retryName = rawName;
+				this.pendingPlayback = () -> playSound(retryName, volumePercent, pitch, position, maxDistance);
+				requestTrack(key);
+				notifyPlayer("Downloading custom sound: " + rawName);
+			} else {
+				LOGGER.warn("Custom sound not found: {}", rawName);
+				notifyPlayer("⚠ Custom sound not found: " + rawName);
+			}
 			return;
 		}
 
-		CompletableFuture.supplyAsync(() -> decodeOrNull(path))
+		final Path soundPath = path;
+		CompletableFuture.supplyAsync(() -> decodeOrNull(soundPath))
 				.thenAcceptAsync(decoded -> {
 					if (decoded == null) {
 						return;
@@ -487,11 +553,8 @@ public final class MusicPlayer {
 					float safeOffset = duration > 0f
 							? Math.max(0f, Math.min(resumeOffsetSeconds, Math.max(0f, duration - RESUME_MARGIN_SECONDS)))
 							: 0f;
-					LOGGER.warn("[MMM-DEBUG] startTrack key={} requestedOffset={} pcmRemaining={} duration={} safeOffset={}",
-							key, resumeOffsetSeconds, data.pcm.remaining(), duration, safeOffset);
 					if (safeOffset > RESUME_MIN_SECONDS) {
 						AL11.alSourcef(source, AL11.AL_SEC_OFFSET, safeOffset);
-						LOGGER.warn("[MMM-DEBUG] seek applied, readBack={}", AL11.alGetSourcef(source, AL11.AL_SEC_OFFSET));
 					}
 
 				this.currentMusic = new Voice(source, buffer, enableFadeIn, volumeMultiplier, pitch, position, maxDistance);

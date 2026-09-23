@@ -9,6 +9,7 @@ import com.mojang.brigadier.suggestion.SuggestionProvider;
 import com.putzwirk.mapmakermusic.library.MusicLibrary;
 import com.putzwirk.mapmakermusic.network.MusicRemotes;
 import java.util.Collection;
+import java.util.Map;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.SharedSuggestionProvider;
@@ -76,7 +77,7 @@ public final class MusicCommand {
 		CommandSourceStack source = ctx.getSource();
 
 		for (ServerPlayer player : targets) {
-			MusicRemotes.getRemote().playMusic(player, name, volume, pitch, true, true, position, maxDistance);
+			MusicRemotes.getRemote().playMusic(player, name, volume, pitch, true, true, position, maxDistance, false);
 		}
 
 		String where = position == null
@@ -141,9 +142,10 @@ public final class MusicCommand {
 	private static int executeReload(CommandContext<CommandSourceStack> ctx) {
 		CommandSourceStack source = ctx.getSource();
 		MinecraftServer server = source.getServer();
+		Map<String, Long> manifest = MusicLibrary.scanTrackSizes();
 
 		for (ServerPlayer player : server.getPlayerList().getPlayers()) {
-			MusicRemotes.getRemote().reload(player);
+			MusicRemotes.getRemote().syncLibrary(player, manifest);
 		}
 
 		source.sendSuccess(() -> Component.literal("Rescanned custom music folder."), true);

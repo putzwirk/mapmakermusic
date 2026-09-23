@@ -13,6 +13,10 @@ public final class MusicNetworking {
 	public static final ResourceLocation UPDATE_MUSIC_BLOCK = MapMakerMusic.id("update_music_block");
 	public static final ResourceLocation WAND_SELECTION = MapMakerMusic.id("wand_selection");
 	public static final ResourceLocation WAND_PUNCH_BLOCK = MapMakerMusic.id("wand_punch_block");
+	public static final ResourceLocation OPEN_MUSIC_SCREEN = MapMakerMusic.id("open_music_screen");
+	public static final ResourceLocation LIBRARY_SYNC = MapMakerMusic.id("library_sync");
+	public static final ResourceLocation TRACK_REQUEST = MapMakerMusic.id("track_request");
+	public static final ResourceLocation TRACK_DATA = MapMakerMusic.id("track_data");
 
 	private MusicNetworking() {
 	}

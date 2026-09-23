@@ -1,6 +1,5 @@
 package com.putzwirk.mapmakermusic.block;
 
-import com.putzwirk.mapmakermusic.Constants;
 import com.putzwirk.mapmakermusic.network.MusicRemotes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
@@ -10,7 +9,6 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -20,8 +18,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class MusicBlockTicker {
 
-	// Map of MusicBlock pos.asLong() -> Set of Player UUIDs currently inside
 	private static final Map<Long, Set<UUID>> PLAYERS_IN_AREA = new ConcurrentHashMap<>();
+	private static final Map<UUID, Long> ACTIVE_AREA = new ConcurrentHashMap<>();
 
 	public static void tick(Level level, BlockPos pos, BlockState state, MusicBlockEntity musicBe) {
 		if (musicBe.getActivationType() == MusicBlockEntity.ActivationType.AREA) {
@@ -52,14 +50,13 @@ public class MusicBlockTicker {
 
 		if (musicBe.getAudioType() == MusicBlockEntity.AudioType.MUSIC) {
 			if (!positional) {
-				MusicRemotes.getRemote().playMusic(player, track, volume, musicBe.getPitch(), musicBe.isFadeIn(), musicBe.isFadeOut(), null, musicBe.getRadius());
+				MusicRemotes.getRemote().playMusic(player, track, volume, pitch, musicBe.isFadeIn(), musicBe.isFadeOut(), null, musicBe.getRadius(), true);
 			} else {
 				BlockPos pPos = musicBe.getPlaybackPos();
 				Vec3 vecPos = new Vec3(pPos.getX() + 0.5, pPos.getY() + 0.5, pPos.getZ() + 0.5);
-				MusicRemotes.getRemote().playMusic(player, track, volume, musicBe.getPitch(), musicBe.isFadeIn(), musicBe.isFadeOut(), vecPos, musicBe.getRadius());
+				MusicRemotes.getRemote().playMusic(player, track, volume, pitch, musicBe.isFadeIn(), musicBe.isFadeOut(), vecPos, musicBe.getRadius(), true);
 			}
 		} else {
-			// SOUND
 			if (!positional) {
 				MusicRemotes.getRemote().playSound(player, track, volume, pitch, null, musicBe.getRadius());
 			} else {
@@ -77,36 +74,64 @@ public class MusicBlockTicker {
 		}
 
 		AABB area = areaOf(musicBe);
-
-		List<ServerPlayer> playersInWorld = level.players().stream()
-				.filter(p -> p instanceof ServerPlayer)
-				.map(p -> (ServerPlayer) p)
-				.toList();
-
 		long beKey = musicBe.getBlockPos().asLong();
 		Set<UUID> insideSet = PLAYERS_IN_AREA.computeIfAbsent(beKey, k -> ConcurrentHashMap.newKeySet());
 
-		for (ServerPlayer player : playersInWorld) {
+		for (ServerPlayer player : serverPlayers(level)) {
 			boolean inside = area.contains(player.getX(), player.getY(), player.getZ());
 			UUID uuid = player.getUUID();
 			boolean wasInside = insideSet.contains(uuid);
 
 			if (inside && !wasInside) {
-				// Player entered area
 				insideSet.add(uuid);
-				playBoxAudioForPlayer(musicBe, player, true);
+				onPlayerEnteredArea(level, musicBe, player);
 			} else if (!inside && wasInside) {
-				// Player left area
 				insideSet.remove(uuid);
-				if (musicBe.getAudioType() == MusicBlockEntity.AudioType.MUSIC) {
-					MusicBlockEntity fallback = findFallbackMusicBox(level, player, beKey);
-					if (fallback != null) {
-						playBoxAudioForPlayer(fallback, player, true);
-					} else {
-						MusicRemotes.getRemote().stopMusic(player, musicBe.isFadeOut());
-					}
-				}
+				onPlayerLeftArea(level, musicBe, beKey, player);
 			}
+		}
+	}
+
+	private static void onPlayerEnteredArea(Level level, MusicBlockEntity entered, ServerPlayer player) {
+		MusicBlockEntity best = bestAreaFor(level, player);
+		MusicBlockEntity target = best != null ? best : entered;
+		long targetKey = target.getBlockPos().asLong();
+
+		Long current = ACTIVE_AREA.get(player.getUUID());
+		if (current != null && current.longValue() == targetKey) {
+			return;
+		}
+
+		ACTIVE_AREA.put(player.getUUID(), targetKey);
+		playBoxAudioForPlayer(target, player, true);
+	}
+
+	private static void onPlayerLeftArea(Level level, MusicBlockEntity left, long leftKey, ServerPlayer player) {
+		Long current = ACTIVE_AREA.get(player.getUUID());
+		if (current == null || current.longValue() != leftKey) {
+			return;
+		}
+
+		MusicBlockEntity best = bestAreaFor(level, player);
+		if (best != null) {
+			long bestKey = best.getBlockPos().asLong();
+			if (bestKey != leftKey) {
+				ACTIVE_AREA.put(player.getUUID(), bestKey);
+				playBoxAudioForPlayer(best, player, true);
+			}
+			return;
+		}
+
+		ACTIVE_AREA.remove(player.getUUID());
+		if (left.getAudioType() == MusicBlockEntity.AudioType.MUSIC) {
+			MusicRemotes.getRemote().stopMusic(player, left.isFadeOut());
+		}
+	}
+
+	public static void forgetPlayer(UUID uuid) {
+		ACTIVE_AREA.remove(uuid);
+		for (Set<UUID> set : PLAYERS_IN_AREA.values()) {
+			set.remove(uuid);
 		}
 	}
 
@@ -132,8 +157,7 @@ public class MusicBlockTicker {
 		return dx * dy * dz;
 	}
 
-	private static MusicBlockEntity findFallbackMusicBox(Level level, ServerPlayer player, long excludeKey) {
-		UUID uuid = player.getUUID();
+	private static MusicBlockEntity bestAreaFor(Level level, ServerPlayer player) {
 		MusicBlockEntity best = null;
 		long bestVolume = Long.MAX_VALUE;
 		long bestKey = Long.MAX_VALUE;
@@ -142,22 +166,16 @@ public class MusicBlockTicker {
 		while (it.hasNext()) {
 			Map.Entry<Long, Set<UUID>> entry = it.next();
 			long key = entry.getKey();
-			if (key == excludeKey || !entry.getValue().contains(uuid)) {
-				continue;
-			}
 			BlockEntity be = level.getBlockEntity(BlockPos.of(key));
 			if (!(be instanceof MusicBlockEntity musicBe)
 					|| musicBe.getActivationType() != MusicBlockEntity.ActivationType.AREA
-					|| musicBe.getAudioType() != MusicBlockEntity.AudioType.MUSIC) {
+					|| musicBe.getAudioType() != MusicBlockEntity.AudioType.MUSIC
+					|| musicBe.getAudioTrack() == null
+					|| musicBe.getAudioTrack().isEmpty()) {
 				it.remove();
 				continue;
 			}
-			String track = musicBe.getAudioTrack();
-			if (track == null || track.isEmpty()) {
-				continue;
-			}
 			if (!areaOf(musicBe).contains(player.getX(), player.getY(), player.getZ())) {
-				entry.getValue().remove(uuid);
 				continue;
 			}
 			long volume = areaVolume(musicBe);
@@ -170,13 +188,17 @@ public class MusicBlockTicker {
 		return best;
 	}
 
+	private static List<ServerPlayer> serverPlayers(Level level) {
+		return level.players().stream()
+				.filter(p -> p instanceof ServerPlayer)
+				.map(p -> (ServerPlayer) p)
+				.toList();
+	}
+
 	private static List<ServerPlayer> getTargetPlayers(Level level, MusicBlockEntity musicBe) {
 		String selector = musicBe.getListenerSelector();
 		if (selector == null || selector.isEmpty() || selector.equals("@a")) {
-			return level.players().stream()
-					.filter(p -> p instanceof ServerPlayer)
-					.map(p -> (ServerPlayer) p)
-					.toList();
+			return serverPlayers(level);
 		}
 		if (selector.equals("@p")) {
 			ServerPlayer nearest = null;
@@ -193,10 +215,6 @@ public class MusicBlockTicker {
 			}
 			return nearest != null ? List.of(nearest) : List.of();
 		}
-		// Fallback @a
-		return level.players().stream()
-				.filter(p -> p instanceof ServerPlayer)
-				.map(p -> (ServerPlayer) p)
-				.toList();
+		return serverPlayers(level);
 	}
 }
