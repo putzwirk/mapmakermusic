@@ -1,8 +1,11 @@
 package com.putzwirk.mapmakermusic.client.gui;
 
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
+import com.putzwirk.mapmakermusic.block.MusicCondition;
 import com.putzwirk.mapmakermusic.block.MusicQueue;
 import com.putzwirk.mapmakermusic.library.MusicLibrary;
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -18,7 +21,7 @@ public class MusicTrackListScreen extends Screen {
 	private static final int PAD = 10;
 	private static final int LIST_TOP = 54;
 	private static final int LIST_HEIGHT = 150;
-	private static final int ROW_HEIGHT = 22;
+	private static final int ROW_HEIGHT = 32;
 	private static final int ROW_GLYPH = GuiIcons.ROW_GLYPH;
 
 	private final Screen parent;
@@ -178,23 +181,32 @@ public class MusicTrackListScreen extends Screen {
 				return Component.literal(label());
 			}
 
-			private String label() {
+			private String[] lines() {
 				if (index < 0) {
-					return "No queues yet";
+					return new String[] {"No queues yet"};
 				}
 				MusicQueue queue = musicBlock.getQueues().get(index);
 				String tracks = queue.getTrackNames().isEmpty()
-						? "<add tracks>"
-						: queue.getPrimaryTrack() + (queue.getTracks().size() > 1 ? " (+" + (queue.getTracks().size() - 1) + ")" : "");
-				String channel = queue.getChannel() == MusicQueue.Channel.MUSIC ? "music" : "sound";
-				String loop = queue.isLoop() ? "loop" : "once";
-				String rules = "";
-				if (!queue.getConditions().isEmpty()) {
-					int count = queue.getConditions().size();
-					rules = ", " + count + " rule" + (count == 1 ? "" : "s")
-							+ (queue.getConditionMatch() == MusicQueue.ConditionMatch.ANY ? " (any)" : " (all)");
+						? (index + 1) + ". <add tracks>"
+						: (index + 1) + ". " + String.join(" > ", queue.getTrackNames());
+				String channel = "Channel: " + (queue.getChannel() == MusicQueue.Channel.MUSIC ? "Music" : "Sound");
+				if (queue.isLoop()) {
+					channel += ", Looping";
 				}
-				return (index + 1) + ". " + tracks + "  " + channel + ", " + loop + rules;
+				String rules = "Always plays";
+				if (!queue.getConditions().isEmpty()) {
+					List<String> parts = new ArrayList<>();
+					for (MusicCondition condition : queue.getConditions()) {
+						parts.add(condition.describe());
+					}
+					String joiner = queue.getConditionMatch() == MusicQueue.ConditionMatch.ANY ? " or " : " and ";
+					rules = "When " + String.join(joiner, parts);
+				}
+				return new String[] {tracks, channel, rules};
+			}
+
+			private String label() {
+				return String.join(" ", lines());
 			}
 
 			@Override
@@ -206,17 +218,20 @@ public class MusicTrackListScreen extends Screen {
 					guiGraphics.drawString(MusicTrackListScreen.this.font, clipped(label(), width - 4), left + 2, top + 7, 0x9A9A9A);
 					return;
 				}
-				int color = musicBlock.getQueues().get(this.index).getTrackNames().isEmpty() ? 0xFF8080 : 0xFFFFFF;
-				guiGraphics.drawString(MusicTrackListScreen.this.font, clipped(label(), width - 2 * ROW_GLYPH - 10), left + 2, top + 7, color);
+				boolean empty = musicBlock.getQueues().get(this.index).getTrackNames().isEmpty();
+				String[] rows = lines();
+				guiGraphics.drawString(MusicTrackListScreen.this.font, clipped(rows[0], width - 2 * ROW_GLYPH - 10), left + 2, top + 2, empty ? 0xFF8080 : 0xFFFFFF);
+				guiGraphics.drawString(MusicTrackListScreen.this.font, clipped(rows[1], width - 2 * ROW_GLYPH - 10), left + 2, top + 11, 0xB0B0B0, false);
+				guiGraphics.drawString(MusicTrackListScreen.this.font, clipped(rows[2], width - 2 * ROW_GLYPH - 10), left + 2, top + 20, 0xB0B0B0, false);
 				int x3 = left + width - ROW_GLYPH;
 				int colX = x3 - ROW_GLYPH - 2;
-				int upY = top + 1;
-				int downY = top + 12;
+				int upY = top + 5;
+				int downY = top + 16;
 				boolean canUp = this.index > 0;
 				boolean canDown = this.index < musicBlock.getQueues().size() - 1;
 				GuiIcons.drawSpinButton(guiGraphics, MusicTrackListScreen.this.font, colX, upY, GuiIcons.UP, canUp && GuiIcons.inSpin(mouseX, mouseY, colX, upY), canUp, 0);
 				GuiIcons.drawSpinButton(guiGraphics, MusicTrackListScreen.this.font, colX, downY, GuiIcons.DOWN, canDown && GuiIcons.inSpin(mouseX, mouseY, colX, downY), canDown, 1);
-				GuiIcons.drawRowGlyph(guiGraphics, MusicTrackListScreen.this.font, x3, top + 4, GuiIcons.REMOVE, GuiIcons.inGlyph(mouseX, mouseY, x3, top + 4));
+				GuiIcons.drawRowGlyph(guiGraphics, MusicTrackListScreen.this.font, x3, top + 9, GuiIcons.REMOVE, GuiIcons.inGlyph(mouseX, mouseY, x3, top + 9));
 			}
 
 			@Override
@@ -226,8 +241,8 @@ public class MusicTrackListScreen extends Screen {
 				}
 				int x3 = rowLeft + rowWidth - ROW_GLYPH;
 				int colX = x3 - ROW_GLYPH - 2;
-				int upY = rowTop + 1;
-				int downY = rowTop + 12;
+				int upY = rowTop + 5;
+				int downY = rowTop + 16;
 				if (index > 0 && GuiIcons.inSpin(mouseX, mouseY, colX, upY)) {
 					moveQueue(index, -1);
 					return true;
