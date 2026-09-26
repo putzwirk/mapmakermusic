@@ -65,6 +65,131 @@ public final class MusicPlayer {
 
 	private final Map<String, List<Runnable>> pendingPlaybacks = new ConcurrentHashMap<>();
 
+	private static final int MAX_CACHED_BUFFERS = 3;
+	private static final long MAX_CACHED_BYTES = 384L * 1024L * 1024L;
+
+	private static final class CachedBuffer {
+		final int buffer;
+		final Path path;
+		final long size;
+		final long modified;
+		final long bytes;
+		final float duration;
+		final int sampleRate;
+		final int alFormat;
+
+		CachedBuffer(int buffer, Path path, long size, long modified, long bytes, float duration, int sampleRate, int alFormat) {
+			this.buffer = buffer;
+			this.path = path;
+			this.size = size;
+			this.modified = modified;
+			this.bytes = bytes;
+			this.duration = duration;
+			this.sampleRate = sampleRate;
+			this.alFormat = alFormat;
+		}
+	}
+
+	private final java.util.LinkedHashMap<String, CachedBuffer> bufferCache = new java.util.LinkedHashMap<>(16, 0.75f, true);
+	private long cachedBytes = 0;
+
+	private static String bufferCacheKey(String key, boolean mono) {
+		return mono ? key + "|m" : key + "|s";
+	}
+
+	private CachedBuffer takeCachedBuffer(String key, boolean mono, Path path) {
+		String cacheKey = bufferCacheKey(key, mono);
+		CachedBuffer entry = this.bufferCache.get(cacheKey);
+		if (entry == null) {
+			return null;
+		}
+		try {
+			if (!entry.path.equals(path) || Files.size(path) != entry.size
+					|| Files.getLastModifiedTime(path).toMillis() != entry.modified) {
+				this.bufferCache.remove(cacheKey);
+				this.cachedBytes -= entry.bytes;
+				deleteBufferIfFree(entry.buffer);
+				return null;
+			}
+		} catch (IOException e) {
+			this.bufferCache.remove(cacheKey);
+			this.cachedBytes -= entry.bytes;
+			deleteBufferIfFree(entry.buffer);
+			return null;
+		}
+		return entry;
+	}
+
+	private void storeCachedBuffer(String key, boolean mono, Path path, OggDecoder.OggData data, int buffer, float duration) {
+		long bytes = (long) data.pcm.remaining() * 2L;
+		if (bytes <= 0L || bytes > MAX_CACHED_BYTES) {
+			return;
+		}
+		long size;
+		long modified;
+		try {
+			size = Files.size(path);
+			modified = Files.getLastModifiedTime(path).toMillis();
+		} catch (IOException e) {
+			return;
+		}
+		evictCachedBuffers(bytes);
+		if (this.bufferCache.size() >= MAX_CACHED_BUFFERS || this.cachedBytes + bytes > MAX_CACHED_BYTES) {
+			return;
+		}
+		CachedBuffer old = this.bufferCache.put(bufferCacheKey(key, mono), new CachedBuffer(buffer, path, size, modified, bytes, duration, data.sampleRate, data.alFormat));
+		this.cachedBytes += bytes;
+		if (old != null) {
+			this.cachedBytes -= old.bytes;
+			deleteBufferIfFree(old.buffer);
+		}
+	}
+
+	private void evictCachedBuffers(long needBytes) {
+		var it = this.bufferCache.entrySet().iterator();
+		while (it.hasNext() && (this.bufferCache.size() >= MAX_CACHED_BUFFERS || this.cachedBytes + needBytes > MAX_CACHED_BYTES)) {
+			Map.Entry<String, CachedBuffer> eldest = it.next();
+			if (isBufferReferenced(eldest.getValue().buffer)) {
+				continue;
+			}
+			it.remove();
+			this.cachedBytes -= eldest.getValue().bytes;
+			AL10.alDeleteBuffers(eldest.getValue().buffer);
+		}
+	}
+
+	private boolean isBufferReferenced(int buffer) {
+		if (this.currentMusic != null && this.currentMusic.buffer == buffer) {
+			return true;
+		}
+		for (Voice voice : this.fadingVoices) {
+			if (voice.buffer == buffer) {
+				return true;
+			}
+		}
+		for (Voice voice : this.activeSounds) {
+			if (voice.buffer == buffer) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean isBufferCached(int buffer) {
+		for (CachedBuffer entry : this.bufferCache.values()) {
+			if (entry.buffer == buffer) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private void deleteBufferIfFree(int buffer) {
+		if (buffer != 0 && !isBufferReferenced(buffer)) {
+			AL10.alDeleteBuffers(buffer);
+		}
+	}
+
 	private final Map<String, Path> musicCache = new ConcurrentHashMap<>();
 	private final Map<String, Float> lastPositions = new ConcurrentHashMap<>();
 	private final Map<String, WorldState> worldStates = new ConcurrentHashMap<>();
@@ -83,6 +208,7 @@ public final class MusicPlayer {
 
 	private boolean isLoadingTrack = false;
 	private long activeAlContext;
+	private long decodeEpoch = 0;
 
 	private String lastKnownWorldId = null;
 
@@ -257,6 +383,11 @@ public final class MusicPlayer {
 		}
 
 		final Path soundPath = path;
+		CachedBuffer cached = takeCachedBuffer(key, position != null, soundPath);
+		if (cached != null) {
+			fireCachedSound(cached, volumeMultiplier, pitch, position, maxDistance, fadeIn);
+			return;
+		}
 		CompletableFuture.supplyAsync(() -> decodeOrNull(soundPath))
 				.thenAcceptAsync(decoded -> {
 					if (decoded == null) {
@@ -279,30 +410,48 @@ public final class MusicPlayer {
 					}
 
 					AL10.alBufferData(buffer, data.alFormat, data.pcm, data.sampleRate);
+					storeCachedBuffer(key, position != null, soundPath, data, buffer, 0f);
 
 					AL10.alSourcei(source, AL10.AL_LOOPING, AL10.AL_FALSE);
 					AL10.alSourcef(source, AL10.AL_PITCH, pitch);
 					AL10.alSource3f(source, AL10.AL_VELOCITY, 0f, 0f, 0f);
 					AL10.alSourcei(source, AL10.AL_BUFFER, buffer);
 
-					if (position == null) {
-						AL10.alSourcei(source, AL10.AL_SOURCE_RELATIVE, AL10.AL_TRUE);
-						AL10.alSource3f(source, AL10.AL_POSITION, 0f, 0f, 0f);
-						AL10.alSourcei(source, AL10.AL_DISTANCE_MODEL, AL10.AL_NONE);
-					} else {
-						AL10.alSourcei(source, AL10.AL_SOURCE_RELATIVE, AL10.AL_FALSE);
-						AL10.alSource3f(source, AL10.AL_POSITION, (float) position.x, (float) position.y, (float) position.z);
-						AL10.alSourcei(source, AL10.AL_DISTANCE_MODEL, AL11.AL_LINEAR_DISTANCE);
-						AL10.alSourcef(source, AL10.AL_MAX_DISTANCE, Math.max(1f, maxDistance));
-						AL10.alSourcef(source, AL10.AL_ROLLOFF_FACTOR, 1f);
-						AL10.alSourcef(source, AL10.AL_REFERENCE_DISTANCE, 0f);
-					}
-
-				AL10.alSourcef(source, AL10.AL_GAIN, fadeIn ? 0f : masterVolume() * volumeMultiplier);
-				AL10.alSourcePlay(source);
-
-				this.activeSounds.add(new Voice(source, buffer, fadeIn, volumeMultiplier, pitch, position, maxDistance, false));
+					fireSoundSource(source, buffer, volumeMultiplier, pitch, position, maxDistance, fadeIn);
 				}, Minecraft.getInstance());
+	}
+
+	private void fireCachedSound(CachedBuffer cached, float volumeMultiplier, float pitch, Vec3 position, float maxDistance, boolean fadeIn) {
+		int source = AL10.alGenSources();
+		if (source == 0) {
+			return;
+		}
+		AL10.alSourcei(source, AL10.AL_LOOPING, AL10.AL_FALSE);
+		AL10.alSourcef(source, AL10.AL_PITCH, pitch);
+		AL10.alSource3f(source, AL10.AL_VELOCITY, 0f, 0f, 0f);
+		AL10.alSourcei(source, AL10.AL_BUFFER, cached.buffer);
+
+		fireSoundSource(source, cached.buffer, volumeMultiplier, pitch, position, maxDistance, fadeIn);
+	}
+
+	private void fireSoundSource(int source, int buffer, float volumeMultiplier, float pitch, Vec3 position, float maxDistance, boolean fadeIn) {
+		if (position == null) {
+			AL10.alSourcei(source, AL10.AL_SOURCE_RELATIVE, AL10.AL_TRUE);
+			AL10.alSource3f(source, AL10.AL_POSITION, 0f, 0f, 0f);
+			AL10.alSourcei(source, AL10.AL_DISTANCE_MODEL, AL10.AL_NONE);
+		} else {
+			AL10.alSourcei(source, AL10.AL_SOURCE_RELATIVE, AL10.AL_FALSE);
+			AL10.alSource3f(source, AL10.AL_POSITION, (float) position.x, (float) position.y, (float) position.z);
+			AL10.alSourcei(source, AL10.AL_DISTANCE_MODEL, AL11.AL_LINEAR_DISTANCE);
+			AL10.alSourcef(source, AL10.AL_MAX_DISTANCE, Math.max(1f, maxDistance));
+			AL10.alSourcef(source, AL10.AL_ROLLOFF_FACTOR, 1f);
+			AL10.alSourcef(source, AL10.AL_REFERENCE_DISTANCE, 0f);
+		}
+
+		AL10.alSourcef(source, AL10.AL_GAIN, fadeIn ? 0f : masterVolume() * volumeMultiplier);
+		AL10.alSourcePlay(source);
+
+		this.activeSounds.add(new Voice(source, buffer, fadeIn, volumeMultiplier, pitch, position, maxDistance, false));
 	}
 
 	public void stopMusic(boolean enableFadeOut) {
@@ -532,6 +681,8 @@ public final class MusicPlayer {
 		clearFadingVoices();
 		this.isLoadingTrack = false;
 		this.activeSounds.clear();
+		this.bufferCache.clear();
+		this.cachedBytes = 0;
 
 		resumeDesiredMusic();
 	}
@@ -593,10 +744,18 @@ public final class MusicPlayer {
 	}
 
 	private void startTrack(Path path, String key, float volumeMultiplier, float pitch, Vec3 position, float maxDistance, float resumeOffsetSeconds, boolean enableFadeIn, boolean enableFadeOut, boolean loop) {
+		this.decodeEpoch++;
+		CachedBuffer cached = takeCachedBuffer(key, position != null, path);
+		if (cached != null) {
+			retireCurrentMusic(enableFadeOut);
+			playCachedMusic(cached, key, volumeMultiplier, pitch, position, maxDistance, resumeOffsetSeconds, enableFadeIn, enableFadeOut, loop);
+			return;
+		}
 		this.isLoadingTrack = true;
 		this.currentTrackKey = key;
 		this.currentMusicPath = path;
 		long decodeStart = System.nanoTime();
+		final long epoch = this.decodeEpoch;
 
 		CompletableFuture.supplyAsync(() -> decodeOrNull(path))
 				.thenAcceptAsync(decoded -> {
@@ -604,27 +763,14 @@ public final class MusicPlayer {
 						LOGGER.info("[dbg] decoded key={} ms={} ok={} desired={}", key,
 								(System.nanoTime() - decodeStart) / 1000000L, decoded != null, this.desiredTrackKey);
 					}
-					if (decoded == null || !key.equals(this.desiredTrackKey)) {
+					if (decoded == null || epoch != this.decodeEpoch || !key.equals(this.desiredTrackKey)) {
 						this.isLoadingTrack = false;
 						return;
 					}
 
 					OggDecoder.OggData data = position == null ? decoded : decoded.asMono();
 
-					if (this.currentMusic != null) {
-						if (enableFadeOut) {
-							this.currentMusic.ticksElapsed = 0;
-							this.currentMusic.fadeIn = false;
-							this.currentMusic.fadeOut = true;
-							this.fadingVoices.add(this.currentMusic);
-							while (this.fadingVoices.size() > 3) {
-								forceStop(this.fadingVoices.remove(0));
-							}
-						} else {
-							forceStop(this.currentMusic);
-						}
-						this.currentMusic = null;
-					}
+					retireCurrentMusic(enableFadeOut);
 
 					int buffer = AL10.alGenBuffers();
 					AL10.alBufferData(buffer, data.alFormat, data.pcm, data.sampleRate);
@@ -641,6 +787,7 @@ public final class MusicPlayer {
 					AL10.alSourcePlay(source);
 
 					float duration = trackDurationSeconds(data);
+					storeCachedBuffer(key, position != null, path, data, buffer, duration);
 					float safeOffset = duration > 0f
 							? Math.max(0f, Math.min(resumeOffsetSeconds, Math.max(0f, duration - RESUME_MARGIN_SECONDS)))
 							: 0f;
@@ -654,6 +801,51 @@ public final class MusicPlayer {
 					LOGGER.info("[dbg] started key={} fading={} dur={}", key, this.fadingVoices.size(), duration);
 				}
 				}, Minecraft.getInstance());
+	}
+
+	private void retireCurrentMusic(boolean enableFadeOut) {
+		if (this.currentMusic != null) {
+			if (enableFadeOut) {
+				this.currentMusic.ticksElapsed = 0;
+				this.currentMusic.fadeIn = false;
+				this.currentMusic.fadeOut = true;
+				this.fadingVoices.add(this.currentMusic);
+				while (this.fadingVoices.size() > 3) {
+					forceStop(this.fadingVoices.remove(0));
+				}
+			} else {
+				forceStop(this.currentMusic);
+			}
+			this.currentMusic = null;
+		}
+	}
+
+	private void playCachedMusic(CachedBuffer cached, String key, float volumeMultiplier, float pitch, Vec3 position, float maxDistance, float resumeOffsetSeconds, boolean enableFadeIn, boolean enableFadeOut, boolean loop) {
+		this.currentTrackKey = key;
+		this.currentMusicPath = cached.path;
+		int source = AL10.alGenSources();
+		AL10.alSourcei(source, AL10.AL_LOOPING, loop ? AL10.AL_TRUE : AL10.AL_FALSE);
+		AL10.alSourcef(source, AL10.AL_PITCH, pitch);
+		AL10.alSource3f(source, AL10.AL_VELOCITY, 0f, 0f, 0f);
+		applyMusicEmitter(source, position, maxDistance);
+		AL10.alSourcei(source, AL10.AL_BUFFER, cached.buffer);
+
+		float initialGain = enableFadeIn ? 0f : masterVolume() * volumeMultiplier;
+		AL10.alSourcef(source, AL10.AL_GAIN, initialGain);
+		AL10.alSourcePlay(source);
+
+		float safeOffset = cached.duration > 0f
+				? Math.max(0f, Math.min(resumeOffsetSeconds, Math.max(0f, cached.duration - RESUME_MARGIN_SECONDS)))
+				: 0f;
+		if (safeOffset > RESUME_MIN_SECONDS) {
+			AL11.alSourcef(source, AL11.AL_SEC_OFFSET, safeOffset);
+		}
+
+		this.currentMusic = new Voice(source, cached.buffer, enableFadeIn, volumeMultiplier, pitch, position, maxDistance, loop);
+		this.isLoadingTrack = false;
+		if (com.putzwirk.mapmakermusic.block.MusicDebug.ENABLED) {
+			LOGGER.info("[dbg] started key={} fading={} dur={} cached=true", key, this.fadingVoices.size(), cached.duration);
+		}
 	}
 
 	private void applyMusicEmitter(int source, Vec3 position, float maxDistance) {
@@ -836,7 +1028,9 @@ public final class MusicPlayer {
 		if (voice != null && voice.source != 0) {
 			AL10.alSourceStop(voice.source);
 			AL10.alDeleteSources(voice.source);
-			AL10.alDeleteBuffers(voice.buffer);
+			if (!isBufferCached(voice.buffer)) {
+				AL10.alDeleteBuffers(voice.buffer);
+			}
 		}
 	}
 
