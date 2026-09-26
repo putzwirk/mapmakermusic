@@ -18,7 +18,7 @@ import net.minecraft.world.scores.Scoreboard;
 
 public final class MusicRuleEvaluator {
 
-	private static final EntityAliveCache ALIVE_CACHE = new EntityAliveCache();
+	private static final EntityCountCache COUNT_CACHE = new EntityCountCache();
 
 	private MusicRuleEvaluator() {
 	}
@@ -125,31 +125,36 @@ public final class MusicRuleEvaluator {
 		}
 		String id = condition.getText() == null ? "" : condition.getText().trim();
 		Optional<EntityType<?>> type = EntityType.byString(id);
-		boolean alive = type.map(resolved -> aliveFor(resolved, server, area, level)).orElse(false);
-		return bossMatches(alive, condition);
+		int count = type.map(resolved -> countFor(resolved, server, area, level)).orElse(0);
+		return countMatches(count, condition);
 	}
 
-	private static boolean aliveFor(EntityType<?> type, MinecraftServer server, AABB area, ServerLevel level) {
+	private static int countFor(EntityType<?> type, MinecraftServer server, AABB area, ServerLevel level) {
 		if (area != null && level != null) {
-			return !level.getEntitiesOfClass(Entity.class, area, entity -> entity.getType() == type && entity.isAlive()).isEmpty();
+			return level.getEntitiesOfClass(Entity.class, area, entity -> entity.getType() == type && entity.isAlive()).size();
 		}
 		String key = EntityType.getKey(type).toString();
-		return ALIVE_CACHE.get(server, server.getTickCount(), key, () -> scanAlive(server, type));
+		return COUNT_CACHE.get(server, server.getTickCount(), key, () -> scanCount(server, type));
 	}
 
-	static boolean bossMatches(boolean alive, MusicCondition condition) {
-		return alive == (condition.getMin() >= 0.5);
+	static boolean countMatches(int count, MusicCondition condition) {
+		return switch (MusicCondition.Type.ENTITY_ALIVE.modeOf(condition)) {
+			case "at most" -> count <= condition.getMin();
+			case "exactly" -> count == condition.getMin();
+			default -> count >= condition.getMin();
+		};
 	}
 
-	private static boolean scanAlive(MinecraftServer server, EntityType<?> type) {
+	private static int scanCount(MinecraftServer server, EntityType<?> type) {
+		int count = 0;
 		for (ServerLevel level : server.getAllLevels()) {
 			for (Entity entity : level.getAllEntities()) {
 				if (entity.getType() == type && entity.isAlive()) {
-					return true;
+					count++;
 				}
 			}
 		}
-		return false;
+		return count;
 	}
 
 	private static boolean matchBiome(MusicCondition condition, ServerPlayer player) {

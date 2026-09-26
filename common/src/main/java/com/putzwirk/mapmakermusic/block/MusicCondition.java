@@ -17,7 +17,7 @@ public class MusicCondition {
 		PLAYER("Player"),
 		PLAYER_HEALTH("Player health"),
 		PLAYER_HUNGER("Player hunger"),
-		ENTITY_ALIVE("Entity alive"),
+		ENTITY_ALIVE("Entity count"),
 		IN_BIOME("In biome"),
 		COORDINATES("Player coordinates");
 
@@ -35,7 +35,7 @@ public class MusicCondition {
 			return switch (this) {
 				case TIME -> List.of("day", "night", "range");
 				case WEATHER -> List.of("clear", "rain", "thunder");
-				case ENTITY_ALIVE -> List.of("alive", "gone");
+				case ENTITY_ALIVE -> List.of("at least", "at most", "exactly");
 				default -> List.of();
 			};
 		}
@@ -43,7 +43,7 @@ public class MusicCondition {
 		public String modeOf(MusicCondition condition) {
 			return switch (this) {
 				case TIME, WEATHER -> condition.text.toLowerCase(Locale.ROOT);
-				case ENTITY_ALIVE -> condition.min >= 0.5 ? "alive" : "gone";
+				case ENTITY_ALIVE -> modes().contains(condition.countOp) ? condition.countOp : "at least";
 				default -> null;
 			};
 		}
@@ -55,7 +55,10 @@ public class MusicCondition {
 					String current = condition.text.toLowerCase(Locale.ROOT);
 					condition.text = options.get((options.indexOf(current) + 1) % options.size());
 				}
-				case ENTITY_ALIVE -> condition.min = condition.min >= 0.5 ? 0 : 1;
+				case ENTITY_ALIVE -> {
+					List<String> options = modes();
+					condition.countOp = options.get((options.indexOf(modeOf(condition)) + 1) % options.size());
+				}
 				default -> {
 				}
 			}
@@ -114,6 +117,7 @@ public class MusicCondition {
 	private double min;
 	private double max;
 	private double[] bounds;
+	private String countOp = "at least";
 
 	public MusicCondition(Type type) {
 		this.type = type;
@@ -151,6 +155,14 @@ public class MusicCondition {
 		this.max = max;
 	}
 
+	public String getCountOp() {
+		return countOp;
+	}
+
+	public void setCountOp(String countOp) {
+		this.countOp = countOp == null ? "at least" : countOp;
+	}
+
 	public double getBound(int index) {
 		if (bounds != null && index >= 0 && index < bounds.length) {
 			return bounds[index];
@@ -174,6 +186,7 @@ public class MusicCondition {
 		copy.min = min;
 		copy.max = max;
 		copy.bounds = bounds == null ? null : bounds.clone();
+		copy.countOp = countOp;
 		return copy;
 	}
 
@@ -199,9 +212,17 @@ public class MusicCondition {
 			}
 			case PLAYER_HEALTH -> "Health " + format(min) + ".." + format(max);
 			case PLAYER_HUNGER -> "Hunger " + format(min) + ".." + format(max);
-			case ENTITY_ALIVE -> cap(text) + (min >= 0.5 ? " alive" : " gone");
+			case ENTITY_ALIVE -> cap(shortId(text)) + " " + countSymbol() + " " + format(min);
 			case IN_BIOME -> "Biome " + text;
 			case COORDINATES -> describeCoords();
+		};
+	}
+
+	private String countSymbol() {
+		return switch (Type.ENTITY_ALIVE.modeOf(this)) {
+			case "at most" -> "<=";
+			case "exactly" -> "==";
+			default -> ">=";
 		};
 	}
 
@@ -242,6 +263,14 @@ public class MusicCondition {
 		return Character.toUpperCase(value.charAt(0)) + value.substring(1);
 	}
 
+	private static String shortId(String value) {
+		if (value == null) {
+			return "";
+		}
+		int separator = value.indexOf(':');
+		return separator >= 0 ? value.substring(separator + 1) : value;
+	}
+
 	public CompoundTag save() {
 		CompoundTag tag = new CompoundTag();
 		tag.putString("Type", type.name());
@@ -254,6 +283,9 @@ public class MusicCondition {
 				boundList.add(DoubleTag.valueOf(Double.isNaN(value) ? Double.MAX_VALUE : value));
 			}
 			tag.put("Bounds", boundList);
+		}
+		if (type == Type.ENTITY_ALIVE) {
+			tag.putString("CountOp", Type.ENTITY_ALIVE.modeOf(this));
 		}
 		return tag;
 	}
@@ -281,6 +313,15 @@ public class MusicCondition {
 		condition.text = tag.getString("Text");
 		condition.min = tag.getDouble("Min");
 		condition.max = tag.getDouble("Max");
+		if (type == Type.ENTITY_ALIVE) {
+			if (tag.contains("CountOp")) {
+				if (Type.ENTITY_ALIVE.modes().contains(tag.getString("CountOp"))) {
+					condition.countOp = tag.getString("CountOp");
+				}
+			} else {
+				condition.countOp = condition.min < 0.5 ? "exactly" : "at least";
+			}
+		}
 		if (type == Type.COORDINATES) {
 			if (legacyAxis >= 0) {
 				double[] migrated = nanBounds();

@@ -131,7 +131,9 @@ public class MusicConditionScreen extends Screen {
 		modeBtn.visible = !type.modes().isEmpty();
 		textEdit.visible = type.textHint() != null;
 		boolean range = type.hasRange() && (type != MusicCondition.Type.TIME || condition.getText().equalsIgnoreCase("range"));
-		minEdit.visible = range;
+		boolean count = type == MusicCondition.Type.ENTITY_ALIVE;
+		minEdit.setHint(Component.literal(count ? "count" : "Min"));
+		minEdit.visible = range || count;
 		maxEdit.visible = range;
 		boolean coords = type == MusicCondition.Type.COORDINATES;
 		for (EditBox coord : coordEdits) {

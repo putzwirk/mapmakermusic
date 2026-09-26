@@ -36,12 +36,19 @@ public class MusicConditionTest {
 	}
 
 	@Test
-	public void entityAliveModeUsesFlag() {
+	public void entityCountModeCycles() {
 		MusicCondition condition = MusicCondition.Type.ENTITY_ALIVE.newDefault();
-		assertEquals("alive", condition.getType().modeOf(condition));
+		assertEquals(List.of("at least", "at most", "exactly"), MusicCondition.Type.ENTITY_ALIVE.modes());
+		assertEquals("at least", condition.getType().modeOf(condition));
+		assertEquals("Wither >= 1", condition.describe());
 		condition.getType().cycleMode(condition);
-		assertEquals("gone", condition.getType().modeOf(condition));
-		assertTrue(condition.describe().endsWith("gone"));
+		assertEquals("at most", condition.getType().modeOf(condition));
+		assertEquals("Wither <= 1", condition.describe());
+		condition.getType().cycleMode(condition);
+		assertEquals("exactly", condition.getType().modeOf(condition));
+		assertEquals("Wither == 1", condition.describe());
+		condition.getType().cycleMode(condition);
+		assertEquals("at least", condition.getType().modeOf(condition));
 	}
 
 	@Test
