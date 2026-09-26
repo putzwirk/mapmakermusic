@@ -122,7 +122,7 @@ public class MusicTrackMixScreen extends Screen {
 		int leftPos = (this.width - BG_WIDTH) / 2;
 		int topPos = (this.height - BG_HEIGHT) / 2;
 		guiGraphics.fill(leftPos, topPos, leftPos + BG_WIDTH, topPos + BG_HEIGHT, 0xF0101010);
-		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, 0xFFA0A0A0);
+		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, GuiIcons.boxOutlineColor(block.getBlockPos()));
 		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 12, 0xFFFFFF);
 		guiGraphics.drawString(this.font, "Volume", leftPos + PAD, topPos + 32, 0xE0E0E0, false);
 		guiGraphics.drawString(this.font, "Pitch", leftPos + PAD, topPos + 68, 0xE0E0E0, false);

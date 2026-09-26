@@ -2,6 +2,7 @@ package com.putzwirk.mapmakermusic.client.gui;
 
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.core.BlockPos;
 
 public final class GuiIcons {
 
@@ -42,5 +43,11 @@ public final class GuiIcons {
 
 	public static boolean inSpin(double mouseX, double mouseY, int x, int y) {
 		return mouseX >= x && mouseX < x + ROW_GLYPH && mouseY >= y && mouseY < y + SPIN_H;
+	}
+
+	public static int boxOutlineColor(BlockPos pos) {
+		long hash = pos.asLong() * 0x9E3779B97F4A7C15L;
+		float hue = (float) (((hash >>> 16) % 360 + 360) % 360) / 360f;
+		return 0xFF000000 | java.awt.Color.HSBtoRGB(hue, 0.85f, 1f);
 	}
 }

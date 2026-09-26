@@ -165,7 +165,7 @@ public class MusicConditionScreen extends Screen {
 		int leftPos = (this.width - BG_WIDTH) / 2;
 		int topPos = (this.height - BG_HEIGHT) / 2;
 		guiGraphics.fill(leftPos, topPos, leftPos + BG_WIDTH, topPos + BG_HEIGHT, 0xF0101010);
-		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, 0xFFA0A0A0);
+		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, GuiIcons.boxOutlineColor(block.getBlockPos()));
 		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 12, 0xFFFFFF);
 
 		super.render(guiGraphics, mouseX, mouseY, delta);

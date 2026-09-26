@@ -129,7 +129,7 @@ public class MusicTrackListScreen extends Screen {
 		int leftPos = (this.width - panelWidth) / 2;
 		int topPos = (this.height - BG_HEIGHT) / 2;
 		guiGraphics.fill(leftPos, topPos, leftPos + panelWidth, topPos + BG_HEIGHT, 0xF0101010);
-		guiGraphics.renderOutline(leftPos, topPos, panelWidth, BG_HEIGHT, 0xFFA0A0A0);
+		guiGraphics.renderOutline(leftPos, topPos, panelWidth, BG_HEIGHT, GuiIcons.boxOutlineColor(musicBlock.getBlockPos()));
 		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 12, 0xFFFFFF);
 		guiGraphics.drawString(this.font, clipped("Top to bottom, first match wins.", panelWidth - 2 * PAD), leftPos + PAD + 2, topPos + 40, 0x9A9A9A, false);
 		super.render(guiGraphics, mouseX, mouseY, delta);

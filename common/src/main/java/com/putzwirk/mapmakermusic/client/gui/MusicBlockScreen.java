@@ -197,7 +197,7 @@ public class MusicBlockScreen extends Screen {
 		boolean isGlobal = this.playbackMode == MusicBlockEntity.PlaybackMode.GLOBAL;
 
 		guiGraphics.fill(leftPos, topPos, leftPos + BG_WIDTH, topPos + BG_HEIGHT, 0xF0101010);
-		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, 0xFFA0A0A0);
+		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, GuiIcons.boxOutlineColor(musicBlock.getBlockPos()));
 		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 12, 0xFFFFFF);
 
 		guiGraphics.drawString(this.font, "Trigger", labelX, topPos + 37, labelColor, false);

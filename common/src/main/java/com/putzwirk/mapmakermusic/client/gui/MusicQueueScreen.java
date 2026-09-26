@@ -302,7 +302,7 @@ public class MusicQueueScreen extends Screen {
 		int leftPos = (this.width - panelWidth) / 2;
 		int topPos = (this.height - BG_HEIGHT) / 2;
 		guiGraphics.fill(leftPos, topPos, leftPos + panelWidth, topPos + BG_HEIGHT, 0xF0101010);
-		guiGraphics.renderOutline(leftPos, topPos, panelWidth, BG_HEIGHT, 0xFFA0A0A0);
+		guiGraphics.renderOutline(leftPos, topPos, panelWidth, BG_HEIGHT, GuiIcons.boxOutlineColor(block.getBlockPos()));
 		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 12, 0xFFFFFF);
 
 		if (!conditionsTab) {
