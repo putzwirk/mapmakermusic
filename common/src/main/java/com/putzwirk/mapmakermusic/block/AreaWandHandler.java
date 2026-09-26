@@ -4,7 +4,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
@@ -124,14 +123,8 @@ public final class AreaWandHandler {
 		if (pos2.equals(pos1)) {
 			return;
 		}
-		BlockPos spot = findSpot(level, player, pos2);
-		if (spot == null) {
-			notify(player, "No space here.");
-			return;
-		}
-
-		boolean placed = level.setBlock(spot, ModBlocks.MUSIC_BLOCK.get().defaultBlockState(), 3);
-		BlockEntity be = level.getBlockEntity(spot);
+		boolean placed = level.setBlock(pos2, ModBlocks.MUSIC_BLOCK.get().defaultBlockState(), 3);
+		BlockEntity be = level.getBlockEntity(pos2);
 		if (!placed || !(be instanceof MusicBlockEntity musicBe)) {
 			notify(player, "Placement failed.");
 			return;
@@ -153,48 +146,6 @@ public final class AreaWandHandler {
 		if (selectionSender != null) {
 			selectionSender.sendSelection(player, pos);
 		}
-	}
-
-	private static BlockPos findSpot(Level level, ServerPlayer player, BlockPos pos2) {
-		BlockPos towardsCamera = spotTowardsCamera(pos2, player.getEyePosition());
-		if (towardsCamera != null && level.isEmptyBlock(towardsCamera)) {
-			return towardsCamera;
-		}
-		BlockPos above = pos2.above();
-		if (!above.equals(towardsCamera) && level.isEmptyBlock(above)) {
-			return above;
-		}
-		for (Direction direction : new Direction[]{Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST}) {
-			BlockPos side = above.relative(direction);
-			if (!side.equals(towardsCamera) && level.isEmptyBlock(side)) {
-				return side;
-			}
-		}
-		BlockPos high = pos2.above(2);
-		if (!high.equals(towardsCamera) && level.isEmptyBlock(high)) {
-			return high;
-		}
-		return null;
-	}
-
-	private static BlockPos spotTowardsCamera(BlockPos pos2, Vec3 eye) {
-		Vec3 center = Vec3.atCenterOf(pos2);
-		double dx = eye.x - center.x;
-		double dy = eye.y - center.y;
-		double dz = eye.z - center.z;
-		double ax = Math.abs(dx);
-		double ay = Math.abs(dy);
-		double az = Math.abs(dz);
-		if (ax >= ay && ax >= az && ax > 1e-4) {
-			return pos2.relative(dx > 0.0 ? Direction.EAST : Direction.WEST);
-		}
-		if (ay >= ax && ay >= az && ay > 1e-4) {
-			return pos2.relative(dy > 0.0 ? Direction.UP : Direction.DOWN);
-		}
-		if (az > 1e-4) {
-			return pos2.relative(dz > 0.0 ? Direction.SOUTH : Direction.NORTH);
-		}
-		return null;
 	}
 
 	private static void notify(ServerPlayer player, String message) {
