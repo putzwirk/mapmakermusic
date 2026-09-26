@@ -121,6 +121,10 @@ public final class AreaWandHandler {
 		}
 
 		BlockPos pos2 = pos;
+		if (pos2.equals(pos1)) {
+			notify(player, "Same block, pick another corner.");
+			return;
+		}
 		BlockPos spot = findSpot(level, player, pos2);
 		if (spot == null) {
 			notify(player, "No space here.");
