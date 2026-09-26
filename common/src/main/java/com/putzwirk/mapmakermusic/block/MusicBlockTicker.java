@@ -364,9 +364,11 @@ public class MusicBlockTicker {
 			}
 			next = 0;
 		}
-		if (allowGap && !state.sound && queue.isFadeOut()
-				&& trackDuration(queue.getTracks().get(state.trackIndex).getTrack()) >= fadeOutSeconds()
-				&& trackDuration(queue.getTracks().get(next).getTrack()) >= fadeOutSeconds()) {
+		float fade = fadeOutSeconds();
+		float currentDur = trackDuration(queue.getTracks().get(state.trackIndex).getTrack());
+		float nextDur = trackDuration(queue.getTracks().get(next).getTrack());
+		boolean longTransition = currentDur >= fade && nextDur >= fade;
+		if (allowGap && !state.sound && queue.isFadeOut() && longTransition) {
 			if (MusicDebug.ENABLED) {
 				LOGGER.info("[dbg] gap box={} player={} qi={} {}->{} fireIn={}s",
 						key.pos(), player.getScoreboardName(), state.queueIndex, state.trackIndex, next, fadeOutSeconds());
@@ -381,6 +383,9 @@ public class MusicBlockTicker {
 		}
 		if (MusicDebug.ENABLED) {
 			LOGGER.info("[dbg] advance box={} player={} qi={} {}->{} gap=false", key.pos(), player.getScoreboardName(), state.queueIndex, state.trackIndex, next);
+		}
+		if (!state.sound && queue.isFadeOut() && !longTransition) {
+			MusicRemotes.getRemote().stopMusic(player, false);
 		}
 		startQueue(level, key, musicBe, player, state.queueIndex, next, 0f, true, false);
 	}
