@@ -152,6 +152,9 @@ public final class MusicPlayer {
 	}
 
 	public void playMusic(String rawName, int volumePercent, float pitch, boolean enableFadeIn, boolean enableFadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop, float startOffsetSeconds) {
+		if (com.putzwirk.mapmakermusic.block.MusicDebug.ENABLED) {
+			LOGGER.info("[dbg] playrx track={} offset={} fadeIn={} fadeOut={} loop={} restart={}", rawName, startOffsetSeconds, enableFadeIn, enableFadeOut, loop, restart);
+		}
 		float volumeMultiplier = clampVolume(volumePercent);
 		pitch = clampPitch(pitch);
 		String key = normalizeName(rawName);
@@ -303,6 +306,9 @@ public final class MusicPlayer {
 	}
 
 	public void stopMusic(boolean enableFadeOut) {
+		if (com.putzwirk.mapmakermusic.block.MusicDebug.ENABLED) {
+			LOGGER.info("[dbg] stoprx current={} fading={} fadeOut={}", this.currentTrackKey, this.fadingVoices.size(), enableFadeOut);
+		}
 		this.isLoadingTrack = false;
 		if (this.currentTrackKey != null && this.currentMusic != null) {
 			savePositionOf(this.currentTrackKey, this.currentMusic);
@@ -561,6 +567,9 @@ public final class MusicPlayer {
 	private void handleFinishedMusic() {
 		Voice finished = this.currentMusic;
 		String finishedKey = this.currentTrackKey;
+		if (com.putzwirk.mapmakermusic.block.MusicDebug.ENABLED) {
+			LOGGER.info("[dbg] finished key={}", finishedKey);
+		}
 		this.currentMusic = null;
 		this.currentTrackKey = null;
 		this.currentMusicPath = null;
@@ -587,9 +596,14 @@ public final class MusicPlayer {
 		this.isLoadingTrack = true;
 		this.currentTrackKey = key;
 		this.currentMusicPath = path;
+		long decodeStart = System.nanoTime();
 
 		CompletableFuture.supplyAsync(() -> decodeOrNull(path))
 				.thenAcceptAsync(decoded -> {
+					if (com.putzwirk.mapmakermusic.block.MusicDebug.ENABLED) {
+						LOGGER.info("[dbg] decoded key={} ms={} ok={} desired={}", key,
+								(System.nanoTime() - decodeStart) / 1000000L, decoded != null, this.desiredTrackKey);
+					}
 					if (decoded == null || !key.equals(this.desiredTrackKey)) {
 						this.isLoadingTrack = false;
 						return;
@@ -636,6 +650,9 @@ public final class MusicPlayer {
 
 				this.currentMusic = new Voice(source, buffer, enableFadeIn, volumeMultiplier, pitch, position, maxDistance, loop);
 				this.isLoadingTrack = false;
+				if (com.putzwirk.mapmakermusic.block.MusicDebug.ENABLED) {
+					LOGGER.info("[dbg] started key={} fading={} dur={}", key, this.fadingVoices.size(), duration);
+				}
 				}, Minecraft.getInstance());
 	}
 

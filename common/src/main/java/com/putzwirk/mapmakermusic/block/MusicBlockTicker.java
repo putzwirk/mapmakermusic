@@ -100,6 +100,9 @@ public class MusicBlockTicker {
 	}
 
 	public static void onTrackFinished(ServerPlayer player, String trackKey) {
+		if (MusicDebug.ENABLED) {
+			LOGGER.info("[dbg] finished player={} track={}", player.getScoreboardName(), trackKey);
+		}
 		UUID uuid = player.getUUID();
 		if (!(player.level() instanceof ServerLevel serverLevel)) {
 			return;
@@ -294,6 +297,12 @@ public class MusicBlockTicker {
 		float pitch = item.getPitch() != null ? item.getPitch() : musicBe.getPitch();
 		long now = level.getGameTime();
 
+		if (MusicDebug.ENABLED) {
+			LOGGER.info("[dbg] start box={} player={} qi={} ti={} track={} offset={} fadeIn={} loop={} sound={} dur={}",
+					key.pos(), player.getScoreboardName(), queueIndex, trackIndex, item.getTrack(), offsetSeconds,
+					fresh && queue.isFadeIn(), queue.isLoop(), sound, trackDuration(item.getTrack()));
+		}
+
 		if (sound) {
 			MusicRemotes.getRemote().playSound(player, item.getTrack(), volume, pitch, playbackAt(musicBe), musicBe.getRadius(),
 					queue.isFadeIn() && fadeApplies(item.getTrack()));
@@ -358,6 +367,10 @@ public class MusicBlockTicker {
 		if (allowGap && !state.sound && queue.isFadeOut()
 				&& trackDuration(queue.getTracks().get(state.trackIndex).getTrack()) >= fadeOutSeconds()
 				&& trackDuration(queue.getTracks().get(next).getTrack()) >= fadeOutSeconds()) {
+			if (MusicDebug.ENABLED) {
+				LOGGER.info("[dbg] gap box={} player={} qi={} {}->{} fireIn={}s",
+						key.pos(), player.getScoreboardName(), state.queueIndex, state.trackIndex, next, fadeOutSeconds());
+			}
 			MusicRemotes.getRemote().stopMusic(player, true);
 			state.fadingGap = true;
 			state.nextTrack = next;
@@ -365,6 +378,9 @@ public class MusicBlockTicker {
 			PlaybackSaveData.get(level.getServer()).put(PlaybackSaveData.boxId(key.dimension(), key.pos()), uuid,
 					new PlaybackSaveData.Entry(state.queueIndex, state.trackIndex, state.startedTick));
 			return;
+		}
+		if (MusicDebug.ENABLED) {
+			LOGGER.info("[dbg] advance box={} player={} qi={} {}->{} gap=false", key.pos(), player.getScoreboardName(), state.queueIndex, state.trackIndex, next);
 		}
 		startQueue(level, key, musicBe, player, state.queueIndex, next, 0f, true, false);
 	}
@@ -393,6 +409,10 @@ public class MusicBlockTicker {
 		}
 		state.stopped = true;
 		PlaybackSaveData.get(level.getServer()).remove(PlaybackSaveData.boxId(key.dimension(), key.pos()), uuid);
+		if (MusicDebug.ENABLED) {
+			LOGGER.info("[dbg] stop box={} player={} qi={} ti={} sound={}",
+					key.pos(), uuid, state.queueIndex, state.trackIndex, state.sound);
+		}
 	}
 
 	private static void settle(ServerLevel level, BoxKey key, UUID uuid, int queueIndex) {
