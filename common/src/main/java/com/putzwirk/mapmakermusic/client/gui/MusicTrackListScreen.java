@@ -158,7 +158,12 @@ public class MusicTrackListScreen extends Screen {
 
 		@Override
 		public int getRowWidth() {
-			return this.width - 22;
+			return this.width - 10;
+		}
+
+		@Override
+		public int getRowLeft() {
+			return this.x0 + 2;
 		}
 
 		@Override
