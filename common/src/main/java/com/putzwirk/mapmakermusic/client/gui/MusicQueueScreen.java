@@ -516,14 +516,7 @@ public class MusicQueueScreen extends Screen {
 					return "Playlist is empty";
 				}
 				MusicQueue.PlaylistItem item = queue().getTracks().get(index);
-				String mix = "";
-				if (item.getVolume() != null) {
-					mix += " v" + item.getVolume();
-				}
-				if (item.getPitch() != null) {
-					mix += " p" + item.getPitch();
-				}
-				return (index + 1) + ". " + item.getTrack() + mix;
+				return (index + 1) + ". " + item.getTrack();
 			}
 
 			@Override
