@@ -18,12 +18,11 @@ import net.minecraft.network.chat.Component;
 public class MusicQueueScreen extends Screen {
 
 	private static final int BG_HEIGHT = 240;
-	private static final int PAD = 10;
-	private static final int GAP = 10;
+	private static final int PAD = GuiLayout.SCREEN_PADDING;
+	private static final int GAP = GuiLayout.WIDGET_SPACING;
 	private static final int LIST_TOP = 62;
 	private static final int LIST_HEIGHT = 100;
 	private static final int ROW_HEIGHT = 22;
-	private static final int GLYPH = 16;
 	private static final int ROW_GLYPH = 14;
 
 	private final Screen parent;
@@ -66,19 +65,19 @@ public class MusicQueueScreen extends Screen {
 		int topPos = (this.height - BG_HEIGHT) / 2;
 
 		addRenderableWidget(Button.builder(Component.literal(GuiIcons.BACK), b -> backToParent())
-				.tooltip(Tooltip.create(Component.literal("Back"))).bounds(leftPos + PAD, topPos + 8, GLYPH + 2, GLYPH + 2).build());
+				.tooltip(Tooltip.create(Component.literal("Back"))).bounds(leftPos + PAD, topPos + GuiLayout.BACK_TOP, GuiLayout.BACK_SIZE, GuiLayout.BACK_SIZE).build());
 
 		Button tracksTab = Button.builder(Component.literal("Tracks"), b -> {
 			this.conditionsTab = false;
 			this.rebuildWidgets();
-		}).bounds(leftPos + PAD, topPos + 30, colWidth, 18).build();
+		}).bounds(leftPos + PAD, topPos + 30, colWidth, GuiLayout.BUTTON_HEIGHT).build();
 		tracksTab.active = conditionsTab;
 		addRenderableWidget(tracksTab);
 
 		Button conditionsTabButton = Button.builder(Component.literal("Conditions"), b -> {
 			this.conditionsTab = true;
 			this.rebuildWidgets();
-		}).bounds(leftPos + PAD + colWidth + GAP, topPos + 30, colWidth, 18).build();
+		}).bounds(leftPos + PAD + colWidth + GAP, topPos + 30, colWidth, GuiLayout.BUTTON_HEIGHT).build();
 		conditionsTabButton.active = !conditionsTab;
 		addRenderableWidget(conditionsTabButton);
 
@@ -119,39 +118,39 @@ public class MusicQueueScreen extends Screen {
 			queue.setChannel(queue.getChannel() == MusicQueue.Channel.MUSIC ? MusicQueue.Channel.SOUND : MusicQueue.Channel.MUSIC);
 			this.channelButton.setMessage(channelLabel());
 		}).tooltip(Tooltip.create(Component.literal("Music: one track at a time, resumes after relog. Sound: overlapping one-shots.")))
-				.bounds(leftPos + PAD, topPos + 166, modeWidth, 18).build();
+				.bounds(leftPos + PAD, topPos + 166, modeWidth, GuiLayout.BUTTON_HEIGHT).build();
 		addRenderableWidget(channelButton);
 
 		this.loopButton = Button.builder(loopLabel(), b -> {
 			queue.setLoop(!queue.isLoop());
 			this.loopButton.setMessage(loopLabel());
 		}).tooltip(Tooltip.create(Component.literal("Repeat the queue endlessly")))
-				.bounds(leftPos + PAD + modeWidth + GAP, topPos + 166, modeWidth, 18).build();
+				.bounds(leftPos + PAD + modeWidth + GAP, topPos + 166, modeWidth, GuiLayout.BUTTON_HEIGHT).build();
 		addRenderableWidget(loopButton);
 
 		this.shuffleButton = Button.builder(shuffleLabel(), b -> {
 			queue.setShuffle(!queue.isShuffle());
 			this.shuffleButton.setMessage(shuffleLabel());
 		}).tooltip(Tooltip.create(Component.literal("Shuffle the order each time the playlist starts")))
-				.bounds(leftPos + PAD + 2 * (modeWidth + GAP), topPos + 166, modeWidth, 18).build();
+				.bounds(leftPos + PAD + 2 * (modeWidth + GAP), topPos + 166, modeWidth, GuiLayout.BUTTON_HEIGHT).build();
 		addRenderableWidget(shuffleButton);
 
 		this.fadeInButton = Button.builder(fadeLabel("Fade in", queue.isFadeIn()), b -> {
 			queue.setFadeIn(!queue.isFadeIn());
 			this.fadeInButton.setMessage(fadeLabel("Fade in", queue.isFadeIn()));
 		}).tooltip(Tooltip.create(Component.literal("Fade in when the queue starts")))
-				.bounds(leftPos + PAD, topPos + 188, colWidth, 18).build();
+				.bounds(leftPos + PAD, topPos + 188, colWidth, GuiLayout.BUTTON_HEIGHT).build();
 		addRenderableWidget(fadeInButton);
 
 		this.fadeOutButton = Button.builder(fadeLabel("Fade out", queue.isFadeOut()), b -> {
 			queue.setFadeOut(!queue.isFadeOut());
 			this.fadeOutButton.setMessage(fadeLabel("Fade out", queue.isFadeOut()));
 		}).tooltip(Tooltip.create(Component.literal("Fade out when the queue ends")))
-				.bounds(rightX, topPos + 188, colWidth, 18).build();
+				.bounds(rightX, topPos + 188, colWidth, GuiLayout.BUTTON_HEIGHT).build();
 		addRenderableWidget(fadeOutButton);
 
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> backToParent())
-				.bounds(leftPos + PAD, topPos + 210, colWidth * 2 + GAP, 18).build());
+				.bounds(leftPos + PAD, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, colWidth * 2 + GAP, GuiLayout.BUTTON_HEIGHT).build());
 
 		this.catalogList = null;
 		this.activeList = null;
@@ -178,7 +177,7 @@ public class MusicQueueScreen extends Screen {
 		addRenderableWidget(activeList);
 
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> backToParent())
-				.bounds(leftPos + PAD, topPos + 212, listWidth, 18).build());
+				.bounds(leftPos + PAD, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, listWidth, GuiLayout.BUTTON_HEIGHT).build());
 
 		this.libraryList = null;
 		this.playlistList = null;
@@ -386,7 +385,7 @@ public class MusicQueueScreen extends Screen {
 		int topPos = (this.height - BG_HEIGHT) / 2;
 		guiGraphics.fill(leftPos, topPos, leftPos + panelWidth, topPos + BG_HEIGHT, 0xF0101010);
 		guiGraphics.renderOutline(leftPos, topPos, panelWidth, BG_HEIGHT, GuiIcons.boxOutlineColor(block.getBlockPos(), block.getOutlineColor()));
-		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 12, 0xFFFFFF);
+		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + GuiLayout.TITLE_TOP, 0xFFFFFF);
 
 		if (!conditionsTab) {
 			int rightX = leftPos + PAD + colWidth + GAP;
