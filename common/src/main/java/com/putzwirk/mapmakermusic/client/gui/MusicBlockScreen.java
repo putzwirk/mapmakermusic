@@ -197,8 +197,15 @@ public class MusicBlockScreen extends Screen {
 		boolean isGlobal = this.playbackMode == MusicBlockEntity.PlaybackMode.GLOBAL;
 
 		guiGraphics.fill(leftPos, topPos, leftPos + BG_WIDTH, topPos + BG_HEIGHT, 0xF0101010);
-		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, GuiIcons.boxOutlineColor(musicBlock.getBlockPos()));
+		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, GuiIcons.boxOutlineColor(musicBlock.getBlockPos(), musicBlock.getOutlineColor()));
 		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 12, 0xFFFFFF);
+
+		int swatchX = leftPos + BG_WIDTH - 32;
+		int swatchY = topPos + 8;
+		guiGraphics.fill(swatchX, swatchY, swatchX + 20, swatchY + 20, 0xFF000000);
+		guiGraphics.fill(swatchX + 1, swatchY + 1, swatchX + 19, swatchY + 19,
+				GuiIcons.boxOutlineColor(musicBlock.getBlockPos(), musicBlock.getOutlineColor()));
+		guiGraphics.renderOutline(swatchX, swatchY, 20, 20, 0xFFFFFFFF);
 
 		guiGraphics.drawString(this.font, "Trigger", labelX, topPos + 37, labelColor, false);
 		if (isChain) {
@@ -216,5 +223,23 @@ public class MusicBlockScreen extends Screen {
 		}
 
 		super.render(guiGraphics, mouseX, mouseY, delta);
+
+		if (mouseX >= swatchX && mouseX < swatchX + 20 && mouseY >= swatchY && mouseY < swatchY + 20) {
+			guiGraphics.renderTooltip(this.font, Component.literal("Outline color"), mouseX, mouseY);
+		}
+	}
+
+	@Override
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		int leftPos = (this.width - BG_WIDTH) / 2;
+		int topPos = (this.height - BG_HEIGHT) / 2;
+		int swatchX = leftPos + BG_WIDTH - 32;
+		int swatchY = topPos + 8;
+		if (mouseX >= swatchX && mouseX < swatchX + 20 && mouseY >= swatchY && mouseY < swatchY + 20) {
+			applySetupFields();
+			this.minecraft.setScreen(new BoxColorScreen(this, musicBlock));
+			return true;
+		}
+		return super.mouseClicked(mouseX, mouseY, button);
 	}
 }
