@@ -200,16 +200,18 @@ public class MusicBlockScreen extends Screen {
 		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, GuiIcons.boxOutlineColor(musicBlock.getBlockPos(), musicBlock.getOutlineColor()));
 		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 12, 0xFFFFFF);
 
-		int swatchX = leftPos + BG_WIDTH - 32;
-		int swatchY = topPos + 8;
-		guiGraphics.fill(swatchX, swatchY, swatchX + 20, swatchY + 20, 0xFF000000);
-		guiGraphics.fill(swatchX + 1, swatchY + 1, swatchX + 19, swatchY + 19,
-				GuiIcons.boxOutlineColor(musicBlock.getBlockPos(), musicBlock.getOutlineColor()));
-		guiGraphics.renderOutline(swatchX, swatchY, 20, 20, 0xFFFFFFFF);
-
 		guiGraphics.drawString(this.font, "Trigger", labelX, topPos + 37, labelColor, false);
+		boolean gateOn = isChain && this.areaGate;
 		if (isChain) {
 			guiGraphics.drawString(this.font, "Bounds", labelX, topPos + 57, labelColor, false);
+		}
+		if (gateOn) {
+			int swatchX = leftPos + FIELD_X - 20;
+			int swatchY = topPos + 54;
+			guiGraphics.fill(swatchX, swatchY, swatchX + 14, swatchY + 14, 0xFF000000);
+			guiGraphics.fill(swatchX + 1, swatchY + 1, swatchX + 13, swatchY + 13,
+					GuiIcons.boxOutlineColor(musicBlock.getBlockPos(), musicBlock.getOutlineColor()));
+			guiGraphics.renderOutline(swatchX, swatchY, 14, 14, 0xFFFFFFFF);
 		}
 		guiGraphics.drawString(this.font, "Pos1", labelX, topPos + 76, labelColor, false);
 		guiGraphics.drawString(this.font, "Pos2", labelX, topPos + 96, labelColor, false);
@@ -224,8 +226,12 @@ public class MusicBlockScreen extends Screen {
 
 		super.render(guiGraphics, mouseX, mouseY, delta);
 
-		if (mouseX >= swatchX && mouseX < swatchX + 20 && mouseY >= swatchY && mouseY < swatchY + 20) {
-			guiGraphics.renderTooltip(this.font, Component.literal("Outline color"), mouseX, mouseY);
+		if (isChain && this.areaGate) {
+			int swatchX = leftPos + FIELD_X - 20;
+			int swatchY = topPos + 54;
+			if (mouseX >= swatchX && mouseX < swatchX + 14 && mouseY >= swatchY && mouseY < swatchY + 14) {
+				guiGraphics.renderTooltip(this.font, Component.literal("Outline color"), mouseX, mouseY);
+			}
 		}
 	}
 
@@ -233,12 +239,14 @@ public class MusicBlockScreen extends Screen {
 	public boolean mouseClicked(double mouseX, double mouseY, int button) {
 		int leftPos = (this.width - BG_WIDTH) / 2;
 		int topPos = (this.height - BG_HEIGHT) / 2;
-		int swatchX = leftPos + BG_WIDTH - 32;
-		int swatchY = topPos + 8;
-		if (mouseX >= swatchX && mouseX < swatchX + 20 && mouseY >= swatchY && mouseY < swatchY + 20) {
-			applySetupFields();
-			this.minecraft.setScreen(new BoxColorScreen(this, musicBlock));
-			return true;
+		if (this.triggerMode == MusicBlockEntity.TriggerMode.CHAIN && this.areaGate) {
+			int swatchX = leftPos + FIELD_X - 20;
+			int swatchY = topPos + 54;
+			if (mouseX >= swatchX && mouseX < swatchX + 14 && mouseY >= swatchY && mouseY < swatchY + 14) {
+				applySetupFields();
+				this.minecraft.setScreen(new BoxColorScreen(this, musicBlock));
+				return true;
+			}
 		}
 		return super.mouseClicked(mouseX, mouseY, button);
 	}
