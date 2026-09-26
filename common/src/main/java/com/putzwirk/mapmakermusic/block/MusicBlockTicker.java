@@ -262,7 +262,66 @@ public class MusicBlockTicker {
 			state.orderPos = saved.orderPos;
 		}
 		STATES.computeIfAbsent(key, k -> new ConcurrentHashMap<>()).put(uuid, state);
-		advanceClock(level, key, musicBe, player, uuid, state, false);
+		if (!catchUpClock(level, musicBe, player, uuid, state)) {
+			return false;
+		}
+		float offset = Math.max(0f, (level.getGameTime() - state.startedTick) / 20f);
+		startQueue(level, key, musicBe, player, state.queueIndex, state.trackIndex, offset, false, false, state.order, state.orderPos);
+		return true;
+	}
+
+	private static boolean catchUpClock(ServerLevel level, MusicBlockEntity musicBe, ServerPlayer player, UUID uuid, PlaybackState state) {
+		MusicQueue queue = musicBe.getQueues().get(state.queueIndex);
+		if (state.fadingGap) {
+			state.trackIndex = state.nextTrack;
+			state.fadingGap = false;
+			if (state.trackIndex < 0 || state.trackIndex >= queue.getTracks().size()) {
+				settle(level, keyOf(level, musicBe.getBlockPos()), uuid, state.queueIndex);
+				return false;
+			}
+		}
+		for (int i = 0; i < 4096; i++) {
+			float duration = trackDuration(queue.getTracks().get(state.trackIndex).getTrack());
+			if (duration <= 0f) {
+				state.startedTick = level.getGameTime();
+				return true;
+			}
+			float elapsed = (level.getGameTime() - state.startedTick) / 20f;
+			if (elapsed < duration) {
+				return true;
+			}
+			int next;
+			List<Integer> order = state.order;
+			if (order != null) {
+				int pos = state.orderPos + 1;
+				if (pos >= order.size()) {
+					if (!queue.isLoop()) {
+						settle(level, keyOf(level, musicBe.getBlockPos()), uuid, state.queueIndex);
+						return false;
+					}
+					order = MusicQueue.shuffledOrder(queue.getTracks().size());
+					pos = 0;
+				}
+				state.order = new ArrayList<>(order);
+				state.orderPos = pos;
+				next = order.get(pos);
+			} else {
+				next = state.trackIndex + 1;
+				if (next >= queue.getTracks().size()) {
+					if (!queue.isLoop()) {
+						settle(level, keyOf(level, musicBe.getBlockPos()), uuid, state.queueIndex);
+						return false;
+					}
+					next = 0;
+				}
+			}
+			if (queue.getTracks().get(next).isStop()) {
+				settle(level, keyOf(level, musicBe.getBlockPos()), uuid, state.queueIndex);
+				return false;
+			}
+			state.trackIndex = next;
+			state.startedTick += (long) (duration * 20f);
+		}
 		return true;
 	}
 
