@@ -34,6 +34,12 @@ public class MusicBlockTicker {
 		long startedTick;
 		boolean sound;
 		boolean stopped;
+		boolean fadingGap;
+		int nextTrack;
+	}
+
+	private static float fadeOutSeconds() {
+		return com.putzwirk.mapmakermusic.client.audio.MusicPlayer.FADE_TICKS / 20f;
 	}
 
 	private static final Map<BoxKey, Map<UUID, PlaybackState>> STATES = new ConcurrentHashMap<>();
@@ -118,7 +124,7 @@ public class MusicBlockTicker {
 			if (trackDuration(queue.getTracks().get(state.trackIndex).getTrack()) >= 0f) {
 				continue;
 			}
-			advanceTrack(serverLevel, entry.getKey(), musicBe, player, uuid, state, true);
+			advanceTrack(serverLevel, entry.getKey(), musicBe, player, uuid, state, true, false);
 		}
 	}
 
@@ -314,6 +320,14 @@ public class MusicBlockTicker {
 		if (!state.sound && queue.getTracks().size() == 1 && queue.isLoop()) {
 			return;
 		}
+		if (state.fadingGap) {
+			float gapElapsed = (level.getGameTime() - state.startedTick) / 20f;
+			if (gapElapsed >= fadeOutSeconds()) {
+				state.fadingGap = false;
+				startQueue(level, key, musicBe, player, state.queueIndex, state.nextTrack, 0f, true, false);
+			}
+			return;
+		}
 		float duration = trackDuration(queue.getTracks().get(state.trackIndex).getTrack());
 		if (duration < 0f) {
 			return;
@@ -322,18 +336,26 @@ public class MusicBlockTicker {
 		if (elapsed < duration) {
 			return;
 		}
-		advanceTrack(level, key, musicBe, player, uuid, state, allowFadeIn);
+		advanceTrack(level, key, musicBe, player, uuid, state, allowFadeIn, true);
 	}
 
-	private static void advanceTrack(ServerLevel level, BoxKey key, MusicBlockEntity musicBe, ServerPlayer player, UUID uuid, PlaybackState state, boolean allowFadeIn) {
+	private static void advanceTrack(ServerLevel level, BoxKey key, MusicBlockEntity musicBe, ServerPlayer player, UUID uuid, PlaybackState state, boolean allowFadeIn, boolean allowGap) {
 		MusicQueue queue = musicBe.getQueues().get(state.queueIndex);
 		int next = state.trackIndex + 1;
 		if (next >= queue.getTracks().size()) {
-			if (queue.isLoop()) {
-				startQueue(level, key, musicBe, player, state.queueIndex, 0, 0f, true, false);
-			} else {
+			if (!queue.isLoop()) {
 				settle(level, key, uuid, state.queueIndex);
+				return;
 			}
+			next = 0;
+		}
+		if (allowGap && !state.sound && queue.isFadeOut()) {
+			MusicRemotes.getRemote().stopMusic(player, true);
+			state.fadingGap = true;
+			state.nextTrack = next;
+			state.startedTick = level.getGameTime();
+			PlaybackSaveData.get(level.getServer()).put(PlaybackSaveData.boxId(key.dimension(), key.pos()), uuid,
+					new PlaybackSaveData.Entry(state.queueIndex, state.trackIndex, state.startedTick));
 			return;
 		}
 		startQueue(level, key, musicBe, player, state.queueIndex, next, 0f, true, false);

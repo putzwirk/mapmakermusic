@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 
 public final class MusicPlayer {
 	private static final Logger LOGGER = LoggerFactory.getLogger("MapMakerMusic Audio");
-	private static final int FADE_TICKS = 40;
+	public static final int FADE_TICKS = 40;
 	private static final float POSITIONAL_RANGE = 16f;
 	private static final float RESUME_MARGIN_SECONDS = 0.25f;
 	private static final float RESUME_MIN_SECONDS = 0.05f;
