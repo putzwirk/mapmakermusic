@@ -198,9 +198,13 @@ public class MusicQueueScreen extends Screen {
 	}
 
 	private void openMixEditor(int trackIndex) {
-		if (trackIndex >= 0 && trackIndex < queue().getTracks().size()) {
-			this.minecraft.setScreen(new MusicTrackMixScreen(this, block, queueIndex, trackIndex));
+		if (trackIndex < 0 || trackIndex >= queue().getTracks().size()) {
+			return;
 		}
+		if (queue().getTracks().get(trackIndex).isStop()) {
+			return;
+		}
+		this.minecraft.setScreen(new MusicTrackMixScreen(this, block, queueIndex, trackIndex));
 	}
 
 	private void addTrack(String track) {
@@ -247,6 +251,9 @@ public class MusicQueueScreen extends Screen {
 	private void refreshPlaylist() {
 		double scroll = playlistList != null ? playlistList.getScrollAmount() : 0;
 		playlistList.clearPlaylistEntries();
+		if (queue().getTracks().isEmpty()) {
+			playlistList.addPlaylistEntry(playlistList.new Entry(-1));
+		}
 		for (int i = 0; i < queue().getTracks().size(); i++) {
 			playlistList.addPlaylistEntry(playlistList.new Entry(i));
 		}
@@ -387,7 +394,8 @@ public class MusicQueueScreen extends Screen {
 					duration = MusicLibrary.formatDuration(info == null ? -1f : info.durationSeconds());
 				}
 				int durationWidth = duration.isEmpty() ? 0 : MusicQueueScreen.this.font.width(duration) + 4;
-				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(track, width - ROW_GLYPH - 6 - durationWidth), left + 2, top + 7, 0xFFFFFF);
+				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(track, width - ROW_GLYPH - 6 - durationWidth), left + 2, top + 7,
+						MusicQueue.PlaylistItem.isStop(track) ? 0xFFE07A7A : 0xFFFFFF);
 				int bx = left + width - ROW_GLYPH;
 				if (!duration.isEmpty()) {
 					guiGraphics.drawString(MusicQueueScreen.this.font, duration, bx - durationWidth + 2, top + 7, 0x9A9A9A, false);
@@ -436,6 +444,9 @@ public class MusicQueueScreen extends Screen {
 			}
 
 			private String label() {
+				if (index < 0) {
+					return "Playlist is empty";
+				}
 				MusicQueue.PlaylistItem item = queue().getTracks().get(index);
 				String mix = "";
 				if (item.getVolume() != null) {
@@ -452,7 +463,12 @@ public class MusicQueueScreen extends Screen {
 				this.rowLeft = left;
 				this.rowWidth = width;
 				this.rowTop = top;
-				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(label(), width - 2 * ROW_GLYPH - 10), left + 2, top + 7, 0xFFFFFF);
+				if (this.index < 0) {
+					guiGraphics.drawString(MusicQueueScreen.this.font, clipped(label(), width - 4), left + 2, top + 7, 0x9A9A9A);
+					return;
+				}
+				int textColor = queue().getTracks().get(this.index).isStop() ? 0xFFE07A7A : 0xFFFFFF;
+				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(label(), width - 2 * ROW_GLYPH - 10), left + 2, top + 7, textColor);
 				int x4 = left + width - ROW_GLYPH;
 				int colX = x4 - ROW_GLYPH - 2;
 				int upY = top + 1;
@@ -466,6 +482,9 @@ public class MusicQueueScreen extends Screen {
 
 			@Override
 			public boolean mouseClicked(double mouseX, double mouseY, int button) {
+				if (index < 0) {
+					return false;
+				}
 				int x4 = rowLeft + rowWidth - ROW_GLYPH;
 				int colX = x4 - ROW_GLYPH - 2;
 				int upY = rowTop + 1;

@@ -34,11 +34,13 @@ public class MusicBlockScreen extends Screen {
 
 	private final MusicBlockEntity musicBlock;
 
-	private MusicBlockEntity.ActivationType activationType;
+	private MusicBlockEntity.TriggerMode triggerMode;
+	private boolean areaGate;
 	private MusicBlockEntity.AudioType audioType;
 	private MusicBlockEntity.PlaybackMode playbackMode;
 
-	private Button activationButton;
+	private Button triggerButton;
+	private Button gateButton;
 	private Button playbackButton;
 	private EditBox pos1Edit;
 	private EditBox pos2Edit;
@@ -49,7 +51,8 @@ public class MusicBlockScreen extends Screen {
 	public MusicBlockScreen(MusicBlockEntity musicBlock) {
 		super(Component.literal("Audiobox"));
 		this.musicBlock = musicBlock;
-		this.activationType = musicBlock.getActivationType();
+		this.triggerMode = musicBlock.getTriggerMode();
+		this.areaGate = musicBlock.isAreaGate();
 		this.audioType = musicBlock.getAudioType();
 		this.playbackMode = musicBlock.getPlaybackMode();
 	}
@@ -60,34 +63,40 @@ public class MusicBlockScreen extends Screen {
 
 		int leftPos = (this.width - BG_WIDTH) / 2;
 		int topPos = (this.height - BG_HEIGHT) / 2;
-		boolean isArea = this.activationType == MusicBlockEntity.ActivationType.AREA;
+		boolean isChain = this.triggerMode == MusicBlockEntity.TriggerMode.CHAIN;
+		boolean gateOn = isChain && this.areaGate;
 		boolean isGlobal = this.playbackMode == MusicBlockEntity.PlaybackMode.GLOBAL;
 
-		this.activationButton = Button.builder(Component.literal("Activation: " + label(this.activationType)), b -> {
-			this.activationType = this.activationType == MusicBlockEntity.ActivationType.REDSTONE
-					? MusicBlockEntity.ActivationType.AREA
-					: MusicBlockEntity.ActivationType.REDSTONE;
-			this.activationButton.setMessage(Component.literal("Activation: " + label(this.activationType)));
-			this.pos1Edit.setEditable(this.activationType == MusicBlockEntity.ActivationType.AREA);
-			this.pos2Edit.setEditable(this.activationType == MusicBlockEntity.ActivationType.AREA);
-		}).tooltip(Tooltip.create(Component.literal("Click to switch activation"))).bounds(leftPos + FIELD_X, topPos + 32, FIELD_WIDTH, 18).build();
-		addRenderableWidget(activationButton);
+		this.triggerButton = Button.builder(Component.literal("Trigger: " + label(this.triggerMode)), b -> {
+			this.triggerMode = this.triggerMode == MusicBlockEntity.TriggerMode.IMPULSE
+					? MusicBlockEntity.TriggerMode.CHAIN
+					: MusicBlockEntity.TriggerMode.IMPULSE;
+			this.rebuildWidgets();
+		}).tooltip(Tooltip.create(Component.literal("Impulse: one shot per signal. Chain: conditions checked every tick."))).bounds(leftPos + FIELD_X, topPos + 32, FIELD_WIDTH, 18).build();
+		addRenderableWidget(triggerButton);
 
 		this.pos1Edit = new EditBox(this.font, leftPos + FIELD_X, topPos + 52, FIELD_WIDTH, 16, Component.literal("First area corner"));
 		this.pos1Edit.setValue(formatPos(musicBlock.getPos1()));
-		this.pos1Edit.setEditable(isArea);
+		this.pos1Edit.setEditable(gateOn);
 		addRenderableWidget(pos1Edit);
 
 		this.pos2Edit = new EditBox(this.font, leftPos + FIELD_X, topPos + 72, FIELD_WIDTH, 16, Component.literal("Second area corner"));
 		this.pos2Edit.setValue(formatPos(musicBlock.getPos2()));
-		this.pos2Edit.setEditable(isArea);
+		this.pos2Edit.setEditable(gateOn);
 		addRenderableWidget(pos2Edit);
+
+		this.gateButton = Button.builder(Component.literal("Area gate: " + (this.areaGate ? "On" : "Off")), b -> {
+			this.areaGate = !this.areaGate;
+			this.rebuildWidgets();
+		}).tooltip(Tooltip.create(Component.literal("On: only players inside the box hear it. Edit corners or use the area wand."))).bounds(leftPos + FIELD_X, topPos + 92, FIELD_WIDTH, 18).build();
+		this.gateButton.visible = isChain;
+		addRenderableWidget(gateButton);
 
 		addRenderableWidget(Button.builder(Component.literal("Audio track settings"), b -> {
 			applySetupFields();
 			this.minecraft.setScreen(new MusicTrackListScreen(this, musicBlock));
 		}).tooltip(Tooltip.create(Component.literal("Choose tracks, per-track mix, order, and rules")))
-				.bounds(leftPos + 12, topPos + 106, BG_WIDTH - 24, 20).build());
+				.bounds(leftPos + 12, topPos + 114, BG_WIDTH - 24, 20).build());
 
 		this.playbackButton = Button.builder(Component.literal("Playback: " + label(this.playbackMode)), b -> {
 			this.playbackMode = this.playbackMode == MusicBlockEntity.PlaybackMode.GLOBAL
@@ -122,8 +131,8 @@ public class MusicBlockScreen extends Screen {
 				.bounds(leftPos + 134, topPos + BG_HEIGHT - 26, 118, 18).build());
 	}
 
-	private String label(MusicBlockEntity.ActivationType type) {
-		return type == MusicBlockEntity.ActivationType.AREA ? "Area" : "Redstone";
+	private String label(MusicBlockEntity.TriggerMode mode) {
+		return mode == MusicBlockEntity.TriggerMode.CHAIN ? "Chain" : "Impulse";
 	}
 
 	private String label(MusicBlockEntity.PlaybackMode mode) {
@@ -131,9 +140,10 @@ public class MusicBlockScreen extends Screen {
 	}
 
 	private void applySetupFields() {
-		musicBlock.setActivationType(activationType);
+		musicBlock.setTriggerMode(triggerMode);
+		musicBlock.setAreaGate(areaGate);
 		musicBlock.setAudioType(audioType);
-		if (activationType == MusicBlockEntity.ActivationType.AREA) {
+		if (triggerMode == MusicBlockEntity.TriggerMode.CHAIN && areaGate) {
 			musicBlock.setPos1(parsePos(pos1Edit.getValue(), musicBlock.getBlockPos()));
 			musicBlock.setPos2(parsePos(pos2Edit.getValue(), musicBlock.getBlockPos()));
 		}
@@ -183,17 +193,19 @@ public class MusicBlockScreen extends Screen {
 		int topPos = (this.height - BG_HEIGHT) / 2;
 		int labelX = leftPos + 12;
 		int labelColor = 0xE0E0E0;
-		boolean isArea = this.activationType == MusicBlockEntity.ActivationType.AREA;
+		boolean isChain = this.triggerMode == MusicBlockEntity.TriggerMode.CHAIN;
 		boolean isGlobal = this.playbackMode == MusicBlockEntity.PlaybackMode.GLOBAL;
 
 		guiGraphics.fill(leftPos, topPos, leftPos + BG_WIDTH, topPos + BG_HEIGHT, 0xF0101010);
 		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, 0xFFA0A0A0);
 		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 12, 0xFFFFFF);
 
-		guiGraphics.drawString(this.font, "Activation", labelX, topPos + 37, labelColor, false);
+		guiGraphics.drawString(this.font, "Trigger", labelX, topPos + 37, labelColor, false);
 		guiGraphics.drawString(this.font, "Pos1", labelX, topPos + 56, labelColor, false);
 		guiGraphics.drawString(this.font, "Pos2", labelX, topPos + 76, labelColor, false);
-		guiGraphics.drawString(this.font, isArea ? "Edit coordinates or use the area wand." : "Switch to Area to edit the positions.", labelX, topPos + 96, 0x9A9A9A, false);
+		if (isChain) {
+			guiGraphics.drawString(this.font, "Gate", labelX, topPos + 97, labelColor, false);
+		}
 		guiGraphics.drawString(this.font, "Playback", labelX, topPos + 141, labelColor, false);
 
 		if (isGlobal) {

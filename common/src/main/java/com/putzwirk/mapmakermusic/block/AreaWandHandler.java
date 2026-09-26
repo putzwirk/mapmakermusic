@@ -134,7 +134,8 @@ public final class AreaWandHandler {
 			return;
 		}
 
-		musicBe.setActivationType(MusicBlockEntity.ActivationType.AREA);
+		musicBe.setTriggerMode(MusicBlockEntity.TriggerMode.CHAIN);
+		musicBe.setAreaGate(true);
 		musicBe.setPos1(pos1);
 		musicBe.setPos2(pos2);
 		musicBe.setChanged();

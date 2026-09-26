@@ -50,19 +50,14 @@ public class MusicTrackListScreen extends Screen {
 		refreshQueues();
 		addRenderableWidget(queueList);
 
-		addRenderableWidget(Button.builder(Component.literal(GuiIcons.ADD), b -> {
-			MusicQueue queue = new MusicQueue();
-			var tracks = MusicLibrary.scanTrackNames();
-			if (!tracks.isEmpty()) {
-				queue.getTracks().add(new MusicQueue.PlaylistItem(tracks.get(0)));
-			}
-			musicBlock.addQueue(queue);
+		addRenderableWidget(Button.builder(Component.literal("Add queue"), b -> {
+			musicBlock.addQueue(new MusicQueue());
 			this.minecraft.setScreen(new MusicQueueScreen(this, musicBlock, musicBlock.getQueues().size() - 1));
-		}).tooltip(Tooltip.create(Component.literal("Add queue"))).bounds(leftPos + PAD, topPos + 212, 18, 18).build());
+		}).tooltip(Tooltip.create(Component.literal("Add an empty queue"))).bounds(leftPos + PAD, topPos + 212, 100, 18).build());
 
 		addRenderableWidget(Button.builder(Component.literal("Audio folder"), b -> openMusicFolder())
 				.tooltip(Tooltip.create(Component.literal("Open the folder that holds .ogg tracks")))
-				.bounds(leftPos + PAD + 24, topPos + 212, content - 24, 18).build());
+				.bounds(leftPos + PAD + 106, topPos + 212, content - 106, 18).build());
 
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> {
 			MusicBlockScreen.sendUpdate(musicBlock);
@@ -107,6 +102,9 @@ public class MusicTrackListScreen extends Screen {
 	private void refreshQueues() {
 		double scroll = queueList != null ? queueList.getScrollAmount() : 0;
 		queueList.clearQueueEntries();
+		if (musicBlock.getQueues().isEmpty()) {
+			queueList.addQueueEntry(queueList.new Entry(-1));
+		}
 		for (int i = 0; i < musicBlock.getQueues().size(); i++) {
 			queueList.addQueueEntry(queueList.new Entry(i));
 		}
@@ -181,6 +179,9 @@ public class MusicTrackListScreen extends Screen {
 			}
 
 			private String label() {
+				if (index < 0) {
+					return "No queues yet";
+				}
 				MusicQueue queue = musicBlock.getQueues().get(index);
 				String tracks = queue.getTrackNames().isEmpty()
 						? "<add tracks>"
@@ -201,6 +202,10 @@ public class MusicTrackListScreen extends Screen {
 				this.rowLeft = left;
 				this.rowWidth = width;
 				this.rowTop = top;
+				if (this.index < 0) {
+					guiGraphics.drawString(MusicTrackListScreen.this.font, clipped(label(), width - 4), left + 2, top + 7, 0x9A9A9A);
+					return;
+				}
 				int color = musicBlock.getQueues().get(this.index).getTrackNames().isEmpty() ? 0xFF8080 : 0xFFFFFF;
 				guiGraphics.drawString(MusicTrackListScreen.this.font, clipped(label(), width - 2 * ROW_GLYPH - 10), left + 2, top + 7, color);
 				int x3 = left + width - ROW_GLYPH;
@@ -216,6 +221,9 @@ public class MusicTrackListScreen extends Screen {
 
 			@Override
 			public boolean mouseClicked(double mouseX, double mouseY, int button) {
+				if (index < 0) {
+					return false;
+				}
 				int x3 = rowLeft + rowWidth - ROW_GLYPH;
 				int colX = x3 - ROW_GLYPH - 2;
 				int upY = rowTop + 1;

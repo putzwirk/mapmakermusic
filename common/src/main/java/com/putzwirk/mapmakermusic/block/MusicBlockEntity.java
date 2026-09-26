@@ -18,12 +18,6 @@ import javax.annotation.Nullable;
 
 public class MusicBlockEntity extends BlockEntity {
 
-	@Deprecated
-	public enum ActivationType {
-		REDSTONE,
-		AREA
-	}
-
 	public enum TriggerMode {
 		IMPULSE,
 		CHAIN
@@ -72,26 +66,6 @@ public class MusicBlockEntity extends BlockEntity {
 
 	public MusicBlockEntity(BlockPos pos, BlockState state) {
 		this(ModBlocks.MUSIC_BLOCK_ENTITY_TYPE.get(), pos, state);
-	}
-
-	@Deprecated
-	public ActivationType getActivationType() {
-		if (triggerMode == TriggerMode.CHAIN) {
-			return ActivationType.AREA;
-		}
-		return ActivationType.REDSTONE;
-	}
-
-	@Deprecated
-	public void setActivationType(ActivationType activationType) {
-		if (activationType == ActivationType.AREA) {
-			this.triggerMode = TriggerMode.CHAIN;
-			this.areaGate = true;
-		} else {
-			this.triggerMode = TriggerMode.IMPULSE;
-			this.areaGate = false;
-		}
-		setChanged();
 	}
 
 	public TriggerMode getTriggerMode() {
@@ -314,8 +288,7 @@ public class MusicBlockEntity extends BlockEntity {
 			}
 			this.areaGate = tag.getBoolean("AreaGate");
 		} else if (tag.contains("ActivationType")) {
-			int legacy = Math.max(0, Math.min(ActivationType.values().length - 1, tag.getInt("ActivationType")));
-			if (ActivationType.values()[legacy] == ActivationType.AREA) {
+			if (tag.getInt("ActivationType") == 1) {
 				this.triggerMode = TriggerMode.CHAIN;
 				this.areaGate = true;
 			} else {
