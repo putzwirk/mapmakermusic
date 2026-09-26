@@ -65,15 +65,19 @@ public class MusicQueueScreen extends Screen {
 		addRenderableWidget(Button.builder(Component.literal(GuiIcons.BACK), b -> backToParent())
 				.tooltip(Tooltip.create(Component.literal("Back"))).bounds(leftPos + PAD, topPos + 8, GLYPH + 2, GLYPH + 2).build());
 
-		addRenderableWidget(Button.builder(tabLabel("Tracks", !conditionsTab), b -> {
+		Button tracksTab = Button.builder(Component.literal("Tracks"), b -> {
 			this.conditionsTab = false;
 			this.rebuildWidgets();
-		}).bounds(leftPos + PAD, topPos + 30, colWidth, 18).build());
+		}).bounds(leftPos + PAD, topPos + 30, colWidth, 18).build();
+		tracksTab.active = conditionsTab;
+		addRenderableWidget(tracksTab);
 
-		addRenderableWidget(Button.builder(tabLabel("Conditions", conditionsTab), b -> {
+		Button conditionsTabButton = Button.builder(Component.literal("Conditions"), b -> {
 			this.conditionsTab = true;
 			this.rebuildWidgets();
-		}).bounds(leftPos + PAD + colWidth + GAP, topPos + 30, colWidth, 18).build());
+		}).bounds(leftPos + PAD + colWidth + GAP, topPos + 30, colWidth, 18).build();
+		conditionsTabButton.active = !conditionsTab;
+		addRenderableWidget(conditionsTabButton);
 
 		if (!conditionsTab) {
 			initTracksTab(leftPos, topPos);
@@ -93,6 +97,7 @@ public class MusicQueueScreen extends Screen {
 
 		this.libraryList = new LibraryList(this.minecraft, colWidth, LIST_HEIGHT, topPos + LIST_TOP, topPos + LIST_TOP + LIST_HEIGHT, ROW_HEIGHT);
 		this.libraryList.setLeftPos(leftPos + PAD);
+		this.libraryList.setRenderSelection(false);
 		this.libraryList.addLibraryEntry(this.libraryList.new Entry(MusicQueue.PlaylistItem.STOP_TRACK));
 		for (String track : MusicLibrary.scanTrackNames()) {
 			if (!MusicQueue.PlaylistItem.isStop(track)) {
@@ -120,14 +125,14 @@ public class MusicQueueScreen extends Screen {
 				.bounds(rightX, topPos + 188, colWidth, 18).build();
 		addRenderableWidget(loopButton);
 
-		this.fadeInButton = Button.builder(fadeLabel("In", queue.isFadeIn()), b -> {
+		this.fadeInButton = Button.builder(fadeLabel("Fade in", queue.isFadeIn()), b -> {
 			queue.setFadeIn(!queue.isFadeIn());
 			this.fadeInButton.setMessage(fadeLabel("In", queue.isFadeIn()));
 		}).tooltip(Tooltip.create(Component.literal("Fade in when the queue starts")))
 				.bounds(leftPos + PAD, topPos + 210, colWidth, 18).build();
 		addRenderableWidget(fadeInButton);
 
-		this.fadeOutButton = Button.builder(fadeLabel("Out", queue.isFadeOut()), b -> {
+		this.fadeOutButton = Button.builder(fadeLabel("Fade out", queue.isFadeOut()), b -> {
 			queue.setFadeOut(!queue.isFadeOut());
 			this.fadeOutButton.setMessage(fadeLabel("Out", queue.isFadeOut()));
 		}).tooltip(Tooltip.create(Component.literal("Fade out when the queue ends")))
@@ -145,6 +150,7 @@ public class MusicQueueScreen extends Screen {
 
 		this.catalogList = new CatalogList(this.minecraft, catWidth, 146, topPos + LIST_TOP, topPos + LIST_TOP + 146, ROW_HEIGHT);
 		this.catalogList.setLeftPos(leftPos + PAD);
+		this.catalogList.setRenderSelection(false);
 		for (MusicCondition.Type type : MusicCondition.Type.values()) {
 			this.catalogList.addCatalogEntry(this.catalogList.new Entry(type));
 		}
@@ -176,21 +182,21 @@ public class MusicQueueScreen extends Screen {
 		return Component.literal(all ? "Match: ALL rules (AND)" : "Match: ANY rule (OR)");
 	}
 
-	private Component tabLabel(String name, boolean active) {
-		return Component.literal((active ? GuiIcons.ON : GuiIcons.OFF) + name);
-	}
-
 	private Component channelLabel() {
 		boolean music = queue().getChannel() == MusicQueue.Channel.MUSIC;
 		return Component.literal("Channel: " + (music ? GuiIcons.NOTE_MUSIC + "Music" : GuiIcons.NOTE_SOUND + "Sound"));
 	}
 
 	private Component loopLabel() {
-		return Component.literal((queue().isLoop() ? GuiIcons.ON : GuiIcons.OFF) + GuiIcons.LOOP + "Loop");
+		return Component.literal("Looping " + bracket(queue().isLoop() ? "YES" : "NO", queue().isLoop()));
 	}
 
-	private static Component fadeLabel(String prefix, boolean value) {
-		return Component.literal((value ? GuiIcons.ON : GuiIcons.OFF) + prefix);
+	private static Component fadeLabel(String name, boolean value) {
+		return Component.literal(name + " " + bracket(value ? "ON" : "OFF", value));
+	}
+
+	private static String bracket(String value, boolean good) {
+		return "[" + (good ? "\u00a7a" : "\u00a7c") + value + "\u00a7r]";
 	}
 
 	private void openConditionEditor(int index) {
@@ -322,6 +328,14 @@ public class MusicQueueScreen extends Screen {
 
 	private void drawSpinButton(GuiGraphics guiGraphics, int x, int y, String symbol, boolean hovered, boolean enabled, int textDy) {
 		GuiIcons.drawSpinButton(guiGraphics, this.font, x, y, symbol, hovered, enabled, textDy);
+	}
+
+	private void drawTallGlyph(GuiGraphics guiGraphics, int x, int y, String symbol, boolean hovered) {
+		GuiIcons.drawTallGlyph(guiGraphics, this.font, x, y, symbol, hovered);
+	}
+
+	private boolean inTallGlyph(double mouseX, double mouseY, int x, int y) {
+		return GuiIcons.inTallGlyph(mouseX, mouseY, x, y);
 	}
 
 	private boolean inSpin(double mouseX, double mouseY, int x, int y) {
@@ -477,7 +491,7 @@ public class MusicQueueScreen extends Screen {
 				boolean canDown = this.index < queue().getTracks().size() - 1;
 				drawSpinButton(guiGraphics, colX, upY, GuiIcons.UP, canUp && inSpin(mouseX, mouseY, colX, upY), canUp, 0);
 				drawSpinButton(guiGraphics, colX, downY, GuiIcons.DOWN, canDown && inSpin(mouseX, mouseY, colX, downY), canDown, 1);
-				drawRowGlyph(guiGraphics, x4, top + 4, GuiIcons.REMOVE, inGlyph(mouseX, mouseY, x4, top + 4));
+				drawTallGlyph(guiGraphics, x4, top + 1, GuiIcons.REMOVE, inTallGlyph(mouseX, mouseY, x4, top + 1));
 			}
 
 			@Override
@@ -497,7 +511,7 @@ public class MusicQueueScreen extends Screen {
 					moveTrack(index, 1);
 					return true;
 				}
-				if (mouseX >= x4 && mouseX < x4 + ROW_GLYPH) {
+				if (inTallGlyph(mouseX, mouseY, x4, rowTop + 1)) {
 					removeTrack(index);
 					return true;
 				}
@@ -593,7 +607,7 @@ public class MusicQueueScreen extends Screen {
 				boolean canDown = this.index < queue().getConditions().size() - 1;
 				drawSpinButton(guiGraphics, colX, upY, GuiIcons.UP, canUp && inSpin(mouseX, mouseY, colX, upY), canUp, 0);
 				drawSpinButton(guiGraphics, colX, downY, GuiIcons.DOWN, canDown && inSpin(mouseX, mouseY, colX, downY), canDown, 1);
-				drawRowGlyph(guiGraphics, x4, top + 4, GuiIcons.REMOVE, inGlyph(mouseX, mouseY, x4, top + 4));
+				drawTallGlyph(guiGraphics, x4, top + 1, GuiIcons.REMOVE, inTallGlyph(mouseX, mouseY, x4, top + 1));
 			}
 
 			@Override
@@ -610,7 +624,7 @@ public class MusicQueueScreen extends Screen {
 					moveCondition(index, 1);
 					return true;
 				}
-				if (mouseX >= x4 && mouseX < x4 + ROW_GLYPH) {
+				if (inTallGlyph(mouseX, mouseY, x4, rowTop + 1)) {
 					removeCondition(index);
 					return true;
 				}

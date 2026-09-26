@@ -231,7 +231,7 @@ public class MusicTrackListScreen extends Screen {
 				boolean canDown = this.index < musicBlock.getQueues().size() - 1;
 				GuiIcons.drawSpinButton(guiGraphics, MusicTrackListScreen.this.font, colX, upY, GuiIcons.UP, canUp && GuiIcons.inSpin(mouseX, mouseY, colX, upY), canUp, 0);
 				GuiIcons.drawSpinButton(guiGraphics, MusicTrackListScreen.this.font, colX, downY, GuiIcons.DOWN, canDown && GuiIcons.inSpin(mouseX, mouseY, colX, downY), canDown, 1);
-				GuiIcons.drawRowGlyph(guiGraphics, MusicTrackListScreen.this.font, x3, top + 9, GuiIcons.REMOVE, GuiIcons.inGlyph(mouseX, mouseY, x3, top + 9));
+				GuiIcons.drawTallGlyph(guiGraphics, MusicTrackListScreen.this.font, x3, top + 5, GuiIcons.REMOVE, GuiIcons.inTallGlyph(mouseX, mouseY, x3, top + 5));
 			}
 
 			@Override
@@ -251,7 +251,7 @@ public class MusicTrackListScreen extends Screen {
 					moveQueue(index, 1);
 					return true;
 				}
-				if (mouseX >= x3 && mouseX < x3 + ROW_GLYPH) {
+				if (GuiIcons.inTallGlyph(mouseX, mouseY, x3, rowTop + 5)) {
 					removeQueue(index);
 					return true;
 				}
