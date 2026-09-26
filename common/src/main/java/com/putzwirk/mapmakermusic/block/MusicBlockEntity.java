@@ -48,6 +48,28 @@ public class MusicBlockEntity extends BlockEntity {
 	private boolean fadeIn = true;
 	private boolean fadeOut = true;
 
+	public static final int MIN_VOLUME = 0;
+	public static final int MAX_VOLUME = 200;
+	public static final float MIN_PITCH = 0.1f;
+	public static final float MAX_PITCH = 4.0f;
+	public static final int MIN_RADIUS = 1;
+	public static final int MAX_RADIUS = 256;
+
+	public static int clampVolume(int volume) {
+		return Math.max(MIN_VOLUME, Math.min(MAX_VOLUME, volume));
+	}
+
+	public static float clampPitch(float pitch) {
+		if (Float.isNaN(pitch)) {
+			return 1.0f;
+		}
+		return Math.max(MIN_PITCH, Math.min(MAX_PITCH, pitch));
+	}
+
+	public static int clampRadius(int radius) {
+		return Math.max(MIN_RADIUS, Math.min(MAX_RADIUS, radius));
+	}
+
 	private PlaybackMode playbackMode = PlaybackMode.GLOBAL;
 	private String listenerSelector = "@a";
 	private BlockPos playbackPos = BlockPos.ZERO;
@@ -328,8 +350,8 @@ public class MusicBlockEntity extends BlockEntity {
 			this.pos2 = NbtUtils.readBlockPos(tag.getCompound("Pos2"));
 		}
 		this.audioTrack = tag.getString("AudioTrack");
-		this.volume = tag.contains("Volume") ? tag.getInt("Volume") : 100;
-		this.pitch = tag.contains("Pitch") ? tag.getFloat("Pitch") : 1.0f;
+		this.volume = tag.contains("Volume") ? clampVolume(tag.getInt("Volume")) : 100;
+		this.pitch = tag.contains("Pitch") ? clampPitch(tag.getFloat("Pitch")) : 1.0f;
 		this.loop = !tag.contains("Loop") || tag.getBoolean("Loop");
 		this.persistent = tag.getBoolean("Persistent");
 		this.fadeIn = !tag.contains("FadeIn") || tag.getBoolean("FadeIn");
@@ -344,7 +366,7 @@ public class MusicBlockEntity extends BlockEntity {
 		} else {
 			this.playbackPos = this.worldPosition;
 		}
-		this.radius = tag.contains("Radius") ? tag.getInt("Radius") : 16;
+		this.radius = tag.contains("Radius") ? clampRadius(tag.getInt("Radius")) : 16;
 
 		this.queues.clear();
 		ListTag queueList = tag.getList("Queues", Tag.TAG_COMPOUND);
