@@ -36,6 +36,7 @@ public class MusicBlockEntity extends BlockEntity {
 	private TriggerMode triggerMode = TriggerMode.IMPULSE;
 	private boolean areaGate = false;
 	private Integer outlineColor = null;
+	private int priority = 0;
 	private AudioType audioType = AudioType.MUSIC;
 	private BlockPos pos1 = BlockPos.ZERO;
 	private BlockPos pos2 = BlockPos.ZERO;
@@ -93,6 +94,15 @@ public class MusicBlockEntity extends BlockEntity {
 
 	public void setOutlineColor(Integer outlineColor) {
 		this.outlineColor = outlineColor;
+		setChanged();
+	}
+
+	public int getPriority() {
+		return priority;
+	}
+
+	public void setPriority(int priority) {
+		this.priority = priority;
 		setChanged();
 	}
 
@@ -310,6 +320,7 @@ public class MusicBlockEntity extends BlockEntity {
 			this.audioType = AudioType.values()[Math.max(0, Math.min(AudioType.values().length - 1, tag.getInt("AudioType")))];
 		}
 		this.outlineColor = tag.contains("OutlineColor") ? tag.getInt("OutlineColor") : null;
+		this.priority = tag.contains("Priority") ? tag.getInt("Priority") : 0;
 		if (tag.contains("Pos1")) {
 			this.pos1 = NbtUtils.readBlockPos(tag.getCompound("Pos1"));
 		}
@@ -365,6 +376,7 @@ public class MusicBlockEntity extends BlockEntity {
 		if (this.outlineColor != null) {
 			tag.putInt("OutlineColor", this.outlineColor);
 		}
+		tag.putInt("Priority", this.priority);
 		tag.putInt("AudioType", this.audioType.ordinal());
 		tag.put("Pos1", NbtUtils.writeBlockPos(this.pos1));
 		tag.put("Pos2", NbtUtils.writeBlockPos(this.pos2));

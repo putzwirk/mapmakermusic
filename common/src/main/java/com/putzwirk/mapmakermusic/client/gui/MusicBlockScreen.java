@@ -47,6 +47,7 @@ public class MusicBlockScreen extends Screen {
 	private EditBox listenerEdit;
 	private EditBox playbackPosEdit;
 	private EditBox radiusEdit;
+	private EditBox priorityEdit;
 
 	public MusicBlockScreen(MusicBlockEntity musicBlock) {
 		super(Component.literal("Audiobox"));
@@ -125,6 +126,12 @@ public class MusicBlockScreen extends Screen {
 		this.radiusEdit.setVisible(!isGlobal);
 		addRenderableWidget(radiusEdit);
 
+		this.priorityEdit = new EditBox(this.font, leftPos + FIELD_X, topPos + 186, FIELD_WIDTH, 16, Component.literal("Priority"));
+		this.priorityEdit.setValue(String.valueOf(musicBlock.getPriority()));
+		this.priorityEdit.setFilter(text -> text.matches("-?\\d*"));
+		this.priorityEdit.setTooltip(Tooltip.create(Component.literal("Higher wins overlapping boxes. Scroll to adjust")));
+		addRenderableWidget(priorityEdit);
+
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> saveAndClose())
 				.bounds(leftPos + 12, topPos + BG_HEIGHT - 26, 118, 18).build());
 		addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> onClose())
@@ -154,6 +161,7 @@ public class MusicBlockScreen extends Screen {
 			musicBlock.setPlaybackPos(parsePos(playbackPosEdit.getValue(), musicBlock.getBlockPos()));
 			musicBlock.setRadius(parseInt(radiusEdit.getValue(), 16));
 		}
+		musicBlock.setPriority(parseInt(priorityEdit.getValue(), 0));
 	}
 
 	private void saveAndClose() {
@@ -223,6 +231,7 @@ public class MusicBlockScreen extends Screen {
 			guiGraphics.drawString(this.font, "Point", labelX, topPos + 173, labelColor, false);
 			guiGraphics.drawString(this.font, "Radius", leftPos + FIELD_X + 106, topPos + 173, labelColor, false);
 		}
+		guiGraphics.drawString(this.font, "Priority", labelX, topPos + 190, labelColor, false);
 
 		super.render(guiGraphics, mouseX, mouseY, delta);
 
@@ -233,6 +242,16 @@ public class MusicBlockScreen extends Screen {
 				guiGraphics.renderTooltip(this.font, Component.literal("Outline color"), mouseX, mouseY);
 			}
 		}
+	}
+
+	@Override
+	public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+		if (delta != 0 && priorityEdit != null && priorityEdit.isMouseOver(mouseX, mouseY)) {
+			int value = parseInt(priorityEdit.getValue(), 0) + (delta > 0 ? 1 : -1);
+			priorityEdit.setValue(String.valueOf(value));
+			return true;
+		}
+		return super.mouseScrolled(mouseX, mouseY, delta);
 	}
 
 	@Override

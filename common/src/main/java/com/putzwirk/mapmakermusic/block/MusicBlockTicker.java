@@ -378,25 +378,36 @@ public class MusicBlockTicker {
 
 	private static boolean beatenBy(ServerLevel level, BoxKey key, MusicBlockEntity musicBe, ServerPlayer player) {
 		boolean iAmGate = musicBe.isAreaGate() && areaOf(musicBe).contains(player.getX(), player.getY(), player.getZ());
+		int myPriority = musicBe.getPriority();
 		long myVolume = iAmGate ? areaVolume(musicBe) : 0L;
 		for (long otherPos : chainBoxesIn(key.dimension())) {
 			if (otherPos == key.pos()) {
 				continue;
 			}
 			BlockEntity be = level.getBlockEntity(BlockPos.of(otherPos));
-			if (!(be instanceof MusicBlockEntity other) || !other.isAreaGate()
+			if (!(be instanceof MusicBlockEntity other)
 					|| other.getTriggerMode() != MusicBlockEntity.TriggerMode.CHAIN || !boxHasTracks(other)) {
-				continue;
-			}
-			if (!areaOf(other).contains(player.getX(), player.getY(), player.getZ())) {
 				continue;
 			}
 			MusicQueue match = other.findMatchingQueue(player);
 			if (match == null || match.getChannel() != MusicQueue.Channel.MUSIC) {
 				continue;
 			}
+			boolean otherGate = other.isAreaGate() && areaOf(other).contains(player.getX(), player.getY(), player.getZ());
+			if (other.isAreaGate() && !otherGate) {
+				continue;
+			}
+			if (other.getPriority() != myPriority) {
+				return other.getPriority() > myPriority;
+			}
+			if (!iAmGate && !otherGate) {
+				continue;
+			}
 			if (!iAmGate) {
 				return true;
+			}
+			if (!otherGate) {
+				continue;
 			}
 			long otherVolume = areaVolume(other);
 			if (otherVolume < myVolume || (otherVolume == myVolume && otherPos < key.pos())) {
