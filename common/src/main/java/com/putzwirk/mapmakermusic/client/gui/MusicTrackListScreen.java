@@ -15,7 +15,7 @@ import net.minecraft.network.chat.Component;
 public class MusicTrackListScreen extends Screen {
 
 	private static final int BG_HEIGHT = 264;
-	private static final int PAD = 10;
+	private static final int PAD = GuiLayout.SCREEN_PADDING;
 	private static final int LIST_TOP = 54;
 	private static final int LIST_HEIGHT = 150;
 	private static final int ROW_HEIGHT = 32;
@@ -43,7 +43,7 @@ public class MusicTrackListScreen extends Screen {
 		int content = panelWidth - 2 * PAD;
 
 		addRenderableWidget(Button.builder(Component.literal(GuiIcons.BACK), b -> backToParent())
-				.tooltip(Tooltip.create(Component.literal("Back"))).bounds(leftPos + PAD, topPos + 8, 18, 18).build());
+				.tooltip(Tooltip.create(Component.literal("Back"))).bounds(leftPos + PAD, topPos + GuiLayout.BACK_TOP, GuiLayout.BACK_SIZE, GuiLayout.BACK_SIZE).build());
 
 		this.queueList = new QueueList(this.minecraft, content, LIST_HEIGHT, topPos + LIST_TOP, topPos + LIST_TOP + LIST_HEIGHT, ROW_HEIGHT);
 		this.queueList.setLeftPos(leftPos + PAD);
@@ -53,16 +53,16 @@ public class MusicTrackListScreen extends Screen {
 		addRenderableWidget(Button.builder(Component.literal("Add queue"), b -> {
 			musicBlock.addQueue(new MusicQueue());
 			this.minecraft.setScreen(new MusicQueueScreen(this, musicBlock, musicBlock.getQueues().size() - 1));
-		}).tooltip(Tooltip.create(Component.literal("Add an empty queue"))).bounds(leftPos + PAD, topPos + 212, 100, 18).build());
+		}).tooltip(Tooltip.create(Component.literal("Add an empty queue"))).bounds(leftPos + PAD, topPos + 212, 100, GuiLayout.BUTTON_HEIGHT).build());
 
 		addRenderableWidget(Button.builder(Component.literal("Audio folder"), b -> openMusicFolder())
 				.tooltip(Tooltip.create(Component.literal("Open the folder that holds .ogg tracks")))
-				.bounds(leftPos + PAD + 106, topPos + 212, content - 106, 18).build());
+				.bounds(leftPos + PAD + 100 + GuiLayout.WIDGET_SPACING, topPos + 212, content - 100 - GuiLayout.WIDGET_SPACING, GuiLayout.BUTTON_HEIGHT).build());
 
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> {
 			MusicBlockScreen.sendUpdate(musicBlock);
 			this.minecraft.setScreen(parent);
-		}).bounds(leftPos + PAD, topPos + BG_HEIGHT - 28, content, 18).build());
+		}).bounds(leftPos + PAD, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, content, GuiLayout.BUTTON_HEIGHT).build());
 	}
 
 	private void backToParent() {
@@ -130,7 +130,7 @@ public class MusicTrackListScreen extends Screen {
 		int topPos = (this.height - BG_HEIGHT) / 2;
 		guiGraphics.fill(leftPos, topPos, leftPos + panelWidth, topPos + BG_HEIGHT, 0xF0101010);
 		guiGraphics.renderOutline(leftPos, topPos, panelWidth, BG_HEIGHT, GuiIcons.boxOutlineColor(musicBlock.getBlockPos(), musicBlock.getOutlineColor()));
-		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 12, 0xFFFFFF);
+		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + GuiLayout.TITLE_TOP, 0xFFFFFF);
 		guiGraphics.drawString(this.font, clipped("Top to bottom, first match wins.", panelWidth - 2 * PAD), leftPos + PAD + 2, topPos + 40, 0x9A9A9A, false);
 		super.render(guiGraphics, mouseX, mouseY, delta);
 	}
