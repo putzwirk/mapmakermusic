@@ -21,7 +21,7 @@ public class MusicQueueScreen extends Screen {
 	private static final int PAD = 10;
 	private static final int GAP = 10;
 	private static final int LIST_TOP = 62;
-	private static final int LIST_HEIGHT = 122;
+	private static final int LIST_HEIGHT = 100;
 	private static final int ROW_HEIGHT = 22;
 	private static final int GLYPH = 16;
 	private static final int ROW_GLYPH = 14;
@@ -117,29 +117,32 @@ public class MusicQueueScreen extends Screen {
 			queue.setChannel(queue.getChannel() == MusicQueue.Channel.MUSIC ? MusicQueue.Channel.SOUND : MusicQueue.Channel.MUSIC);
 			this.channelButton.setMessage(channelLabel());
 		}).tooltip(Tooltip.create(Component.literal("Music: one track at a time, resumes after relog. Sound: overlapping one-shots.")))
-				.bounds(leftPos + PAD, topPos + 188, colWidth, 18).build();
+				.bounds(leftPos + PAD, topPos + 166, colWidth, 18).build();
 		addRenderableWidget(channelButton);
 
 		this.loopButton = Button.builder(loopLabel(), b -> {
 			queue.setLoop(!queue.isLoop());
 			this.loopButton.setMessage(loopLabel());
 		}).tooltip(Tooltip.create(Component.literal("Repeat the queue endlessly")))
-				.bounds(rightX, topPos + 188, colWidth, 18).build();
+				.bounds(rightX, topPos + 166, colWidth, 18).build();
 		addRenderableWidget(loopButton);
 
 		this.fadeInButton = Button.builder(fadeLabel("Fade in", queue.isFadeIn()), b -> {
 			queue.setFadeIn(!queue.isFadeIn());
 			this.fadeInButton.setMessage(fadeLabel("Fade in", queue.isFadeIn()));
 		}).tooltip(Tooltip.create(Component.literal("Fade in when the queue starts")))
-				.bounds(leftPos + PAD, topPos + 210, colWidth, 18).build();
+				.bounds(leftPos + PAD, topPos + 188, colWidth, 18).build();
 		addRenderableWidget(fadeInButton);
 
 		this.fadeOutButton = Button.builder(fadeLabel("Fade out", queue.isFadeOut()), b -> {
 			queue.setFadeOut(!queue.isFadeOut());
 			this.fadeOutButton.setMessage(fadeLabel("Fade out", queue.isFadeOut()));
 		}).tooltip(Tooltip.create(Component.literal("Fade out when the queue ends")))
-				.bounds(rightX, topPos + 210, colWidth, 18).build();
+				.bounds(rightX, topPos + 188, colWidth, 18).build();
 		addRenderableWidget(fadeOutButton);
+
+		addRenderableWidget(Button.builder(Component.literal("Done"), b -> backToParent())
+				.bounds(leftPos + PAD, topPos + 210, colWidth * 2 + GAP, 18).build());
 
 		this.catalogList = null;
 		this.activeList = null;
