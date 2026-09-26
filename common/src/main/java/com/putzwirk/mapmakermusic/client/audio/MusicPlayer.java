@@ -744,7 +744,7 @@ public final class MusicPlayer {
 			if (track == null || track.isEmpty() || !this.musicCache.containsKey(track)) {
 				continue;
 			}
-			int volume = Math.max(0, Math.min(100, parseInt(volumes.get(worldId), 100)));
+			int volume = Math.max(0, Math.min(200, parseInt(volumes.get(worldId), 100)));
 			float pitch = parsePitch(pitches.get(worldId), 1f);
 			Vec3 playbackPos = parsePlaybackPos(posX.get(worldId), posY.get(worldId), posZ.get(worldId));
 			float maxDistance = parseMaxDistance(ranges.get(worldId), POSITIONAL_RANGE);
@@ -839,7 +839,7 @@ public final class MusicPlayer {
 	}
 
 	private float clampVolume(int volumePercent) {
-		return Math.max(0f, Math.min(100f, volumePercent)) / 100f;
+		return Math.max(0f, Math.min(200f, volumePercent)) / 100f;
 	}
 
 	private float clampPitch(float pitch) {
