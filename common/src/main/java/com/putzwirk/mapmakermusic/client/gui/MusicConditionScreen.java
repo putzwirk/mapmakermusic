@@ -45,33 +45,35 @@ public class MusicConditionScreen extends Screen {
 
 		int leftPos = (this.width - BG_WIDTH) / 2;
 		int topPos = (this.height - BG_HEIGHT) / 2;
-		int x = leftPos + 12;
+		int x = leftPos + GuiLayout.SCREEN_PADDING;
+		int contentWidth = BG_WIDTH - 2 * GuiLayout.SCREEN_PADDING;
+		int fieldWidth = (contentWidth - GuiLayout.WIDGET_SPACING) / 2;
 
 		addRenderableWidget(Button.builder(Component.literal(GuiIcons.BACK), b -> {
 			MusicBlockScreen.sendUpdate(block);
 			this.minecraft.setScreen(parent);
-		}).tooltip(Tooltip.create(Component.literal("Back"))).bounds(x, topPos + 8, 18, 18).build());
+		}).tooltip(Tooltip.create(Component.literal("Back"))).bounds(x, topPos + GuiLayout.BACK_TOP, GuiLayout.BACK_SIZE, GuiLayout.BACK_SIZE).build());
 
 		this.modeBtn = Button.builder(modeLabel(), b -> {
 			condition.getType().cycleMode(condition);
 			this.rebuildWidgets();
-		}).bounds(x, topPos + 30, 224, 18).build();
+		}).bounds(x, topPos + 30, contentWidth, GuiLayout.BUTTON_HEIGHT).build();
 		addRenderableWidget(modeBtn);
 
-		this.textEdit = new EditBox(this.font, x, topPos + 52, 224, 18, Component.literal("Value"));
+		this.textEdit = new EditBox(this.font, x, topPos + 30 + GuiLayout.SECTION_SPACING, contentWidth, GuiLayout.BUTTON_HEIGHT, Component.literal("Value"));
 		String hint = condition.getType().textHint();
 		this.textEdit.setHint(Component.literal(hint == null ? "value" : hint));
 		this.textEdit.setValue(condition.getText());
 		this.textEdit.setResponder(condition::setText);
 		addRenderableWidget(textEdit);
 
-		this.minEdit = new EditBox(this.font, x, topPos + 74, 108, 18, Component.literal("Min"));
+		this.minEdit = new EditBox(this.font, x, topPos + 30 + 2 * GuiLayout.SECTION_SPACING, fieldWidth, GuiLayout.BUTTON_HEIGHT, Component.literal("Min"));
 		this.minEdit.setValue(format(condition.getMin()));
 		this.minEdit.setResponder(text -> condition.setMin(parse(text, condition.getMin())));
 		this.minEdit.setTooltip(Tooltip.create(Component.literal("Scroll to adjust")));
 		addRenderableWidget(minEdit);
 
-		this.maxEdit = new EditBox(this.font, x + 116, topPos + 74, 108, 18, Component.literal("Max"));
+		this.maxEdit = new EditBox(this.font, x + fieldWidth + GuiLayout.WIDGET_SPACING, topPos + 30 + 2 * GuiLayout.SECTION_SPACING, fieldWidth, GuiLayout.BUTTON_HEIGHT, Component.literal("Max"));
 		this.maxEdit.setValue(format(condition.getMax()));
 		this.maxEdit.setResponder(text -> condition.setMax(parse(text, condition.getMax())));
 		this.maxEdit.setTooltip(Tooltip.create(Component.literal("Scroll to adjust")));
@@ -79,7 +81,7 @@ public class MusicConditionScreen extends Screen {
 
 		for (int i = 0; i < 6; i++) {
 			final int bound = i;
-			EditBox coord = new EditBox(this.font, x + (i % 2) * 116, topPos + 30 + (i / 2) * 22, 108, 18, Component.literal(COORD_HINTS[i]));
+			EditBox coord = new EditBox(this.font, x + (i % 2) * (fieldWidth + GuiLayout.WIDGET_SPACING), topPos + 30 + (i / 2) * GuiLayout.SECTION_SPACING, fieldWidth, GuiLayout.BUTTON_HEIGHT, Component.literal(COORD_HINTS[i]));
 			coord.setHint(Component.literal(COORD_HINTS[i]));
 			coord.setValue(formatBound(condition.getBound(bound)));
 			coord.setResponder(text -> condition.setBound(bound, parseBound(text, condition.getBound(bound))));
@@ -89,7 +91,7 @@ public class MusicConditionScreen extends Screen {
 		}
 
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> saveAndClose())
-				.bounds(x, topPos + BG_HEIGHT - 24, 224, 18).build());
+				.bounds(x, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, contentWidth, GuiLayout.BUTTON_HEIGHT).build());
 
 		updateVisibility();
 	}
@@ -187,7 +189,7 @@ public class MusicConditionScreen extends Screen {
 		int topPos = (this.height - BG_HEIGHT) / 2;
 		guiGraphics.fill(leftPos, topPos, leftPos + BG_WIDTH, topPos + BG_HEIGHT, 0xF0101010);
 		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, GuiIcons.boxOutlineColor(block.getBlockPos(), block.getOutlineColor()));
-		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 12, 0xFFFFFF);
+		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + GuiLayout.TITLE_TOP, 0xFFFFFF);
 
 		super.render(guiGraphics, mouseX, mouseY, delta);
 	}
