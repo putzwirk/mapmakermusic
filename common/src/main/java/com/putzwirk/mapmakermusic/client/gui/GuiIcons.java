@@ -14,8 +14,8 @@ public final class GuiIcons {
 
 	public static final String BACK = "\u2190";
 	public static final String ADD = "+";
-	public static final String UP = "\u25B2";
-	public static final String DOWN = "\u25BC";
+	public static final String UP = "\u25B4";
+	public static final String DOWN = "\u25BE";
 	public static final String REMOVE = "\u00D7";
 	public static final String NOTE_MUSIC = "\u266A ";
 	public static final String NOTE_SOUND = "\u266B ";
