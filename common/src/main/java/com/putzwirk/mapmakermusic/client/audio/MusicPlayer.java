@@ -224,9 +224,9 @@ public final class MusicPlayer {
 	}
 
 	private void rescanMusicFolder(boolean notify) {
+		MusicLibrary.invalidateTracks();
 		this.musicCache.clear();
 		this.musicCache.putAll(MusicLibrary.scanTracks());
-		MusicLibrary.invalidateTrackInfo();
 		if (notify) {
 			notifyPlayer("Rescanned custom music folder. Found " + this.musicCache.size() + " tracks.");
 		}

@@ -13,6 +13,7 @@ import net.minecraft.server.level.ServerPlayer;
 public final class TrackTransfer {
 
 	private static final int CHUNK_SIZE = 30000;
+	private static final TrackRequestThrottle THROTTLE = new TrackRequestThrottle();
 	private static final ExecutorService IO = Executors.newSingleThreadExecutor(runnable -> {
 		Thread thread = new Thread(runnable, "mapmakermusic-io");
 		thread.setDaemon(true);
@@ -23,7 +24,10 @@ public final class TrackTransfer {
 	}
 
 	public static void sendTrack(ServerPlayer player, String name) {
-		Path path = MusicLibrary.scanTracks().get(name);
+		if (!THROTTLE.tryAcquire(player.getUUID(), System.currentTimeMillis())) {
+			return;
+		}
+		Path path = MusicLibrary.scanTracks().get(MusicLibrary.normalizeTrackKey(name));
 		if (path == null) {
 			return;
 		}

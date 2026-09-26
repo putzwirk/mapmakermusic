@@ -26,8 +26,20 @@ public final class MusicLibrary {
 
 	private static volatile Map<String, Long> serverManifest = null;
 	private static volatile Map<String, TrackInfo> infoCache = null;
+	private static volatile Map<String, Path> tracksCache = null;
 
 	private MusicLibrary() {
+	}
+
+	public static String normalizeTrackKey(String name) {
+		if (name == null) {
+			return "";
+		}
+		String key = name.trim();
+		if (key.toLowerCase(Locale.ROOT).endsWith(".ogg")) {
+			key = key.substring(0, key.length() - 4);
+		}
+		return key.toLowerCase(Locale.ROOT);
 	}
 
 	public static Path getMusicDir() {
@@ -69,6 +81,16 @@ public final class MusicLibrary {
 	}
 
 	public static Map<String, Path> scanTracks() {
+		Map<String, Path> cached = tracksCache;
+		if (cached != null) {
+			return new LinkedHashMap<>(cached);
+		}
+		Map<String, Path> fresh = scanTracksUncached();
+		tracksCache = Collections.unmodifiableMap(fresh);
+		return new LinkedHashMap<>(fresh);
+	}
+
+	private static Map<String, Path> scanTracksUncached() {
 		Map<String, Path> tracks = new LinkedHashMap<>();
 		Path dir = getMusicDir();
 		if (!Files.exists(dir)) {
@@ -103,6 +125,11 @@ public final class MusicLibrary {
 
 	public static void invalidateTrackInfo() {
 		infoCache = null;
+	}
+
+	public static void invalidateTracks() {
+		tracksCache = null;
+		invalidateTrackInfo();
 	}
 
 	public static Map<String, TrackInfo> trackInfo() {
