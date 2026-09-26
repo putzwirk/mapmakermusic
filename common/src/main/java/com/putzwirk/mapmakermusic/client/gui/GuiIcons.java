@@ -42,7 +42,7 @@ public final class GuiIcons {
 		int text = enabled ? 0xFFFFFF : 0xFF707070;
 		guiGraphics.fill(x, y, x + SPIN_W, y + SPIN_H, 0xFF000000);
 		guiGraphics.fill(x + 1, y + 1, x + SPIN_W - 1, y + SPIN_H - 1, face);
-		guiGraphics.drawCenteredString(font, symbol, x + SPIN_W / 2, y + 1 + textDy, text);
+		guiGraphics.drawCenteredString(font, symbol, x + SPIN_W / 2 + 1, y + 1 + textDy - 4, text);
 	}
 
 	public static boolean inSpin(double mouseX, double mouseY, int x, int y) {
