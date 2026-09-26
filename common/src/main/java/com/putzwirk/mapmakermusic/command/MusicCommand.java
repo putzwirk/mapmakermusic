@@ -77,7 +77,7 @@ public final class MusicCommand {
 		CommandSourceStack source = ctx.getSource();
 
 		for (ServerPlayer player : targets) {
-			MusicRemotes.getRemote().playMusic(player, name, volume, pitch, true, true, position, maxDistance, false);
+			MusicRemotes.getRemote().playMusic(player, name, volume, pitch, true, true, position, maxDistance, false, true);
 		}
 
 		String where = position == null

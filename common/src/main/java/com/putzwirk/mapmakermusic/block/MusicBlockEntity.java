@@ -1,9 +1,14 @@
 package com.putzwirk.mapmakermusic.block;
 
+import java.util.ArrayList;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -44,6 +49,8 @@ public class MusicBlockEntity extends BlockEntity {
 	private String listenerSelector = "@a";
 	private BlockPos playbackPos = BlockPos.ZERO;
 	private int radius = 16;
+
+	private final List<MusicQueue> queues = new ArrayList<>();
 
 	// Runtime state for Redstone edge triggering & Area tracking
 	private boolean poweredLastTick = false;
@@ -195,6 +202,55 @@ public class MusicBlockEntity extends BlockEntity {
 		setChanged();
 	}
 
+	public List<MusicQueue> getQueues() {
+		return queues;
+	}
+
+	public void setQueues(List<MusicQueue> value) {
+		queues.clear();
+		if (value != null) {
+			queues.addAll(value);
+		}
+		setChanged();
+	}
+
+	public void addQueue(MusicQueue queue) {
+		queues.add(queue);
+		setChanged();
+	}
+
+	public void setQueue(int index, MusicQueue queue) {
+		if (index >= 0 && index < queues.size()) {
+			queues.set(index, queue);
+			setChanged();
+		}
+	}
+
+	public void removeQueue(int index) {
+		if (index >= 0 && index < queues.size()) {
+			queues.remove(index);
+			setChanged();
+		}
+	}
+
+	public void moveQueue(int index, int delta) {
+		int target = index + delta;
+		if (index >= 0 && index < queues.size() && target >= 0 && target < queues.size()) {
+			MusicQueue queue = queues.remove(index);
+			queues.add(target, queue);
+			setChanged();
+		}
+	}
+
+	public MusicQueue findMatchingQueue(ServerPlayer player) {
+		for (MusicQueue queue : queues) {
+			if (!queue.getTracks().isEmpty() && MusicRuleEvaluator.matches(queue, player)) {
+				return queue;
+			}
+		}
+		return null;
+	}
+
 	public boolean isPoweredLastTick() {
 		return poweredLastTick;
 	}
@@ -244,6 +300,27 @@ public class MusicBlockEntity extends BlockEntity {
 			this.playbackPos = this.worldPosition;
 		}
 		this.radius = tag.contains("Radius") ? tag.getInt("Radius") : 16;
+
+		this.queues.clear();
+		ListTag queueList = tag.getList("Queues", Tag.TAG_COMPOUND);
+		if (queueList.isEmpty() && tag.contains("Cues")) {
+			queueList = tag.getList("Cues", Tag.TAG_COMPOUND);
+		}
+		for (int i = 0; i < queueList.size(); i++) {
+			this.queues.add(MusicQueue.load(queueList.getCompound(i)));
+		}
+		if (this.queues.isEmpty() && !this.audioTrack.isEmpty()) {
+			MusicQueue legacy = new MusicQueue();
+			legacy.getTracks().add(new MusicQueue.PlaylistItem(this.audioTrack));
+			this.queues.add(legacy);
+		}
+		if (this.audioType == AudioType.SOUND) {
+			for (MusicQueue queue : this.queues) {
+				if (!queue.isChannelExplicit()) {
+					queue.setChannel(MusicQueue.Channel.SOUND);
+				}
+			}
+		}
 	}
 
 	@Override
@@ -265,6 +342,12 @@ public class MusicBlockEntity extends BlockEntity {
 		tag.putString("ListenerSelector", this.listenerSelector);
 		tag.put("PlaybackPos", NbtUtils.writeBlockPos(this.playbackPos));
 		tag.putInt("Radius", this.radius);
+
+		ListTag queueList = new ListTag();
+		for (MusicQueue queue : this.queues) {
+			queueList.add(queue.save());
+		}
+		tag.put("Queues", queueList);
 	}
 
 	@Override

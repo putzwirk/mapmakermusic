@@ -15,6 +15,7 @@ import java.nio.file.Files;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import net.minecraft.client.Minecraft;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.packs.resources.SimplePreparableReloadListener;
@@ -36,18 +37,16 @@ public final class MapMakerMusicClient {
 	public static void init() {
 		MUSIC_PLAYER.init();
 		MusicPlayer.setTrackRequester(name -> MusicNetworking.sendToServer(new MusicNetworking.TrackRequestPacket(name)));
+		MusicPlayer.setTrackFinishedCallback(() -> MusicNetworking.sendToServer(new MusicNetworking.TrackFinishedPacket()));
 		MinecraftForge.EVENT_BUS.register(new MapMakerMusicClient());
 
-		MusicBlockScreen.setPacketSender((pos, activationType, audioType, pos1, pos2, audioTrack, volume, pitch, loop, persistent, fadeIn, fadeOut, playbackMode, listenerSelector, playbackPos, radius) -> {
-			UpdateMusicBlockPacket packet = new UpdateMusicBlockPacket(pos, activationType, audioType, pos1, pos2, audioTrack, volume, pitch, loop, persistent, fadeIn, fadeOut, playbackMode, listenerSelector, playbackPos, radius);
-			MusicNetworking.sendToServer(new MusicNetworking.ForgeUpdateMusicBlockPacket(packet));
-		});
+		MusicBlockScreen.setPacketSender((pos, data) -> MusicNetworking.sendToServer(new MusicNetworking.ForgeUpdateMusicBlockPacket(pos, data)));
 	}
 
-	public static void onPlayMusic(String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance, boolean restart) {
+	public static void onPlayMusic(String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop) {
 		Minecraft.getInstance().execute(() -> {
 			stopVanillaMusic();
-			MUSIC_PLAYER.playMusic(name, volume, pitch, fadeIn, fadeOut, position, maxDistance, restart);
+			MUSIC_PLAYER.playMusic(name, volume, pitch, fadeIn, fadeOut, position, maxDistance, restart, loop);
 		});
 	}
 
@@ -160,8 +159,14 @@ public final class MapMakerMusicClient {
 
 	private static void stopVanillaMusic() {
 		Minecraft client = Minecraft.getInstance();
-		if (client != null && client.getSoundManager() != null) {
-			client.getSoundManager().stop();
+		if (client == null) {
+			return;
+		}
+		if (client.getMusicManager() != null) {
+			client.getMusicManager().stopPlaying();
+		}
+		if (client.getSoundManager() != null) {
+			client.getSoundManager().stop(null, SoundSource.MUSIC);
 		}
 	}
 

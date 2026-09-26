@@ -15,6 +15,7 @@ import com.putzwirk.mapmakermusic.network.MusicRemotes;
 import com.putzwirk.mapmakermusic.network.TrackTransfer;
 import com.putzwirk.mapmakermusic.network.UpdateMusicBlockPacket;
 import net.fabricmc.api.ModInitializer;
+import net.minecraft.nbt.CompoundTag;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
@@ -64,24 +65,8 @@ public class MapMakerMusic implements ModInitializer {
 
 		ServerPlayNetworking.registerGlobalReceiver(MusicNetworking.UPDATE_MUSIC_BLOCK, (server, player, handler, buf, responseSender) -> {
 			BlockPos pos = buf.readBlockPos();
-			int activationType = buf.readInt();
-			int audioType = buf.readInt();
-			BlockPos pos1 = buf.readBlockPos();
-			BlockPos pos2 = buf.readBlockPos();
-			String audioTrack = buf.readUtf();
-			int volume = buf.readInt();
-			float pitch = buf.readFloat();
-			boolean loop = buf.readBoolean();
-			boolean persistent = buf.readBoolean();
-			boolean fadeIn = buf.readBoolean();
-			boolean fadeOut = buf.readBoolean();
-			int playbackMode = buf.readInt();
-			String listenerSelector = buf.readUtf();
-			BlockPos playbackPos = buf.readBlockPos();
-			int radius = buf.readInt();
-
-			UpdateMusicBlockPacket packet = new UpdateMusicBlockPacket(pos, activationType, audioType, pos1, pos2, audioTrack, volume, pitch, loop, persistent, fadeIn, fadeOut, playbackMode, listenerSelector, playbackPos, radius);
-			server.execute(() -> MusicBlockServerHandler.handleUpdate(player, packet));
+			CompoundTag data = buf.readNbt();
+			server.execute(() -> MusicBlockServerHandler.handleUpdate(player, new UpdateMusicBlockPacket(pos, data)));
 		});
 
 		MusicRemotes.setRemote(new FabricMusicRemote());
@@ -119,6 +104,8 @@ public class MapMakerMusic implements ModInitializer {
 			String name = buf.readUtf();
 			server.execute(() -> TrackTransfer.sendTrack(player, name));
 		});
+		ServerPlayNetworking.registerGlobalReceiver(MusicNetworking.TRACK_FINISHED, (server, player, handler, buf, responseSender) ->
+				server.execute(() -> MusicBlockTicker.onTrackFinished(player)));
 		LOGGER.info("MapMakerMusic initialized");
 	}
 

@@ -1,6 +1,7 @@
 package com.putzwirk.mapmakermusic.network;
 
 import com.putzwirk.mapmakermusic.MapMakerMusic;
+import com.putzwirk.mapmakermusic.block.MusicBlockTicker;
 import com.putzwirk.mapmakermusic.client.MapMakerMusicClient;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -17,7 +18,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import java.util.function.Supplier;
 
 public final class MusicNetworking {
-	private static final String PROTOCOL_VERSION = "8";
+	private static final String PROTOCOL_VERSION = "10";
 	public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
 			MapMakerMusic.id("main"),
 			() -> PROTOCOL_VERSION,
@@ -41,6 +42,7 @@ public final class MusicNetworking {
 		CHANNEL.registerMessage(id++, LibrarySyncPacket.class, LibrarySyncPacket::encode, LibrarySyncPacket::new, LibrarySyncPacket::handle);
 		CHANNEL.registerMessage(id++, TrackDataPacket.class, TrackDataPacket::encode, TrackDataPacket::new, TrackDataPacket::handle);
 		CHANNEL.registerMessage(id++, TrackRequestPacket.class, TrackRequestPacket::encode, TrackRequestPacket::new, TrackRequestPacket::handle);
+		CHANNEL.registerMessage(id++, TrackFinishedPacket.class, TrackFinishedPacket::encode, TrackFinishedPacket::new, TrackFinishedPacket::handle);
 	}
 
 	public static void sendToPlayer(ServerPlayer player, Object message) {
@@ -65,8 +67,9 @@ public final class MusicNetworking {
 		public final Vec3 position;
 		public final float maxDistance;
 		public final boolean restart;
+		public final boolean loop;
 
-		public PlayMusicPacket(String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance, boolean restart) {
+		public PlayMusicPacket(String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop) {
 			this.name = name;
 			this.volume = volume;
 			this.pitch = pitch;
@@ -75,6 +78,7 @@ public final class MusicNetworking {
 			this.position = position;
 			this.maxDistance = maxDistance;
 			this.restart = restart;
+			this.loop = loop;
 		}
 
 		public PlayMusicPacket(FriendlyByteBuf buf) {
@@ -86,6 +90,7 @@ public final class MusicNetworking {
 			this.position = buf.readBoolean() ? new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()) : null;
 			this.maxDistance = buf.readFloat();
 			this.restart = buf.readBoolean();
+			this.loop = buf.readBoolean();
 		}
 
 		public void encode(FriendlyByteBuf buf) {
@@ -102,11 +107,12 @@ public final class MusicNetworking {
 			}
 			buf.writeFloat(this.maxDistance);
 			buf.writeBoolean(this.restart);
+			buf.writeBoolean(this.loop);
 		}
 
 		public static void handle(PlayMusicPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
 			NetworkEvent.Context context = contextSupplier.get();
-			runOnMainThread(context, () -> MapMakerMusicClient.onPlayMusic(msg.name, msg.volume, msg.pitch, msg.fadeIn, msg.fadeOut, msg.position, msg.maxDistance, msg.restart));
+			runOnMainThread(context, () -> MapMakerMusicClient.onPlayMusic(msg.name, msg.volume, msg.pitch, msg.fadeIn, msg.fadeOut, msg.position, msg.maxDistance, msg.restart, msg.loop));
 		}
 	}
 
@@ -364,51 +370,45 @@ public final class MusicNetworking {
 		}
 	}
 
-	public static class ForgeUpdateMusicBlockPacket {
-		public final UpdateMusicBlockPacket packet;
-
-		public ForgeUpdateMusicBlockPacket(UpdateMusicBlockPacket packet) {
-			this.packet = packet;
+	public static class TrackFinishedPacket {
+		public TrackFinishedPacket() {
 		}
 
-		public ForgeUpdateMusicBlockPacket(FriendlyByteBuf buf) {
-			BlockPos pos = buf.readBlockPos();
-			int activationType = buf.readInt();
-			int audioType = buf.readInt();
-			BlockPos pos1 = buf.readBlockPos();
-			BlockPos pos2 = buf.readBlockPos();
-			String audioTrack = buf.readUtf();
-			int volume = buf.readInt();
-			float pitch = buf.readFloat();
-			boolean loop = buf.readBoolean();
-			boolean persistent = buf.readBoolean();
-			boolean fadeIn = buf.readBoolean();
-			boolean fadeOut = buf.readBoolean();
-			int playbackMode = buf.readInt();
-			String listenerSelector = buf.readUtf();
-			BlockPos playbackPos = buf.readBlockPos();
-			int radius = buf.readInt();
-
-			this.packet = new UpdateMusicBlockPacket(pos, activationType, audioType, pos1, pos2, audioTrack, volume, pitch, loop, persistent, fadeIn, fadeOut, playbackMode, listenerSelector, playbackPos, radius);
+		public TrackFinishedPacket(FriendlyByteBuf buf) {
 		}
 
 		public void encode(FriendlyByteBuf buf) {
-			buf.writeBlockPos(packet.pos);
-			buf.writeInt(packet.activationType);
-			buf.writeInt(packet.audioType);
-			buf.writeBlockPos(packet.pos1);
-			buf.writeBlockPos(packet.pos2);
-			buf.writeUtf(packet.audioTrack);
-			buf.writeInt(packet.volume);
-			buf.writeFloat(packet.pitch);
-			buf.writeBoolean(packet.loop);
-			buf.writeBoolean(packet.persistent);
-			buf.writeBoolean(packet.fadeIn);
-			buf.writeBoolean(packet.fadeOut);
-			buf.writeInt(packet.playbackMode);
-			buf.writeUtf(packet.listenerSelector);
-			buf.writeBlockPos(packet.playbackPos);
-			buf.writeInt(packet.radius);
+		}
+
+		public static void handle(TrackFinishedPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
+			NetworkEvent.Context context = contextSupplier.get();
+			context.enqueueWork(() -> {
+				ServerPlayer player = context.getSender();
+				if (player != null) {
+					MusicBlockTicker.onTrackFinished(player);
+				}
+			});
+			context.setPacketHandled(true);
+		}
+	}
+
+	public static class ForgeUpdateMusicBlockPacket {
+		public final BlockPos pos;
+		public final CompoundTag data;
+
+		public ForgeUpdateMusicBlockPacket(BlockPos pos, CompoundTag data) {
+			this.pos = pos;
+			this.data = data;
+		}
+
+		public ForgeUpdateMusicBlockPacket(FriendlyByteBuf buf) {
+			this.pos = buf.readBlockPos();
+			this.data = buf.readNbt();
+		}
+
+		public void encode(FriendlyByteBuf buf) {
+			buf.writeBlockPos(this.pos);
+			buf.writeNbt(this.data);
 		}
 
 		public static void handle(ForgeUpdateMusicBlockPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
@@ -416,7 +416,7 @@ public final class MusicNetworking {
 			context.enqueueWork(() -> {
 				ServerPlayer player = context.getSender();
 				if (player != null) {
-					MusicBlockServerHandler.handleUpdate(player, msg.packet);
+					MusicBlockServerHandler.handleUpdate(player, new UpdateMusicBlockPacket(msg.pos, msg.data));
 				}
 			});
 			context.setPacketHandled(true);

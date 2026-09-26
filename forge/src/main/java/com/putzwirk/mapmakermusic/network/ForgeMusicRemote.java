@@ -8,8 +8,8 @@ import net.minecraft.world.phys.Vec3;
 public final class ForgeMusicRemote implements MusicRemote {
 
 	@Override
-	public void playMusic(ServerPlayer player, String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance, boolean restart) {
-		MusicNetworking.sendToPlayer(player, new MusicNetworking.PlayMusicPacket(name, volume, pitch, fadeIn, fadeOut, position, maxDistance, restart));
+	public void playMusic(ServerPlayer player, String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop) {
+		MusicNetworking.sendToPlayer(player, new MusicNetworking.PlayMusicPacket(name, volume, pitch, fadeIn, fadeOut, position, maxDistance, restart, loop));
 	}
 
 	@Override

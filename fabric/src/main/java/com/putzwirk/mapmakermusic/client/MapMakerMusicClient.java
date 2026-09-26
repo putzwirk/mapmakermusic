@@ -35,6 +35,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.packs.PackType;
 import net.minecraft.server.packs.resources.ResourceManager;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.phys.Vec3;
@@ -51,26 +52,12 @@ public class MapMakerMusicClient implements ClientModInitializer {
 			buf.writeUtf(name);
 			ClientPlayNetworking.send(MusicNetworking.TRACK_REQUEST, buf);
 		});
+		MusicPlayer.setTrackFinishedCallback(() -> ClientPlayNetworking.send(MusicNetworking.TRACK_FINISHED, new FriendlyByteBuf(Unpooled.buffer())));
 
-		MusicBlockScreen.setPacketSender((pos, activationType, audioType, pos1, pos2, audioTrack, volume, pitch, loop, persistent, fadeIn, fadeOut, playbackMode, listenerSelector, playbackPos, radius) -> {
+		MusicBlockScreen.setPacketSender((pos, data) -> {
 			FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
 			buf.writeBlockPos(pos);
-			buf.writeInt(activationType);
-			buf.writeInt(audioType);
-			buf.writeBlockPos(pos1);
-			buf.writeBlockPos(pos2);
-			buf.writeUtf(audioTrack);
-			buf.writeInt(volume);
-			buf.writeFloat(pitch);
-			buf.writeBoolean(loop);
-			buf.writeBoolean(persistent);
-			buf.writeBoolean(fadeIn);
-			buf.writeBoolean(fadeOut);
-			buf.writeInt(playbackMode);
-			buf.writeUtf(listenerSelector);
-			buf.writeBlockPos(playbackPos);
-			buf.writeInt(radius);
-
+			buf.writeNbt(data);
 			ClientPlayNetworking.send(MusicNetworking.UPDATE_MUSIC_BLOCK, buf);
 		});
 
@@ -83,9 +70,10 @@ public class MapMakerMusicClient implements ClientModInitializer {
 			Vec3 position = buf.readBoolean() ? new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()) : null;
 			float maxDistance = buf.readFloat();
 			boolean restart = buf.readBoolean();
+			boolean loop = buf.readBoolean();
 			client.execute(() -> {
 				stopVanillaMusic();
-				this.musicPlayer.playMusic(name, volume, pitch, fadeIn, fadeOut, position, maxDistance, restart);
+				this.musicPlayer.playMusic(name, volume, pitch, fadeIn, fadeOut, position, maxDistance, restart, loop);
 			});
 		});
 
@@ -226,8 +214,14 @@ public class MapMakerMusicClient implements ClientModInitializer {
 
 	private void stopVanillaMusic() {
 		Minecraft client = Minecraft.getInstance();
-		if (client != null && client.getSoundManager() != null) {
-			client.getSoundManager().stop();
+		if (client == null) {
+			return;
+		}
+		if (client.getMusicManager() != null) {
+			client.getMusicManager().stopPlaying();
+		}
+		if (client.getSoundManager() != null) {
+			client.getSoundManager().stop(null, SoundSource.MUSIC);
 		}
 	}
 }

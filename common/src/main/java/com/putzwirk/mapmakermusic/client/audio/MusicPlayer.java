@@ -48,10 +48,19 @@ public final class MusicPlayer {
 		void requestTrack(String name);
 	}
 
+	public interface TrackFinishedCallback {
+		void onTrackFinished();
+	}
+
 	private static volatile TrackRequester trackRequester;
+	private static volatile TrackFinishedCallback trackFinishedCallback;
 
 	public static void setTrackRequester(TrackRequester requester) {
 		trackRequester = requester;
+	}
+
+	public static void setTrackFinishedCallback(TrackFinishedCallback callback) {
+		trackFinishedCallback = callback;
 	}
 
 	private Runnable pendingPlayback;
@@ -132,7 +141,7 @@ public final class MusicPlayer {
 		}
 	}
 
-	public void playMusic(String rawName, int volumePercent, float pitch, boolean enableFadeIn, boolean enableFadeOut, Vec3 position, float maxDistance, boolean restart) {
+	public void playMusic(String rawName, int volumePercent, float pitch, boolean enableFadeIn, boolean enableFadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop) {
 		float volumeMultiplier = clampVolume(volumePercent);
 		pitch = clampPitch(pitch);
 		String key = normalizeName(rawName);
@@ -147,7 +156,7 @@ public final class MusicPlayer {
 				final int retryVolume = volumePercent;
 				final float retryPitch = pitch;
 				final Vec3 retryPosition = position;
-				this.pendingPlayback = () -> playMusic(retryName, retryVolume, retryPitch, enableFadeIn, enableFadeOut, retryPosition, maxDistance, restart);
+				this.pendingPlayback = () -> playMusic(retryName, retryVolume, retryPitch, enableFadeIn, enableFadeOut, retryPosition, maxDistance, restart, loop);
 				requestTrack(key);
 				notifyPlayer("Downloading custom music: " + rawName);
 			} else {
@@ -209,7 +218,7 @@ public final class MusicPlayer {
 			this.lastPositions.remove(key);
 		}
 
-		startTrack(path, key, volumeMultiplier, pitch, position, maxDistance, resumeOffset, enableFadeIn, enableFadeOut);
+		startTrack(path, key, volumeMultiplier, pitch, position, maxDistance, resumeOffset, enableFadeIn, enableFadeOut, loop);
 	}
 
 	public void playSound(String rawName, int volumePercent, float pitch, Vec3 position, float maxDistance) {
@@ -278,7 +287,7 @@ public final class MusicPlayer {
 					AL10.alSourcef(source, AL10.AL_GAIN, masterVolume() * volumeMultiplier);
 					AL10.alSourcePlay(source);
 
-					this.activeSounds.add(new Voice(source, buffer, false, volumeMultiplier, pitch, position, maxDistance));
+					this.activeSounds.add(new Voice(source, buffer, false, volumeMultiplier, pitch, position, maxDistance, false));
 				}, Minecraft.getInstance());
 	}
 
@@ -286,7 +295,6 @@ public final class MusicPlayer {
 		this.isLoadingTrack = false;
 		if (this.currentTrackKey != null && this.currentMusic != null) {
 			savePositionOf(this.currentTrackKey, this.currentMusic);
-			LOGGER.warn("[MMM-DEBUG] stopMusic key={} savedOffset={}", this.currentTrackKey, this.lastPositions.getOrDefault(this.currentTrackKey, -1f));
 		}
 		if (this.previousMusic != null) {
 			forceStop(this.previousMusic);
@@ -393,7 +401,7 @@ public final class MusicPlayer {
 		this.lastPositions.put(state.trackKey, state.position);
 
 		float volumeMultiplier = clampVolume(state.volumePercent);
-		startTrack(path, state.trackKey, volumeMultiplier, state.pitch, state.playbackPos, state.maxDistance, state.position, true, true);
+		startTrack(path, state.trackKey, volumeMultiplier, state.pitch, state.playbackPos, state.maxDistance, state.position, true, true, true);
 	}
 
 	public void onResourceReload() {
@@ -428,7 +436,11 @@ public final class MusicPlayer {
 
 		if (this.currentMusic != null) {
 			if (!isPlaying(this.currentMusic)) {
-				recoverInterruptedMusic();
+				if (this.currentMusic.loop) {
+					recoverInterruptedMusic();
+				} else {
+					handleFinishedMusic();
+				}
 			} else {
 				savePositionOf(this.currentTrackKey, this.currentMusic);
 				if (this.currentMusic.fadeIn) {
@@ -499,14 +511,34 @@ public final class MusicPlayer {
 		this.currentMusic = null;
 		forceStop(interrupted);
 
-		startTrack(path, key, volume, pitch, position, maxDistance, offset, true, true);
+		startTrack(path, key, volume, pitch, position, maxDistance, offset, true, true, true);
+	}
+
+	private void handleFinishedMusic() {
+		Voice finished = this.currentMusic;
+		this.currentMusic = null;
+		this.currentTrackKey = null;
+		this.currentMusicPath = null;
+		this.isLoadingTrack = false;
+		if (finished != null) {
+			forceStop(finished);
+		}
+		this.desiredTrackKey = null;
+		String worldId = currentWorldId();
+		if (worldId != null) {
+			this.worldStates.remove(worldId);
+		}
+		TrackFinishedCallback callback = trackFinishedCallback;
+		if (callback != null) {
+			callback.onTrackFinished();
+		}
 	}
 
 	private void startTrack(Path path, String key, float volumeMultiplier, float pitch, float resumeOffsetSeconds) {
-		startTrack(path, key, volumeMultiplier, pitch, null, POSITIONAL_RANGE, resumeOffsetSeconds, true, true);
+		startTrack(path, key, volumeMultiplier, pitch, null, POSITIONAL_RANGE, resumeOffsetSeconds, true, true, true);
 	}
 
-	private void startTrack(Path path, String key, float volumeMultiplier, float pitch, Vec3 position, float maxDistance, float resumeOffsetSeconds, boolean enableFadeIn, boolean enableFadeOut) {
+	private void startTrack(Path path, String key, float volumeMultiplier, float pitch, Vec3 position, float maxDistance, float resumeOffsetSeconds, boolean enableFadeIn, boolean enableFadeOut, boolean loop) {
 		this.isLoadingTrack = true;
 		this.currentTrackKey = key;
 		this.currentMusicPath = path;
@@ -539,7 +571,7 @@ public final class MusicPlayer {
 					AL10.alBufferData(buffer, data.alFormat, data.pcm, data.sampleRate);
 
 					int source = AL10.alGenSources();
-					AL10.alSourcei(source, AL10.AL_LOOPING, AL10.AL_TRUE);
+					AL10.alSourcei(source, AL10.AL_LOOPING, loop ? AL10.AL_TRUE : AL10.AL_FALSE);
 					AL10.alSourcef(source, AL10.AL_PITCH, pitch);
 					AL10.alSource3f(source, AL10.AL_VELOCITY, 0f, 0f, 0f);
 					applyMusicEmitter(source, position, maxDistance);
@@ -557,7 +589,7 @@ public final class MusicPlayer {
 						AL11.alSourcef(source, AL11.AL_SEC_OFFSET, safeOffset);
 					}
 
-				this.currentMusic = new Voice(source, buffer, enableFadeIn, volumeMultiplier, pitch, position, maxDistance);
+				this.currentMusic = new Voice(source, buffer, enableFadeIn, volumeMultiplier, pitch, position, maxDistance, loop);
 				this.isLoadingTrack = false;
 				}, Minecraft.getInstance());
 	}
@@ -786,8 +818,9 @@ public final class MusicPlayer {
 		float maxDistance;
 		int ticksElapsed;
 		boolean fadeIn;
+		boolean loop;
 
-		Voice(int source, int buffer, boolean fadeIn, float volumeMultiplier, float pitch, Vec3 position, float maxDistance) {
+		Voice(int source, int buffer, boolean fadeIn, float volumeMultiplier, float pitch, Vec3 position, float maxDistance, boolean loop) {
 			this.source = source;
 			this.buffer = buffer;
 			this.ticksElapsed = 0;
@@ -796,6 +829,7 @@ public final class MusicPlayer {
 			this.pitch = pitch;
 			this.position = position;
 			this.maxDistance = maxDistance;
+			this.loop = loop;
 		}
 	}
 
