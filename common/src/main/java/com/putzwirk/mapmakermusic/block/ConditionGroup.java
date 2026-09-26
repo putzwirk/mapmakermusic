@@ -61,6 +61,10 @@ public class ConditionGroup {
 		if (countLeaves() == 0) {
 			return "Always plays";
 		}
+		return "When " + describeChildren();
+	}
+
+	public String describeChildren() {
 		List<String> parts = new ArrayList<>();
 		for (Object kid : kids) {
 			if (kid instanceof ConditionGroup sub && sub.countLeaves() == 0) {
@@ -68,7 +72,12 @@ public class ConditionGroup {
 			}
 			parts.add(describeNode(kid));
 		}
-		return "When " + String.join(op == Op.ALL ? " and " : " or ", parts);
+		return String.join(op == Op.ALL ? " and " : " or ", parts);
+	}
+
+	public String ruleCount() {
+		int leaves = countLeaves();
+		return leaves + (leaves == 1 ? " rule" : " rules");
 	}
 
 	private static String describeNode(Object node) {

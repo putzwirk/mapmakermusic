@@ -331,7 +331,7 @@ public class MusicQueueScreen extends Screen {
 	private String breadcrumb() {
 		ConditionGroup root = queue().getRuleRoot();
 		if (viewed() == root) {
-			return "First match wins; empty = always plays";
+			return "";
 		}
 		List<String> parts = new ArrayList<>();
 		parts.add("Rules");
@@ -670,9 +670,9 @@ public class MusicQueueScreen extends Screen {
 			private String headerText() {
 				ConditionGroup current = viewed();
 				if (current == queue().getRuleRoot()) {
-					return "Match " + current.getOp().name();
+					return "Match " + current.getOp().name() + " (" + current.ruleCount() + ")";
 				}
-				return current.getOp().name() + " (" + current.countLeaves() + ")";
+				return current.getOp().name() + " (" + current.ruleCount() + ")";
 			}
 
 			private String label() {
@@ -680,9 +680,14 @@ public class MusicQueueScreen extends Screen {
 					case HEADER -> headerText();
 					case BACK -> ".. Back";
 					case NODE -> isGroup()
-							? (group().getOp() == ConditionGroup.Op.ALL ? "[ALL]" : "[ANY]") + " (" + group().countLeaves() + ") >"
+							? group().getOp().name() + ": " + groupDescribe() + " >"
 							: ((MusicCondition) node).describe();
 				};
+			}
+
+			private String groupDescribe() {
+				String inner = group().describeChildren();
+				return inner.isEmpty() ? "(empty)" : inner;
 			}
 
 			@Override

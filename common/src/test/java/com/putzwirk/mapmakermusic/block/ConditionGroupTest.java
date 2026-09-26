@@ -51,6 +51,19 @@ public class ConditionGroupTest {
 	}
 
 	@Test
+	public void childrenAndCounts() {
+		ConditionGroup root = new ConditionGroup();
+		root.getKids().add(MusicCondition.Type.TIME.newDefault());
+		ConditionGroup sub = new ConditionGroup();
+		sub.getKids().add(MusicCondition.Type.WEATHER.newDefault());
+		root.getKids().add(sub);
+		assertEquals("Daytime and Clear", root.describeChildren());
+		assertEquals("2 rules", root.ruleCount());
+		assertEquals("1 rule", sub.ruleCount());
+		assertEquals("", new ConditionGroup().describeChildren());
+	}
+
+	@Test
 	public void toggleOp() {
 		ConditionGroup group = new ConditionGroup();
 		assertEquals(ConditionGroup.Op.ALL, group.getOp());
