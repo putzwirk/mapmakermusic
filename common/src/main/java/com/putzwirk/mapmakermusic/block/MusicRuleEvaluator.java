@@ -5,6 +5,7 @@ import java.util.Locale;
 import java.util.Optional;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
@@ -15,6 +16,8 @@ import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.Scoreboard;
 
 public final class MusicRuleEvaluator {
+
+	private static final EntityAliveCache ALIVE_CACHE = new EntityAliveCache();
 
 	private MusicRuleEvaluator() {
 	}
@@ -116,24 +119,25 @@ public final class MusicRuleEvaluator {
 
 	private static boolean matchBoss(MusicCondition condition, ServerPlayer player) {
 		Optional<EntityType<?>> type = EntityType.byString(condition.getText());
-		if (type.isEmpty() || player.getServer() == null) {
+		MinecraftServer server = player.getServer();
+		if (type.isEmpty() || server == null) {
 			return false;
 		}
 
-		boolean alive = false;
-		for (ServerLevel level : player.getServer().getAllLevels()) {
+		String key = EntityType.getKey(type.get()).toString();
+		boolean alive = ALIVE_CACHE.get(server, server.getTickCount(), key, () -> scanAlive(server, type.get()));
+		return alive == (condition.getMin() >= 0.5);
+	}
+
+	private static boolean scanAlive(MinecraftServer server, EntityType<?> type) {
+		for (ServerLevel level : server.getAllLevels()) {
 			for (Entity entity : level.getAllEntities()) {
-				if (entity.getType() == type.get() && entity.isAlive()) {
-					alive = true;
-					break;
+				if (entity.getType() == type && entity.isAlive()) {
+					return true;
 				}
 			}
-			if (alive) {
-				break;
-			}
 		}
-
-		return alive == (condition.getMin() >= 0.5);
+		return false;
 	}
 
 	private static boolean matchBiome(MusicCondition condition, ServerPlayer player) {

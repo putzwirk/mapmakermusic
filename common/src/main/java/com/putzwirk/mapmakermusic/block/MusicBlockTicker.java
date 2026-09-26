@@ -28,6 +28,14 @@ public class MusicBlockTicker {
 	private record BoxKey(String dimension, long pos) {
 	}
 
+	private record MatchKey(BoxKey box, UUID player) {
+	}
+
+	private static final class MatchMemo {
+		long tick;
+		MusicQueue queue;
+	}
+
 	private static final class PlaybackState {
 		int queueIndex;
 		int trackIndex;
@@ -52,6 +60,22 @@ public class MusicBlockTicker {
 	private static final Map<BoxKey, Map<UUID, PlaybackState>> STATES = new ConcurrentHashMap<>();
 	private static final Map<String, Set<Long>> CHAIN_BOXES = new ConcurrentHashMap<>();
 	private static final Map<UUID, BoxKey> MUSIC_CLAIM = new ConcurrentHashMap<>();
+	private static final Map<MatchKey, MatchMemo> MATCH_MEMO = new ConcurrentHashMap<>();
+
+	private static MusicQueue matchMemo(ServerLevel level, BoxKey key, MusicBlockEntity musicBe, ServerPlayer player) {
+		MatchKey matchKey = new MatchKey(key, player.getUUID());
+		long now = level.getGameTime();
+		MatchMemo memo = MATCH_MEMO.get(matchKey);
+		if (memo != null && memo.tick == now) {
+			return memo.queue;
+		}
+		MusicQueue match = musicBe.findMatchingQueue(player);
+		MatchMemo next = new MatchMemo();
+		next.tick = now;
+		next.queue = match;
+		MATCH_MEMO.put(matchKey, next);
+		return match;
+	}
 
 	public static void tick(Level level, BlockPos pos, BlockState state, MusicBlockEntity musicBe) {
 		if (level.isClientSide || !(level instanceof ServerLevel serverLevel)) {
@@ -164,6 +188,7 @@ public class MusicBlockTicker {
 			states.remove(uuid);
 		}
 		MUSIC_CLAIM.entrySet().removeIf(entry -> entry.getKey().equals(uuid));
+		MATCH_MEMO.keySet().removeIf(matchKey -> matchKey.player().equals(uuid));
 	}
 
 	public static void invalidateBox(Level level, BlockPos pos) {
@@ -173,6 +198,7 @@ public class MusicBlockTicker {
 		BoxKey key = keyOf(serverLevel, pos);
 		STATES.remove(key);
 		MUSIC_CLAIM.entrySet().removeIf(entry -> entry.getValue().equals(key));
+		MATCH_MEMO.keySet().removeIf(matchKey -> matchKey.box().equals(key));
 		PlaybackSaveData.get(serverLevel.getServer()).removeBox(PlaybackSaveData.boxId(key.dimension(), key.pos()));
 		Set<Long> boxes = CHAIN_BOXES.get(key.dimension());
 		if (boxes != null) {
@@ -211,7 +237,7 @@ public class MusicBlockTicker {
 
 	private static void stepPlayer(ServerLevel level, BoxKey key, MusicBlockEntity musicBe, ServerPlayer player) {
 		UUID uuid = player.getUUID();
-		MusicQueue desired = musicBe.findMatchingQueue(player);
+		MusicQueue desired = matchMemo(level, key, musicBe, player);
 		Map<UUID, PlaybackState> states = STATES.computeIfAbsent(key, k -> new ConcurrentHashMap<>());
 		PlaybackState state = states.get(uuid);
 
@@ -560,7 +586,7 @@ public class MusicBlockTicker {
 					|| other.getTriggerMode() != MusicBlockEntity.TriggerMode.CHAIN || !boxHasTracks(other)) {
 				continue;
 			}
-			MusicQueue match = other.findMatchingQueue(player);
+			MusicQueue match = matchMemo(level, new BoxKey(key.dimension(), otherPos), other, player);
 			if (match == null || match.getChannel() != MusicQueue.Channel.MUSIC) {
 				continue;
 			}
@@ -602,7 +628,7 @@ public class MusicBlockTicker {
 			if (!areaOf(other).contains(player.getX(), player.getY(), player.getZ())) {
 				continue;
 			}
-			if (other.findMatchingQueue(player) == null) {
+			if (matchMemo(level, new BoxKey(key.dimension(), otherPos), other, player) == null) {
 				continue;
 			}
 			long otherVolume = areaVolume(other);
