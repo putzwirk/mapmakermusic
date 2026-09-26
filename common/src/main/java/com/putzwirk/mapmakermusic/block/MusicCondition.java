@@ -19,7 +19,7 @@ public class MusicCondition {
 		PLAYER_HUNGER("Player hunger"),
 		ENTITY_ALIVE("Entity alive"),
 		IN_BIOME("In biome"),
-		COORDINATES("Coordinates");
+		COORDINATES("Player coordinates");
 
 		private final String display;
 
