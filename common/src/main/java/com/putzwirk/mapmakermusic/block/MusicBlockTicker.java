@@ -207,7 +207,7 @@ public class MusicBlockTicker {
 		}
 
 		int queueIndex = musicBe.getQueues().indexOf(desired);
-		if (state != null && state.stopped && state.queueIndex == queueIndex) {
+		if (state != null && state.stopped && state.trackIndex < 0 && state.queueIndex == queueIndex) {
 			return;
 		}
 		if (state == null || state.stopped || state.queueIndex != queueIndex) {
@@ -336,7 +336,13 @@ public class MusicBlockTicker {
 	private static void stopState(ServerLevel level, BoxKey key, MusicBlockEntity musicBe, UUID uuid, ServerPlayer player) {
 		Map<UUID, PlaybackState> states = STATES.get(key);
 		PlaybackState state = states == null ? null : states.get(uuid);
-		if (state == null || state.stopped) {
+		if (state == null) {
+			return;
+		}
+		if (state.stopped) {
+			if (state.trackIndex < 0) {
+				states.remove(uuid);
+			}
 			return;
 		}
 		if (player != null) {
