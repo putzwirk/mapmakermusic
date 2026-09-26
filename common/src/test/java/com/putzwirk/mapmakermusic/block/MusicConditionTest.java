@@ -20,9 +20,7 @@ public class MusicConditionTest {
 		assertEquals(20.0, MusicCondition.Type.PLAYER_HUNGER.newDefault().getMax());
 		assertEquals("minecraft:wither", MusicCondition.Type.ENTITY_ALIVE.newDefault().getText());
 		assertEquals("minecraft:plains", MusicCondition.Type.IN_BIOME.newDefault().getText());
-		assertEquals(-100.0, MusicCondition.Type.POS_X.newDefault().getMin());
-		assertEquals(100.0, MusicCondition.Type.POS_X.newDefault().getMax());
-		assertEquals(320.0, MusicCondition.Type.POS_Y.newDefault().getMax());
+		assertTrue(Double.isNaN(MusicCondition.Type.COORDINATES.newDefault().getBound(0)));
 	}
 
 	@Test
@@ -48,8 +46,8 @@ public class MusicConditionTest {
 
 	@Test
 	public void modelessTypesHaveNoMode() {
-		assertTrue(MusicCondition.Type.POS_X.modes().isEmpty());
-		assertEquals(null, MusicCondition.Type.POS_X.modeOf(MusicCondition.Type.POS_X.newDefault()));
+		assertTrue(MusicCondition.Type.COORDINATES.modes().isEmpty());
+		assertEquals(null, MusicCondition.Type.COORDINATES.modeOf(MusicCondition.Type.COORDINATES.newDefault()));
 	}
 
 	@ParameterizedTest
@@ -69,11 +67,39 @@ public class MusicConditionTest {
 	}
 
 	@Test
-	public void positionDescribe() {
-		MusicCondition condition = MusicCondition.Type.POS_X.newDefault();
-		condition.setMin(10);
-		condition.setMax(100);
-		assertEquals("X 10..100", condition.describe());
+	public void coordinatesDescribe() {
+		MusicCondition condition = MusicCondition.Type.COORDINATES.newDefault();
+		assertEquals("Anywhere", condition.describe());
+		condition.setBound(0, 10);
+		assertEquals("At X 10", condition.describe());
+		condition.setBound(1, 100);
+		condition.setBound(4, 5);
+		condition.setBound(5, 5);
+		assertEquals("At X 10..100, Z 5", condition.describe());
+	}
+
+	@Test
+	public void coordinatesRoundtrip() {
+		MusicCondition condition = MusicCondition.Type.COORDINATES.newDefault();
+		condition.setBound(0, 10);
+		condition.setBound(3, 64);
+		MusicCondition loaded = MusicCondition.load(condition.save());
+		assertEquals(MusicCondition.Type.COORDINATES, loaded.getType());
+		assertEquals(10.0, loaded.getBound(0));
+		assertTrue(Double.isNaN(loaded.getBound(1)));
+		assertEquals(64.0, loaded.getBound(3));
+		assertEquals("At X 10, Y 64", loaded.describe());
+	}
+
+	@Test
+	public void legacyAxisMigrates() {
+		CompoundTag tag = new CompoundTag();
+		tag.putString("Type", "POS_X");
+		tag.putDouble("Min", 10);
+		tag.putDouble("Max", 100);
+		MusicCondition loaded = MusicCondition.load(tag);
+		assertEquals(MusicCondition.Type.COORDINATES, loaded.getType());
+		assertEquals("At X 10..100", loaded.describe());
 	}
 
 	@Test
@@ -97,7 +123,7 @@ public class MusicConditionTest {
 	}
 
 	@ParameterizedTest
-	@CsvSource({"0, TIME", "1, WEATHER", "2, SCOREBOARD", "3, PLAYER_HEALTH", "4, ENTITY_ALIVE", "5, IN_BIOME", "6, POS_Y", "99, TIME"})
+	@CsvSource({"0, TIME", "1, WEATHER", "2, SCOREBOARD", "3, PLAYER_HEALTH", "4, ENTITY_ALIVE", "5, IN_BIOME", "6, COORDINATES", "99, TIME"})
 	public void legacyOrdinalsMigrate(int ordinal, String expected) {
 		CompoundTag tag = new CompoundTag();
 		tag.putInt("Type", ordinal);
@@ -107,11 +133,11 @@ public class MusicConditionTest {
 
 	@Test
 	public void copyIsIndependent() {
-		MusicCondition condition = MusicCondition.Type.POS_Y.newDefault();
+		MusicCondition condition = MusicCondition.Type.COORDINATES.newDefault();
 		MusicCondition copy = condition.copy();
-		copy.setMin(50);
-		assertEquals(0.0, condition.getMin());
+		copy.setBound(2, 50);
+		assertTrue(Double.isNaN(condition.getBound(2)));
 		assertFalse(copy == condition);
-		assertTrue(condition.describe().contains("Y"));
+		assertEquals("At Y 50", copy.describe());
 	}
 }

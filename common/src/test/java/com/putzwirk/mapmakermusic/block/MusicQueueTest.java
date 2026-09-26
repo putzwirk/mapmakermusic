@@ -46,9 +46,9 @@ public class MusicQueueTest {
 		queue.getTracks().add(new MusicQueue.PlaylistItem("STOP"));
 		queue.setLoop(false);
 		queue.getRuleRoot().setOp(ConditionGroup.Op.ANY);
-		MusicCondition condition = MusicCondition.Type.POS_X.newDefault();
-		condition.setMin(10);
-		condition.setMax(100);
+		MusicCondition condition = MusicCondition.Type.COORDINATES.newDefault();
+		condition.setBound(0, 10);
+		condition.setBound(1, 100);
 		queue.getRuleRoot().getKids().add(condition);
 
 		MusicQueue loaded = MusicQueue.load(queue.save());
@@ -58,7 +58,7 @@ public class MusicQueueTest {
 		assertTrue(loaded.getTracks().get(1).isStop());
 		assertFalse(loaded.isLoop());
 		assertEquals(1, loaded.getRuleRoot().countLeaves());
-		assertEquals("X 10..100", ((MusicCondition) loaded.getRuleRoot().getKids().get(0)).describe());
+		assertEquals("At X 10..100", ((MusicCondition) loaded.getRuleRoot().getKids().get(0)).describe());
 	}
 
 	@Test

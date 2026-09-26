@@ -53,9 +53,7 @@ public final class MusicRuleEvaluator {
 			case PLAYER_HUNGER -> inRange(player.getFoodData().getFoodLevel(), condition);
 			case ENTITY_ALIVE -> matchBoss(condition, player);
 			case IN_BIOME -> matchBiome(condition, player);
-			case POS_X -> inRange(player.getX(), condition);
-			case POS_Y -> inRange(player.getY(), condition);
-			case POS_Z -> inRange(player.getZ(), condition);
+			case COORDINATES -> matchCoordinates(condition, player);
 		};
 	}
 
@@ -122,5 +120,24 @@ public final class MusicRuleEvaluator {
 
 	private static boolean inRange(double value, MusicCondition condition) {
 		return value >= condition.getMin() && value <= condition.getMax();
+	}
+
+	private static boolean matchCoordinates(MusicCondition condition, ServerPlayer player) {
+		return axisMatches(player.getX(), condition.getBound(0), condition.getBound(1))
+				&& axisMatches(player.getY(), condition.getBound(2), condition.getBound(3))
+				&& axisMatches(player.getZ(), condition.getBound(4), condition.getBound(5));
+	}
+
+	private static boolean axisMatches(double value, double min, double max) {
+		if (Double.isNaN(min) && Double.isNaN(max)) {
+			return true;
+		}
+		if (Double.isNaN(min)) {
+			min = max;
+		}
+		if (Double.isNaN(max)) {
+			max = min;
+		}
+		return value >= min && value <= max;
 	}
 }

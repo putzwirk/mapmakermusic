@@ -27,6 +27,8 @@ public class MusicConditionScreen extends Screen {
 	private EditBox textEdit;
 	private EditBox minEdit;
 	private EditBox maxEdit;
+	private final EditBox[] coordEdits = new EditBox[6];
+	private static final String[] COORD_HINTS = {"X1", "X2", "Y1", "Y2", "Z1", "Z2"};
 
 	public MusicConditionScreen(Screen parent, MusicBlockEntity block, int queueIndex, MusicCondition condition) {
 		super(Component.literal(condition.getType().displayName()));
@@ -75,6 +77,17 @@ public class MusicConditionScreen extends Screen {
 		this.maxEdit.setTooltip(Tooltip.create(Component.literal("Scroll to adjust")));
 		addRenderableWidget(maxEdit);
 
+		for (int i = 0; i < 6; i++) {
+			final int bound = i;
+			EditBox coord = new EditBox(this.font, x + (i % 2) * 116, topPos + 30 + (i / 2) * 22, 108, 18, Component.literal(COORD_HINTS[i]));
+			coord.setHint(Component.literal(COORD_HINTS[i]));
+			coord.setValue(formatBound(condition.getBound(bound)));
+			coord.setResponder(text -> condition.setBound(bound, parseBound(text, condition.getBound(bound))));
+			coord.setTooltip(Tooltip.create(Component.literal("Empty ignores this bound. Scroll to adjust")));
+			this.coordEdits[i] = coord;
+			addRenderableWidget(coord);
+		}
+
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> saveAndClose())
 				.bounds(x, topPos + BG_HEIGHT - 24, 224, 18).build());
 
@@ -95,6 +108,19 @@ public class MusicConditionScreen extends Screen {
 				return true;
 			}
 		}
+		if (delta != 0 && coordEdits[0].visible) {
+			for (int i = 0; i < 6; i++) {
+				if (coordEdits[i].isMouseOver(mouseX, mouseY)) {
+					double current = condition.getBound(i);
+					if (Double.isNaN(current)) {
+						current = 0;
+					}
+					condition.setBound(i, current + (delta > 0 ? 1 : -1));
+					coordEdits[i].setValue(formatBound(condition.getBound(i)));
+					return true;
+				}
+			}
+		}
 		return super.mouseScrolled(mouseX, mouseY, delta);
 	}
 
@@ -105,6 +131,10 @@ public class MusicConditionScreen extends Screen {
 		boolean range = type.hasRange() && (type != MusicCondition.Type.TIME || condition.getText().equalsIgnoreCase("range"));
 		minEdit.visible = range;
 		maxEdit.visible = range;
+		boolean coords = type == MusicCondition.Type.COORDINATES;
+		for (EditBox coord : coordEdits) {
+			coord.visible = coords;
+		}
 	}
 
 	private Component modeLabel() {
@@ -131,12 +161,23 @@ public class MusicConditionScreen extends Screen {
 		return String.valueOf(value);
 	}
 
+	private static String formatBound(double value) {
+		return Double.isNaN(value) ? "" : format(value);
+	}
+
 	private static double parse(String text, double fallback) {
 		try {
 			return Double.parseDouble(text.trim());
 		} catch (NumberFormatException e) {
 			return fallback;
 		}
+	}
+
+	private static double parseBound(String text, double fallback) {
+		if (text == null || text.trim().isEmpty()) {
+			return Double.NaN;
+		}
+		return parse(text, fallback);
 	}
 
 	@Override

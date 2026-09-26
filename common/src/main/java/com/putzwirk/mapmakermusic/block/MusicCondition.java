@@ -1,8 +1,11 @@
 package com.putzwirk.mapmakermusic.block;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.DoubleTag;
+import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 
 public class MusicCondition {
@@ -15,9 +18,7 @@ public class MusicCondition {
 		PLAYER_HUNGER("Player hunger"),
 		ENTITY_ALIVE("Entity alive"),
 		IN_BIOME("In biome"),
-		POS_X("X position"),
-		POS_Y("Y position"),
-		POS_Z("Z position");
+		COORDINATES("Coordinates");
 
 		private final String display;
 
@@ -70,7 +71,7 @@ public class MusicCondition {
 
 		public boolean hasRange() {
 			return switch (this) {
-				case TIME, SCOREBOARD, PLAYER_HEALTH, PLAYER_HUNGER, POS_X, POS_Y, POS_Z -> true;
+				case TIME, SCOREBOARD, PLAYER_HEALTH, PLAYER_HUNGER -> true;
 				default -> false;
 			};
 		}
@@ -93,20 +94,23 @@ public class MusicCondition {
 					condition.min = 1;
 				}
 				case IN_BIOME -> condition.text = "minecraft:plains";
-				case POS_X, POS_Z -> {
-					condition.min = -100;
-					condition.max = 100;
-				}
-				case POS_Y -> condition.max = 320;
+				case COORDINATES -> condition.bounds = nanBounds();
 			}
 			return condition;
 		}
+	}
+
+	public static double[] nanBounds() {
+		double[] bounds = new double[6];
+		java.util.Arrays.fill(bounds, Double.NaN);
+		return bounds;
 	}
 
 	private Type type;
 	private String text = "";
 	private double min;
 	private double max;
+	private double[] bounds;
 
 	public MusicCondition(Type type) {
 		this.type = type;
@@ -144,11 +148,29 @@ public class MusicCondition {
 		this.max = max;
 	}
 
+	public double getBound(int index) {
+		if (bounds != null && index >= 0 && index < bounds.length) {
+			return bounds[index];
+		}
+		return Double.NaN;
+	}
+
+	public void setBound(int index, double value) {
+		if (index < 0 || index >= 6) {
+			return;
+		}
+		if (bounds == null) {
+			bounds = nanBounds();
+		}
+		bounds[index] = value;
+	}
+
 	public MusicCondition copy() {
 		MusicCondition copy = new MusicCondition(type);
 		copy.text = text;
 		copy.min = min;
 		copy.max = max;
+		copy.bounds = bounds == null ? null : bounds.clone();
 		return copy;
 	}
 
@@ -169,10 +191,31 @@ public class MusicCondition {
 			case PLAYER_HUNGER -> "Hunger " + format(min) + ".." + format(max);
 			case ENTITY_ALIVE -> cap(text) + (min >= 0.5 ? " alive" : " gone");
 			case IN_BIOME -> "Biome " + text;
-			case POS_X -> "X " + format(min) + ".." + format(max);
-			case POS_Y -> "Y " + format(min) + ".." + format(max);
-			case POS_Z -> "Z " + format(min) + ".." + format(max);
+			case COORDINATES -> describeCoords();
 		};
+	}
+
+	private String describeCoords() {
+		String[] names = {"X", "Y", "Z"};
+		List<String> parts = new ArrayList<>();
+		for (int axis = 0; axis < 3; axis++) {
+			double lo = getBound(axis * 2);
+			double hi = getBound(axis * 2 + 1);
+			if (Double.isNaN(lo) && Double.isNaN(hi)) {
+				continue;
+			}
+			if (Double.isNaN(lo)) {
+				lo = hi;
+			}
+			if (Double.isNaN(hi)) {
+				hi = lo;
+			}
+			parts.add(names[axis] + " " + (lo == hi ? format(lo) : format(lo) + ".." + format(hi)));
+		}
+		if (parts.isEmpty()) {
+			return "Anywhere";
+		}
+		return "At " + String.join(", ", parts);
 	}
 
 	private static String format(double value) {
@@ -195,16 +238,32 @@ public class MusicCondition {
 		tag.putString("Text", text);
 		tag.putDouble("Min", min);
 		tag.putDouble("Max", max);
+		if (type == Type.COORDINATES && bounds != null) {
+			ListTag boundList = new ListTag();
+			for (double value : bounds) {
+				boundList.add(DoubleTag.valueOf(Double.isNaN(value) ? Double.MAX_VALUE : value));
+			}
+			tag.put("Bounds", boundList);
+		}
 		return tag;
 	}
 
 	public static MusicCondition load(CompoundTag tag) {
 		Type type = Type.TIME;
+		int legacyAxis = -1;
 		if (tag.contains("Type", Tag.TAG_STRING)) {
+			String name = tag.getString("Type");
 			try {
-				type = Type.valueOf(tag.getString("Type"));
+				type = Type.valueOf(name);
 			} catch (IllegalArgumentException ignored) {
+				legacyAxis = axisOfName(name);
+				if (legacyAxis >= 0) {
+					type = Type.COORDINATES;
+				}
 			}
+		} else if (tag.getInt("Type") == 6) {
+			type = Type.COORDINATES;
+			legacyAxis = 1;
 		} else {
 			type = legacy(tag.getInt("Type"));
 		}
@@ -212,7 +271,34 @@ public class MusicCondition {
 		condition.text = tag.getString("Text");
 		condition.min = tag.getDouble("Min");
 		condition.max = tag.getDouble("Max");
+		if (type == Type.COORDINATES) {
+			if (legacyAxis >= 0) {
+				double[] migrated = nanBounds();
+				migrated[legacyAxis * 2] = condition.min;
+				migrated[legacyAxis * 2 + 1] = condition.max;
+				condition.bounds = migrated;
+			} else if (tag.contains("Bounds")) {
+				ListTag boundList = tag.getList("Bounds", Tag.TAG_DOUBLE);
+				double[] migrated = nanBounds();
+				for (int i = 0; i < Math.min(6, boundList.size()); i++) {
+					double value = boundList.getDouble(i);
+					migrated[i] = value == Double.MAX_VALUE ? Double.NaN : value;
+				}
+				condition.bounds = migrated;
+			} else {
+				condition.bounds = nanBounds();
+			}
+		}
 		return condition;
+	}
+
+	private static int axisOfName(String name) {
+		return switch (name) {
+			case "POS_X" -> 0;
+			case "POS_Y" -> 1;
+			case "POS_Z" -> 2;
+			default -> -1;
+		};
 	}
 
 	private static Type legacy(int ordinal) {
@@ -222,7 +308,6 @@ public class MusicCondition {
 			case 3 -> Type.PLAYER_HEALTH;
 			case 4 -> Type.ENTITY_ALIVE;
 			case 5 -> Type.IN_BIOME;
-			case 6 -> Type.POS_Y;
 			default -> Type.TIME;
 		};
 	}
