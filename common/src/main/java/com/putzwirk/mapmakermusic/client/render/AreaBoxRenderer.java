@@ -4,7 +4,6 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.putzwirk.mapmakermusic.block.ModBlocks;
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.block.MusicBlockTicker;
-import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -27,6 +26,7 @@ public final class AreaBoxRenderer {
 	private static final int SCAN_CHUNK_RADIUS = 4;
 	private static final int REFRESH_INTERVAL_TICKS = 20;
 	private static final int MAX_BOXES = 128;
+	private static final int MAX_GRID_PER_AXIS = 32;
 	private static final double PREVIEW_GROW = 0.02;
 
 	private static BlockPos wandSelection;
@@ -58,8 +58,8 @@ public final class AreaBoxRenderer {
 
 		for (Entry entry : cachedBoxes) {
 			AABB grown = entry.area.inflate(growFor(entry.pos));
-			float[] rgb = colorFor(entry.pos);
-			LevelRenderer.renderLineBox(poseStack, buffers.getBuffer(RenderType.lines()), grown, rgb[0], rgb[1], rgb[2], 1f);
+			LevelRenderer.renderLineBox(poseStack, buffers.getBuffer(RenderType.lines()), grown, entry.rgb[0], entry.rgb[1], entry.rgb[2], 1f);
+			renderGrid(poseStack, buffers, entry);
 		}
 
 		AABB preview = selectionPreview(client);
@@ -72,6 +72,37 @@ public final class AreaBoxRenderer {
 
 		if (buffers instanceof MultiBufferSource.BufferSource immediate) {
 			immediate.endBatch(RenderType.lines());
+		}
+	}
+
+	private static void renderGrid(PoseStack poseStack, MultiBufferSource buffers, Entry entry) {
+		AABB area = entry.area;
+		int x0 = (int) Math.floor(area.minX);
+		int x1 = (int) Math.floor(area.maxX);
+		int y0 = (int) Math.floor(area.minY);
+		int y1 = (int) Math.floor(area.maxY);
+		int z0 = (int) Math.floor(area.minZ);
+		int z1 = (int) Math.floor(area.maxZ);
+		float r = entry.rgb[0];
+		float g = entry.rgb[1];
+		float b = entry.rgb[2];
+		if (x1 - x0 <= MAX_GRID_PER_AXIS) {
+			for (int x = x0 + 1; x < x1; x++) {
+				LevelRenderer.renderLineBox(poseStack, buffers.getBuffer(RenderType.lines()),
+						new AABB(x, area.minY, area.minZ, x, area.maxY, area.maxZ), r, g, b, 0.5f);
+			}
+		}
+		if (y1 - y0 <= MAX_GRID_PER_AXIS) {
+			for (int y = y0 + 1; y < y1; y++) {
+				LevelRenderer.renderLineBox(poseStack, buffers.getBuffer(RenderType.lines()),
+						new AABB(area.minX, y, area.minZ, area.maxX, y, area.maxZ), r, g, b, 0.5f);
+			}
+		}
+		if (z1 - z0 <= MAX_GRID_PER_AXIS) {
+			for (int z = z0 + 1; z < z1; z++) {
+				LevelRenderer.renderLineBox(poseStack, buffers.getBuffer(RenderType.lines()),
+						new AABB(area.minX, area.minY, z, area.maxX, area.maxY, z), r, g, b, 0.5f);
+			}
 		}
 	}
 
@@ -99,9 +130,9 @@ public final class AreaBoxRenderer {
 					if (cachedBoxes.size() >= MAX_BOXES) {
 						return;
 					}
-					if (be instanceof MusicBlockEntity musicBe
-							&& musicBe.getTriggerMode() == MusicBlockEntity.TriggerMode.CHAIN && musicBe.isAreaGate()) {
-						cachedBoxes.add(new Entry(musicBe.getBlockPos().immutable(), MusicBlockTicker.areaOf(musicBe)));
+				if (be instanceof MusicBlockEntity musicBe
+						&& musicBe.getTriggerMode() == MusicBlockEntity.TriggerMode.CHAIN && musicBe.isAreaGate()) {
+						cachedBoxes.add(new Entry(musicBe.getBlockPos().immutable(), MusicBlockTicker.areaOf(musicBe), rgbFor(musicBe)));
 					}
 				}
 			}
@@ -131,9 +162,8 @@ public final class AreaBoxRenderer {
 		return 0.01 + ((hash >>> 8) % 16) * 0.0015;
 	}
 
-	private static float[] colorFor(BlockPos pos) {		long hash = pos.asLong() * 0x9E3779B97F4A7C15L;
-		float hue = (float) (((hash >>> 16) % 360 + 360) % 360) / 360f;
-		int packed = Color.HSBtoRGB(hue, 0.85f, 1f);
+	private static float[] rgbFor(MusicBlockEntity musicBe) {
+		int packed = com.putzwirk.mapmakermusic.client.gui.GuiIcons.boxOutlineColor(musicBe.getBlockPos(), musicBe.getOutlineColor());
 		return new float[]{
 				((packed >> 16) & 0xFF) / 255f,
 				((packed >> 8) & 0xFF) / 255f,
@@ -144,10 +174,12 @@ public final class AreaBoxRenderer {
 	private static final class Entry {
 		final BlockPos pos;
 		final AABB area;
+		final float[] rgb;
 
-		Entry(BlockPos pos, AABB area) {
+		Entry(BlockPos pos, AABB area, float[] rgb) {
 			this.pos = pos;
 			this.area = area;
+			this.rgb = rgb;
 		}
 	}
 }

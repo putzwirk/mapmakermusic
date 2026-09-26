@@ -35,6 +35,7 @@ public class MusicBlockEntity extends BlockEntity {
 
 	private TriggerMode triggerMode = TriggerMode.IMPULSE;
 	private boolean areaGate = false;
+	private Integer outlineColor = null;
 	private AudioType audioType = AudioType.MUSIC;
 	private BlockPos pos1 = BlockPos.ZERO;
 	private BlockPos pos2 = BlockPos.ZERO;
@@ -83,6 +84,15 @@ public class MusicBlockEntity extends BlockEntity {
 
 	public void setAreaGate(boolean areaGate) {
 		this.areaGate = areaGate;
+		setChanged();
+	}
+
+	public Integer getOutlineColor() {
+		return outlineColor;
+	}
+
+	public void setOutlineColor(Integer outlineColor) {
+		this.outlineColor = outlineColor;
 		setChanged();
 	}
 
@@ -299,6 +309,7 @@ public class MusicBlockEntity extends BlockEntity {
 		if (tag.contains("AudioType")) {
 			this.audioType = AudioType.values()[Math.max(0, Math.min(AudioType.values().length - 1, tag.getInt("AudioType")))];
 		}
+		this.outlineColor = tag.contains("OutlineColor") ? tag.getInt("OutlineColor") : null;
 		if (tag.contains("Pos1")) {
 			this.pos1 = NbtUtils.readBlockPos(tag.getCompound("Pos1"));
 		}
@@ -351,6 +362,9 @@ public class MusicBlockEntity extends BlockEntity {
 		super.saveAdditional(tag);
 		tag.putString("TriggerMode", this.triggerMode.name());
 		tag.putBoolean("AreaGate", this.areaGate);
+		if (this.outlineColor != null) {
+			tag.putInt("OutlineColor", this.outlineColor);
+		}
 		tag.putInt("AudioType", this.audioType.ordinal());
 		tag.put("Pos1", NbtUtils.writeBlockPos(this.pos1));
 		tag.put("Pos2", NbtUtils.writeBlockPos(this.pos2));

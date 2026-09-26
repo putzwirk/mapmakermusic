@@ -46,6 +46,13 @@ public final class GuiIcons {
 	}
 
 	public static int boxOutlineColor(BlockPos pos) {
+		return boxOutlineColor(pos, null);
+	}
+
+	public static int boxOutlineColor(BlockPos pos, Integer custom) {
+		if (custom != null) {
+			return 0xFF000000 | (custom & 0xFFFFFF);
+		}
 		long hash = pos.asLong() * 0x9E3779B97F4A7C15L;
 		float hue = (float) (((hash >>> 16) % 360 + 360) % 360) / 360f;
 		return 0xFF000000 | java.awt.Color.HSBtoRGB(hue, 0.85f, 1f);
