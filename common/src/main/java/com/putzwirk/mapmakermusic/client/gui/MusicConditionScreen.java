@@ -27,6 +27,7 @@ public class MusicConditionScreen extends Screen {
 	private EditBox textEdit;
 	private EditBox minEdit;
 	private EditBox maxEdit;
+	private EditBox tagEdit;
 	private final EditBox[] coordEdits = new EditBox[6];
 	private static final String[] COORD_HINTS = {"X1", "X2", "Y1", "Y2", "Z1", "Z2"};
 
@@ -67,7 +68,7 @@ public class MusicConditionScreen extends Screen {
 		this.textEdit.setResponder(condition::setText);
 		addRenderableWidget(textEdit);
 
-		this.minEdit = new EditBox(this.font, x, topPos + 30 + 2 * GuiLayout.SECTION_SPACING, fieldWidth, GuiLayout.BUTTON_HEIGHT, Component.literal("Min"));
+		this.minEdit = new EditBox(this.font, x, topPos + 30 + 2 * GuiLayout.SECTION_SPACING, condition.getType() == MusicCondition.Type.ENTITY_ALIVE ? contentWidth : fieldWidth, GuiLayout.BUTTON_HEIGHT, Component.literal("Min"));
 		this.minEdit.setValue(format(condition.getMin()));
 		this.minEdit.setResponder(text -> condition.setMin(parse(text, condition.getMin())));
 		this.minEdit.setTooltip(Tooltip.create(Component.literal("Scroll to adjust")));
@@ -78,6 +79,12 @@ public class MusicConditionScreen extends Screen {
 		this.maxEdit.setResponder(text -> condition.setMax(parse(text, condition.getMax())));
 		this.maxEdit.setTooltip(Tooltip.create(Component.literal("Scroll to adjust")));
 		addRenderableWidget(maxEdit);
+
+		this.tagEdit = new EditBox(this.font, x, topPos + 30 + 3 * GuiLayout.SECTION_SPACING, contentWidth, GuiLayout.BUTTON_HEIGHT, Component.literal("Tag"));
+		this.tagEdit.setHint(Component.literal("scoreboard tag, optional"));
+		this.tagEdit.setValue(condition.getTag());
+		this.tagEdit.setResponder(condition::setTag);
+		addRenderableWidget(tagEdit);
 
 		for (int i = 0; i < 6; i++) {
 			final int bound = i;
@@ -135,6 +142,7 @@ public class MusicConditionScreen extends Screen {
 		minEdit.setHint(Component.literal(count ? "count" : "Min"));
 		minEdit.visible = range || count;
 		maxEdit.visible = range;
+		tagEdit.visible = count;
 		boolean coords = type == MusicCondition.Type.COORDINATES;
 		for (EditBox coord : coordEdits) {
 			coord.visible = coords;

@@ -124,17 +124,35 @@ public final class MusicRuleEvaluator {
 			return false;
 		}
 		String id = condition.getText() == null ? "" : condition.getText().trim();
+		String tag = condition.getTag() == null ? "" : condition.getTag().trim();
 		Optional<EntityType<?>> type = EntityType.byString(id);
-		int count = type.map(resolved -> countFor(resolved, server, area, level)).orElse(0);
+		int count;
+		if (type.isPresent()) {
+			count = countFor(type.get(), tag, server, area, level);
+		} else if (!tag.isEmpty()) {
+			count = countFor(null, tag, server, area, level);
+		} else {
+			count = 0;
+		}
 		return countMatches(count, condition);
 	}
 
-	private static int countFor(EntityType<?> type, MinecraftServer server, AABB area, ServerLevel level) {
+	private static int countFor(EntityType<?> type, String tag, MinecraftServer server, AABB area, ServerLevel level) {
 		if (area != null && level != null) {
-			return level.getEntitiesOfClass(Entity.class, area, entity -> entity.getType() == type && entity.isAlive()).size();
+			return level.getEntitiesOfClass(Entity.class, area, entity -> matchesEntity(entity, type, tag)).size();
 		}
-		String key = EntityType.getKey(type).toString();
-		return COUNT_CACHE.get(server, server.getTickCount(), key, () -> scanCount(server, type));
+		String key = (type == null ? "" : EntityType.getKey(type).toString()) + "#" + tag;
+		return COUNT_CACHE.get(server, server.getTickCount(), key, () -> scanCount(type, tag, server));
+	}
+
+	private static boolean matchesEntity(Entity entity, EntityType<?> type, String tag) {
+		if (!entity.isAlive()) {
+			return false;
+		}
+		if (type != null && entity.getType() != type) {
+			return false;
+		}
+		return tag.isEmpty() || entity.getTags().contains(tag);
 	}
 
 	static boolean countMatches(int count, MusicCondition condition) {
@@ -145,11 +163,11 @@ public final class MusicRuleEvaluator {
 		};
 	}
 
-	private static int scanCount(MinecraftServer server, EntityType<?> type) {
+	private static int scanCount(EntityType<?> type, String tag, MinecraftServer server) {
 		int count = 0;
 		for (ServerLevel level : server.getAllLevels()) {
 			for (Entity entity : level.getAllEntities()) {
-				if (entity.getType() == type && entity.isAlive()) {
+				if (matchesEntity(entity, type, tag)) {
 					count++;
 				}
 			}

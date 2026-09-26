@@ -36,6 +36,49 @@ public class MusicConditionTest {
 	}
 
 	@Test
+	public void entityCountTagDescribe() {
+		MusicCondition both = MusicCondition.Type.ENTITY_ALIVE.newDefault();
+		both.setText("minecraft:villager");
+		both.setTag("boss");
+		both.setCountOp("exactly");
+		both.setMin(0);
+		assertEquals("Villager #boss == 0", both.describe());
+
+		MusicCondition tagOnly = MusicCondition.Type.ENTITY_ALIVE.newDefault();
+		tagOnly.setText("");
+		tagOnly.setTag("boss");
+		tagOnly.setCountOp("at least");
+		tagOnly.setMin(1);
+		assertEquals("#boss >= 1", tagOnly.describe());
+	}
+
+	@Test
+	public void entityCountTagRoundtrips() {
+		MusicCondition condition = MusicCondition.Type.ENTITY_ALIVE.newDefault();
+		condition.setText("minecraft:villager");
+		condition.setTag("boss");
+		condition.setCountOp("at most");
+		condition.setMin(3);
+		MusicCondition loaded = MusicCondition.load(condition.save());
+		assertEquals("boss", loaded.getTag());
+		assertEquals("at most", loaded.getType().modeOf(loaded));
+		assertEquals("Villager #boss <= 3", loaded.describe());
+		assertEquals("boss", condition.copy().getTag());
+	}
+
+	@Test
+	public void legacyLoadHasEmptyTag() {
+		CompoundTag tag = new CompoundTag();
+		tag.putString("Type", "ENTITY_ALIVE");
+		tag.putString("Text", "minecraft:wither");
+		tag.putDouble("Min", 1);
+		tag.putDouble("Max", 100);
+		MusicCondition loaded = MusicCondition.load(tag);
+		assertEquals("", loaded.getTag());
+		assertEquals("Wither >= 1", loaded.describe());
+	}
+
+	@Test
 	public void entityCountModeCycles() {
 		MusicCondition condition = MusicCondition.Type.ENTITY_ALIVE.newDefault();
 		assertEquals(List.of("at least", "at most", "exactly"), MusicCondition.Type.ENTITY_ALIVE.modes());

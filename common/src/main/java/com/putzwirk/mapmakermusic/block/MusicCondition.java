@@ -118,6 +118,7 @@ public class MusicCondition {
 	private double max;
 	private double[] bounds;
 	private String countOp = "at least";
+	private String tag = "";
 
 	public MusicCondition(Type type) {
 		this.type = type;
@@ -163,6 +164,14 @@ public class MusicCondition {
 		this.countOp = countOp == null ? "at least" : countOp;
 	}
 
+	public String getTag() {
+		return tag;
+	}
+
+	public void setTag(String tag) {
+		this.tag = tag == null ? "" : tag;
+	}
+
 	public double getBound(int index) {
 		if (bounds != null && index >= 0 && index < bounds.length) {
 			return bounds[index];
@@ -187,6 +196,7 @@ public class MusicCondition {
 		copy.max = max;
 		copy.bounds = bounds == null ? null : bounds.clone();
 		copy.countOp = countOp;
+		copy.tag = tag;
 		return copy;
 	}
 
@@ -212,10 +222,19 @@ public class MusicCondition {
 			}
 			case PLAYER_HEALTH -> "Health " + format(min) + ".." + format(max);
 			case PLAYER_HUNGER -> "Hunger " + format(min) + ".." + format(max);
-			case ENTITY_ALIVE -> cap(shortId(text)) + " " + countSymbol() + " " + format(min);
+			case ENTITY_ALIVE -> describeCount();
 			case IN_BIOME -> "Biome " + text;
 			case COORDINATES -> describeCoords();
 		};
+	}
+
+	private String describeCount() {
+		String who = cap(shortId(text));
+		String want = tag == null ? "" : tag.trim();
+		if (!want.isEmpty()) {
+			who = (who.isEmpty() ? "" : who + " ") + "#" + want;
+		}
+		return who + " " + countSymbol() + " " + format(min);
 	}
 
 	private String countSymbol() {
@@ -286,6 +305,7 @@ public class MusicCondition {
 		}
 		if (type == Type.ENTITY_ALIVE) {
 			tag.putString("CountOp", Type.ENTITY_ALIVE.modeOf(this));
+			tag.putString("Tag", this.tag == null ? "" : this.tag);
 		}
 		return tag;
 	}
@@ -321,6 +341,7 @@ public class MusicCondition {
 			} else {
 				condition.countOp = condition.min < 0.5 ? "exactly" : "at least";
 			}
+			condition.tag = tag.getString("Tag");
 		}
 		if (type == Type.COORDINATES) {
 			if (legacyAxis >= 0) {
