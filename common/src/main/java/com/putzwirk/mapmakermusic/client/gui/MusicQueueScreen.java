@@ -166,6 +166,9 @@ public class MusicQueueScreen extends Screen {
 		this.catalogList.setRenderSelection(false);
 		this.catalogList.addCatalogEntry(this.catalogList.new Entry(null));
 		for (MusicCondition.Type type : MusicCondition.Type.values()) {
+			if (type == MusicCondition.Type.ENTITY_ALIVE && !block.isAreaGate()) {
+				continue;
+			}
 			this.catalogList.addCatalogEntry(this.catalogList.new Entry(type));
 		}
 		addRenderableWidget(catalogList);
