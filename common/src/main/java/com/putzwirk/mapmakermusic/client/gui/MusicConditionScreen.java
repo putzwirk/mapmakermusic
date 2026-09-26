@@ -4,18 +4,26 @@ import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.block.MusicCondition;
 import com.putzwirk.mapmakermusic.client.gui.GuiIcons;
 import com.putzwirk.mapmakermusic.client.gui.MusicBlockScreen;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
+import org.lwjgl.glfw.GLFW;
 
 public class MusicConditionScreen extends Screen {
 
 	private static final int BG_WIDTH = 248;
 	private static final int BG_HEIGHT = 150;
+	private static final int MAX_SUGGESTIONS = 8;
+	private static final int SUGGESTION_ROW = 11;
 
 	private final Screen parent;
 	private final MusicBlockEntity block;
@@ -30,6 +38,8 @@ public class MusicConditionScreen extends Screen {
 	private EditBox tagEdit;
 	private final EditBox[] coordEdits = new EditBox[6];
 	private static final String[] COORD_HINTS = {"X1", "X2", "Y1", "Y2", "Z1", "Z2"};
+	private List<String> suggestions = List.of();
+	private int suggestionIndex;
 
 	public MusicConditionScreen(Screen parent, MusicBlockEntity block, int queueIndex, MusicCondition condition) {
 		super(Component.literal(condition.getType().displayName()));
@@ -65,7 +75,10 @@ public class MusicConditionScreen extends Screen {
 		String hint = condition.getType().textHint();
 		this.textEdit.setHint(Component.literal(hint == null ? "value" : hint));
 		this.textEdit.setValue(condition.getText());
-		this.textEdit.setResponder(condition::setText);
+		this.textEdit.setResponder(text -> {
+			condition.setText(text);
+			refreshSuggestions();
+		});
 		addRenderableWidget(textEdit);
 
 		this.minEdit = new EditBox(this.font, x, topPos + 30 + 2 * GuiLayout.SECTION_SPACING, condition.getType() == MusicCondition.Type.ENTITY_ALIVE ? contentWidth : fieldWidth, GuiLayout.BUTTON_HEIGHT, Component.literal("Min"));
@@ -131,6 +144,139 @@ public class MusicConditionScreen extends Screen {
 			}
 		}
 		return super.mouseScrolled(mouseX, mouseY, delta);
+	}
+
+	@Override
+	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+		if (!suggestions.isEmpty() && textEdit != null && textEdit.isFocused()) {
+			if (keyCode == GLFW.GLFW_KEY_TAB || keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+				acceptSuggestion();
+				return true;
+			}
+			if (keyCode == GLFW.GLFW_KEY_DOWN) {
+				suggestionIndex = (suggestionIndex + 1) % suggestions.size();
+				return true;
+			}
+			if (keyCode == GLFW.GLFW_KEY_UP) {
+				suggestionIndex = (suggestionIndex + suggestions.size() - 1) % suggestions.size();
+				return true;
+			}
+		}
+		boolean handled = super.keyPressed(keyCode, scanCode, modifiers);
+		refreshSuggestions();
+		return handled;
+	}
+
+	@Override
+	public boolean charTyped(char codePoint, int modifiers) {
+		boolean handled = super.charTyped(codePoint, modifiers);
+		refreshSuggestions();
+		return handled;
+	}
+
+	@Override
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		if (button == 0 && !suggestions.isEmpty() && textEdit != null && textEdit.visible) {
+			for (int i = 0; i < suggestions.size(); i++) {
+				int rowTop = textEdit.getY() + textEdit.getHeight() + i * SUGGESTION_ROW;
+				if (mouseX >= textEdit.getX() && mouseX < textEdit.getX() + textEdit.getWidth()
+						&& mouseY >= rowTop && mouseY < rowTop + SUGGESTION_ROW) {
+					suggestionIndex = i;
+					acceptSuggestion();
+					return true;
+				}
+			}
+		}
+		boolean handled = super.mouseClicked(mouseX, mouseY, button);
+		refreshSuggestions();
+		return handled;
+	}
+
+	private void acceptSuggestion() {
+		if (suggestions.isEmpty() || textEdit == null) {
+			return;
+		}
+		String pick = suggestions.get(Math.min(suggestionIndex, suggestions.size() - 1));
+		textEdit.setValue(pick);
+		condition.setText(pick);
+		textEdit.moveCursorToEnd();
+		refreshSuggestions();
+	}
+
+	private void refreshSuggestions() {
+		if (textEdit == null || !textEdit.visible || !textEdit.isFocused()) {
+			suggestions = List.of();
+			return;
+		}
+		String current = textEdit.getValue().trim().toLowerCase(Locale.ROOT);
+		List<String> matches = new ArrayList<>();
+		for (String option : completeOptions()) {
+			String lower = option.toLowerCase(Locale.ROOT);
+			int separator = lower.indexOf(':');
+			String path = separator >= 0 ? lower.substring(separator + 1) : lower;
+			if (current.isEmpty() || lower.startsWith(current) || path.startsWith(current)) {
+				matches.add(option);
+			}
+		}
+		matches.sort(String::compareToIgnoreCase);
+		if (matches.size() == 1 && matches.get(0).equalsIgnoreCase(textEdit.getValue().trim())) {
+			matches = List.of();
+		}
+		suggestions = matches.size() > MAX_SUGGESTIONS ? matches.subList(0, MAX_SUGGESTIONS) : matches;
+		if (suggestionIndex >= suggestions.size()) {
+			suggestionIndex = 0;
+		}
+	}
+
+	private List<String> completeOptions() {
+		return switch (condition.getType()) {
+			case PLAYER -> playerOptions();
+			case IN_BIOME -> biomeOptions();
+			case ENTITY_ALIVE -> entityOptions();
+			default -> List.of();
+		};
+	}
+
+	private List<String> playerOptions() {
+		List<String> names = new ArrayList<>(List.of("@a", "@p", "@r", "@s", "@e"));
+		Minecraft client = this.minecraft;
+		if (client != null && client.getConnection() != null) {
+			for (var info : client.getConnection().getOnlinePlayers()) {
+				names.add(info.getProfile().getName());
+			}
+		}
+		return names;
+	}
+
+	private List<String> biomeOptions() {
+		Minecraft client = this.minecraft;
+		if (client == null || client.level == null) {
+			return List.of();
+		}
+		return client.level.registryAccess().registryOrThrow(Registries.BIOME).keySet().stream().map(Object::toString).sorted().toList();
+	}
+
+	private List<String> entityOptions() {
+		return BuiltInRegistries.ENTITY_TYPE.keySet().stream().map(Object::toString).sorted().toList();
+	}
+
+	private void renderSuggestions(GuiGraphics guiGraphics) {
+		if (suggestions.isEmpty() || textEdit == null || !textEdit.visible) {
+			return;
+		}
+		int x = textEdit.getX();
+		int y = textEdit.getY() + textEdit.getHeight();
+		int width = textEdit.getWidth();
+		guiGraphics.fill(x, y, x + width, y + suggestions.size() * SUGGESTION_ROW + 2, 0xF0000000);
+		for (int i = 0; i < suggestions.size(); i++) {
+			int rowTop = y + i * SUGGESTION_ROW;
+			if (i == suggestionIndex) {
+				guiGraphics.fill(x, rowTop, x + width, rowTop + SUGGESTION_ROW, 0xFF404040);
+			}
+			String shown = this.font.plainSubstrByWidth(suggestions.get(i), width - 6, false);
+			guiGraphics.drawString(this.font, shown, x + 3, rowTop + 1, 0xFFFFFF, false);
+		}
+		guiGraphics.renderOutline(x, y, width, suggestions.size() * SUGGESTION_ROW + 2, 0xFF6A6A6A);
 	}
 
 	private void updateVisibility() {
@@ -202,5 +348,6 @@ public class MusicConditionScreen extends Screen {
 		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + GuiLayout.TITLE_TOP, 0xFFFFFF);
 
 		super.render(guiGraphics, mouseX, mouseY, delta);
+		renderSuggestions(guiGraphics);
 	}
 }
