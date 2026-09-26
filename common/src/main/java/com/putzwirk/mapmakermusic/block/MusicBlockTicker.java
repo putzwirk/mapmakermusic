@@ -36,7 +36,7 @@ public class MusicBlockTicker {
 	private static final Map<UUID, ActiveState> ACTIVE = new ConcurrentHashMap<>();
 
 	public static void tick(Level level, BlockPos pos, BlockState state, MusicBlockEntity musicBe) {
-		if (musicBe.getActivationType() == MusicBlockEntity.ActivationType.AREA) {
+		if (musicBe.getTriggerMode() == MusicBlockEntity.TriggerMode.CHAIN && musicBe.isAreaGate()) {
 			tickAreaActivation(level, musicBe);
 		}
 	}
@@ -316,7 +316,8 @@ public class MusicBlockTicker {
 			long key = entry.getKey();
 			BlockEntity be = level.getBlockEntity(BlockPos.of(key));
 			if (!(be instanceof MusicBlockEntity musicBe)
-					|| musicBe.getActivationType() != MusicBlockEntity.ActivationType.AREA
+					|| musicBe.getTriggerMode() != MusicBlockEntity.TriggerMode.CHAIN
+					|| !musicBe.isAreaGate()
 					|| !boxHasTracks(musicBe)) {
 				it.remove();
 				continue;

@@ -55,7 +55,7 @@ public class MusicBlock extends Block implements EntityBlock {
 			BlockEntity be = level.getBlockEntity(pos);
 			if (be instanceof MusicBlockEntity musicBe) {
 				boolean hasSignal = level.hasNeighborSignal(pos);
-				if (musicBe.getActivationType() == MusicBlockEntity.ActivationType.REDSTONE) {
+				if (musicBe.getTriggerMode() == MusicBlockEntity.TriggerMode.IMPULSE) {
 					boolean wasPowered = musicBe.isPoweredLastTick();
 					if (hasSignal && !wasPowered) {
 						MusicBlockTicker.triggerRedstoneActivation(level, musicBe);

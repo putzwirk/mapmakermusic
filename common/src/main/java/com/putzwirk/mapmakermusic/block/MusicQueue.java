@@ -19,6 +19,12 @@ public class MusicQueue {
 	}
 
 	public static class PlaylistItem {
+		public static final String STOP_TRACK = "STOP";
+
+		public static boolean isStop(String track) {
+			return track != null && track.equalsIgnoreCase(STOP_TRACK);
+		}
+
 		private String track = "";
 		private Integer volume;
 		private Float pitch;
@@ -58,6 +64,10 @@ public class MusicQueue {
 
 		public void setPitch(Float pitch) {
 			this.pitch = pitch;
+		}
+
+		public boolean isStop() {
+			return isStop(track);
 		}
 
 		public PlaylistItem copy() {

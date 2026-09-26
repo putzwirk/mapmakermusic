@@ -18,9 +18,15 @@ import javax.annotation.Nullable;
 
 public class MusicBlockEntity extends BlockEntity {
 
+	@Deprecated
 	public enum ActivationType {
 		REDSTONE,
 		AREA
+	}
+
+	public enum TriggerMode {
+		IMPULSE,
+		CHAIN
 	}
 
 	public enum AudioType {
@@ -33,7 +39,8 @@ public class MusicBlockEntity extends BlockEntity {
 		POSITIONAL
 	}
 
-	private ActivationType activationType = ActivationType.REDSTONE;
+	private TriggerMode triggerMode = TriggerMode.IMPULSE;
+	private boolean areaGate = false;
 	private AudioType audioType = AudioType.MUSIC;
 	private BlockPos pos1 = BlockPos.ZERO;
 	private BlockPos pos2 = BlockPos.ZERO;
@@ -67,12 +74,41 @@ public class MusicBlockEntity extends BlockEntity {
 		this(ModBlocks.MUSIC_BLOCK_ENTITY_TYPE.get(), pos, state);
 	}
 
+	@Deprecated
 	public ActivationType getActivationType() {
-		return activationType;
+		if (triggerMode == TriggerMode.CHAIN) {
+			return ActivationType.AREA;
+		}
+		return ActivationType.REDSTONE;
 	}
 
+	@Deprecated
 	public void setActivationType(ActivationType activationType) {
-		this.activationType = activationType;
+		if (activationType == ActivationType.AREA) {
+			this.triggerMode = TriggerMode.CHAIN;
+			this.areaGate = true;
+		} else {
+			this.triggerMode = TriggerMode.IMPULSE;
+			this.areaGate = false;
+		}
+		setChanged();
+	}
+
+	public TriggerMode getTriggerMode() {
+		return triggerMode;
+	}
+
+	public void setTriggerMode(TriggerMode triggerMode) {
+		this.triggerMode = triggerMode == null ? TriggerMode.IMPULSE : triggerMode;
+		setChanged();
+	}
+
+	public boolean isAreaGate() {
+		return areaGate;
+	}
+
+	public void setAreaGate(boolean areaGate) {
+		this.areaGate = areaGate;
 		setChanged();
 	}
 
@@ -270,8 +306,22 @@ public class MusicBlockEntity extends BlockEntity {
 	@Override
 	public void load(CompoundTag tag) {
 		super.load(tag);
-		if (tag.contains("ActivationType")) {
-			this.activationType = ActivationType.values()[Math.max(0, Math.min(ActivationType.values().length - 1, tag.getInt("ActivationType")))];
+		if (tag.contains("TriggerMode")) {
+			try {
+				this.triggerMode = TriggerMode.valueOf(tag.getString("TriggerMode"));
+			} catch (IllegalArgumentException ignored) {
+				this.triggerMode = TriggerMode.IMPULSE;
+			}
+			this.areaGate = tag.getBoolean("AreaGate");
+		} else if (tag.contains("ActivationType")) {
+			int legacy = Math.max(0, Math.min(ActivationType.values().length - 1, tag.getInt("ActivationType")));
+			if (ActivationType.values()[legacy] == ActivationType.AREA) {
+				this.triggerMode = TriggerMode.CHAIN;
+				this.areaGate = true;
+			} else {
+				this.triggerMode = TriggerMode.IMPULSE;
+				this.areaGate = false;
+			}
 		}
 		if (tag.contains("AudioType")) {
 			this.audioType = AudioType.values()[Math.max(0, Math.min(AudioType.values().length - 1, tag.getInt("AudioType")))];
@@ -326,7 +376,8 @@ public class MusicBlockEntity extends BlockEntity {
 	@Override
 	protected void saveAdditional(CompoundTag tag) {
 		super.saveAdditional(tag);
-		tag.putInt("ActivationType", this.activationType.ordinal());
+		tag.putString("TriggerMode", this.triggerMode.name());
+		tag.putBoolean("AreaGate", this.areaGate);
 		tag.putInt("AudioType", this.audioType.ordinal());
 		tag.put("Pos1", NbtUtils.writeBlockPos(this.pos1));
 		tag.put("Pos2", NbtUtils.writeBlockPos(this.pos2));
