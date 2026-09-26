@@ -555,6 +555,9 @@ public final class MusicPlayer {
 			this.desiredPitch = 1f;
 			return;
 		}
+		if (state.trackKey.equals(this.currentTrackKey) && (this.isLoadingTrack || this.currentMusic != null)) {
+			return;
+		}
 
 		Path path = this.musicCache.get(state.trackKey);
 		if (path == null) {
@@ -721,17 +724,18 @@ public final class MusicPlayer {
 		if (com.putzwirk.mapmakermusic.block.MusicDebug.ENABLED) {
 			LOGGER.info("[dbg] finished key={}", finishedKey);
 		}
-		this.currentMusic = null;
-		this.currentTrackKey = null;
-		this.currentMusicPath = null;
-		this.isLoadingTrack = false;
 		if (finished != null) {
 			forceStop(finished);
 		}
-		this.desiredTrackKey = null;
-		String worldId = currentWorldId();
-		if (worldId != null) {
-			this.worldStates.remove(worldId);
+		this.currentMusic = null;
+		if (!this.isLoadingTrack) {
+			this.currentTrackKey = null;
+			this.currentMusicPath = null;
+			this.desiredTrackKey = null;
+			String worldId = currentWorldId();
+			if (worldId != null) {
+				this.worldStates.remove(worldId);
+			}
 		}
 		TrackFinishedCallback callback = trackFinishedCallback;
 		if (callback != null && finishedKey != null) {
@@ -760,11 +764,13 @@ public final class MusicPlayer {
 		CompletableFuture.supplyAsync(() -> decodeOrNull(path))
 				.thenAcceptAsync(decoded -> {
 					if (com.putzwirk.mapmakermusic.block.MusicDebug.ENABLED) {
-						LOGGER.info("[dbg] decoded key={} ms={} ok={} desired={}", key,
-								(System.nanoTime() - decodeStart) / 1000000L, decoded != null, this.desiredTrackKey);
+						LOGGER.info("[dbg] decoded key={} ms={} ok={} desired={} epochOk={}", key,
+								(System.nanoTime() - decodeStart) / 1000000L, decoded != null, this.desiredTrackKey, epoch == this.decodeEpoch);
 					}
 					if (decoded == null || epoch != this.decodeEpoch || !key.equals(this.desiredTrackKey)) {
-						this.isLoadingTrack = false;
+						if (epoch == this.decodeEpoch) {
+							this.isLoadingTrack = false;
+						}
 						return;
 					}
 
