@@ -74,6 +74,7 @@ public class MusicConditionScreen extends Screen {
 		this.textEdit = new EditBox(this.font, x, topPos + 30 + GuiLayout.SECTION_SPACING, contentWidth, GuiLayout.BUTTON_HEIGHT, Component.literal("Value"));
 		String hint = condition.getType().textHint();
 		this.textEdit.setHint(Component.literal(hint == null ? "value" : hint));
+		this.textEdit.setMaxLength(128);
 		this.textEdit.setValue(condition.getText());
 		this.textEdit.setResponder(text -> {
 			condition.setText(text);
@@ -95,6 +96,7 @@ public class MusicConditionScreen extends Screen {
 
 		this.tagEdit = new EditBox(this.font, x, topPos + 30 + 3 * GuiLayout.SECTION_SPACING, contentWidth, GuiLayout.BUTTON_HEIGHT, Component.literal("Tag"));
 		this.tagEdit.setHint(Component.literal("scoreboard tag, optional"));
+		this.tagEdit.setMaxLength(128);
 		this.tagEdit.setValue(condition.getTag());
 		this.tagEdit.setResponder(condition::setTag);
 		addRenderableWidget(tagEdit);
