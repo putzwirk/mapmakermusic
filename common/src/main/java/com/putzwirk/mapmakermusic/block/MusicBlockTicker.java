@@ -210,6 +210,12 @@ public class MusicBlockTicker {
 		if (state != null && state.stopped && state.trackIndex < 0 && state.queueIndex == queueIndex) {
 			return;
 		}
+		if (desired.getChannel() == MusicQueue.Channel.MUSIC && beatenBy(level, key, musicBe, player)) {
+			if (state != null && !state.stopped) {
+				stopState(level, key, musicBe, uuid, player);
+			}
+			return;
+		}
 		if (state == null || state.stopped || state.queueIndex != queueIndex) {
 			if (!adoptSaved(level, key, musicBe, player, uuid, queueIndex)) {
 				startQueue(level, key, musicBe, player, queueIndex, 0, 0f, true, false);
@@ -368,6 +374,36 @@ public class MusicBlockTicker {
 		STATES.computeIfAbsent(key, k -> new ConcurrentHashMap<>()).put(uuid, state);
 		MUSIC_CLAIM.remove(uuid, key);
 		PlaybackSaveData.get(level.getServer()).remove(PlaybackSaveData.boxId(key.dimension(), key.pos()), uuid);
+	}
+
+	private static boolean beatenBy(ServerLevel level, BoxKey key, MusicBlockEntity musicBe, ServerPlayer player) {
+		boolean iAmGate = musicBe.isAreaGate() && areaOf(musicBe).contains(player.getX(), player.getY(), player.getZ());
+		long myVolume = iAmGate ? areaVolume(musicBe) : 0L;
+		for (long otherPos : chainBoxesIn(key.dimension())) {
+			if (otherPos == key.pos()) {
+				continue;
+			}
+			BlockEntity be = level.getBlockEntity(BlockPos.of(otherPos));
+			if (!(be instanceof MusicBlockEntity other) || !other.isAreaGate()
+					|| other.getTriggerMode() != MusicBlockEntity.TriggerMode.CHAIN || !boxHasTracks(other)) {
+				continue;
+			}
+			if (!areaOf(other).contains(player.getX(), player.getY(), player.getZ())) {
+				continue;
+			}
+			MusicQueue match = other.findMatchingQueue(player);
+			if (match == null || match.getChannel() != MusicQueue.Channel.MUSIC) {
+				continue;
+			}
+			if (!iAmGate) {
+				return true;
+			}
+			long otherVolume = areaVolume(other);
+			if (otherVolume < myVolume || (otherVolume == myVolume && otherPos < key.pos())) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static boolean blockedBySmaller(ServerLevel level, BoxKey key, MusicBlockEntity musicBe, ServerPlayer player) {
