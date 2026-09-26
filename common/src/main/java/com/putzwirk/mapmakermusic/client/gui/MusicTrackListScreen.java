@@ -1,11 +1,8 @@
 package com.putzwirk.mapmakermusic.client.gui;
 
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
-import com.putzwirk.mapmakermusic.block.MusicCondition;
 import com.putzwirk.mapmakermusic.block.MusicQueue;
 import com.putzwirk.mapmakermusic.library.MusicLibrary;
-import java.util.ArrayList;
-import java.util.List;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -193,15 +190,7 @@ public class MusicTrackListScreen extends Screen {
 				if (queue.isLoop()) {
 					channel += ", Looping";
 				}
-				String rules = "Always plays";
-				if (!queue.getConditions().isEmpty()) {
-					List<String> parts = new ArrayList<>();
-					for (MusicCondition condition : queue.getConditions()) {
-						parts.add(condition.describe());
-					}
-					String joiner = queue.getConditionMatch() == MusicQueue.ConditionMatch.ANY ? " or " : " and ";
-					rules = "When " + String.join(joiner, parts);
-				}
+				String rules = queue.getRuleRoot().describeRules();
 				return new String[] {tracks, channel, rules};
 			}
 

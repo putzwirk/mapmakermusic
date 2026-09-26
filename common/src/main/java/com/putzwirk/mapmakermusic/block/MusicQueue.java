@@ -13,11 +13,6 @@ public class MusicQueue {
 		SOUND
 	}
 
-	public enum ConditionMatch {
-		ALL,
-		ANY
-	}
-
 	public static class PlaylistItem {
 		public static final String STOP_TRACK = "STOP";
 
@@ -104,8 +99,7 @@ public class MusicQueue {
 	private boolean fadeIn = true;
 	private boolean fadeOut = true;
 	private boolean loop = true;
-	private final List<MusicCondition> conditions = new ArrayList<>();
-	private ConditionMatch conditionMatch = ConditionMatch.ALL;
+	private final ConditionGroup ruleRoot = new ConditionGroup();
 
 	public List<PlaylistItem> getTracks() {
 		return tracks;
@@ -165,16 +159,8 @@ public class MusicQueue {
 		this.loop = loop;
 	}
 
-	public List<MusicCondition> getConditions() {
-		return conditions;
-	}
-
-	public ConditionMatch getConditionMatch() {
-		return conditionMatch;
-	}
-
-	public void setConditionMatch(ConditionMatch conditionMatch) {
-		this.conditionMatch = conditionMatch == null ? ConditionMatch.ALL : conditionMatch;
+	public ConditionGroup getRuleRoot() {
+		return ruleRoot;
 	}
 
 	public boolean isPlaylist() {
@@ -195,10 +181,9 @@ public class MusicQueue {
 		copy.fadeIn = fadeIn;
 		copy.fadeOut = fadeOut;
 		copy.loop = loop;
-		for (MusicCondition condition : conditions) {
-			copy.conditions.add(condition.copy());
-		}
-		copy.conditionMatch = conditionMatch;
+		copy.ruleRoot.getKids().clear();
+		copy.ruleRoot.getKids().addAll(ruleRoot.copy().getKids());
+		copy.ruleRoot.setOp(ruleRoot.getOp());
 		return copy;
 	}
 
@@ -216,12 +201,7 @@ public class MusicQueue {
 		tag.putBoolean("FadeOut", fadeOut);
 		tag.putBoolean("Loop", loop);
 
-		ListTag conditionList = new ListTag();
-		for (MusicCondition condition : conditions) {
-			conditionList.add(condition.save());
-		}
-		tag.put("Conditions", conditionList);
-		tag.putString("ConditionMatch", conditionMatch.name());
+		tag.put("RuleRoot", ruleRoot.save());
 
 		return tag;
 	}
@@ -264,15 +244,21 @@ public class MusicQueue {
 			queue.loop = true;
 		}
 
-		ListTag conditionList = tag.getList("Conditions", Tag.TAG_COMPOUND);
-		for (int i = 0; i < conditionList.size(); i++) {
-			queue.conditions.add(MusicCondition.load(conditionList.getCompound(i)));
-		}
-
-		if (tag.contains("ConditionMatch")) {
-			try {
-				queue.conditionMatch = ConditionMatch.valueOf(tag.getString("ConditionMatch"));
-			} catch (IllegalArgumentException ignored) {
+		if (tag.contains("RuleRoot")) {
+			ConditionGroup loaded = ConditionGroup.load(tag.getCompound("RuleRoot"));
+			queue.ruleRoot.getKids().clear();
+			queue.ruleRoot.getKids().addAll(loaded.getKids());
+			queue.ruleRoot.setOp(loaded.getOp());
+		} else {
+			ListTag conditionList = tag.getList("Conditions", Tag.TAG_COMPOUND);
+			for (int i = 0; i < conditionList.size(); i++) {
+				queue.ruleRoot.getKids().add(MusicCondition.load(conditionList.getCompound(i)));
+			}
+			if (tag.contains("ConditionMatch")) {
+				try {
+					queue.ruleRoot.setOp(ConditionGroup.Op.valueOf(tag.getString("ConditionMatch")));
+				} catch (IllegalArgumentException ignored) {
+				}
 			}
 		}
 

@@ -4,7 +4,6 @@ import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.block.MusicCondition;
 import com.putzwirk.mapmakermusic.client.gui.GuiIcons;
 import com.putzwirk.mapmakermusic.client.gui.MusicBlockScreen;
-import java.util.List;
 import java.util.Locale;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -21,7 +20,7 @@ public class MusicConditionScreen extends Screen {
 	private final Screen parent;
 	private final MusicBlockEntity block;
 	private final int queueIndex;
-	private final int conditionIndex;
+	private final MusicCondition original;
 	private final MusicCondition condition;
 
 	private Button modeBtn;
@@ -29,24 +28,13 @@ public class MusicConditionScreen extends Screen {
 	private EditBox minEdit;
 	private EditBox maxEdit;
 
-	public MusicConditionScreen(Screen parent, MusicBlockEntity block, int queueIndex, int conditionIndex) {
-		super(Component.literal(titleFor(block, queueIndex, conditionIndex)));
+	public MusicConditionScreen(Screen parent, MusicBlockEntity block, int queueIndex, MusicCondition condition) {
+		super(Component.literal(condition.getType().displayName()));
 		this.parent = parent;
 		this.block = block;
 		this.queueIndex = queueIndex;
-		this.conditionIndex = conditionIndex;
-
-		MusicCondition existing = conditionIndex >= 0 && conditionIndex < block.getQueues().get(queueIndex).getConditions().size()
-				? block.getQueues().get(queueIndex).getConditions().get(conditionIndex)
-				: null;
-		this.condition = existing != null ? existing.copy() : MusicCondition.Type.TIME.newDefault();
-	}
-
-	private static String titleFor(MusicBlockEntity block, int queueIndex, int conditionIndex) {
-		if (conditionIndex >= 0 && conditionIndex < block.getQueues().get(queueIndex).getConditions().size()) {
-			return block.getQueues().get(queueIndex).getConditions().get(conditionIndex).getType().displayName();
-		}
-		return "New Condition";
+		this.original = condition;
+		this.condition = condition.copy();
 	}
 
 	@Override
@@ -131,15 +119,7 @@ public class MusicConditionScreen extends Screen {
 	}
 
 	private void saveAndClose() {
-		MusicCondition saved = condition.copy();
-		if (conditionIndex >= 0) {
-			List<MusicCondition> conditions = block.getQueues().get(queueIndex).getConditions();
-			if (conditionIndex < conditions.size()) {
-				conditions.set(conditionIndex, saved);
-			}
-		} else {
-			block.getQueues().get(queueIndex).getConditions().add(saved);
-		}
+		block.getQueues().get(queueIndex).getRuleRoot().replaceByIdentity(original, condition.copy());
 		MusicBlockScreen.sendUpdate(block);
 		this.minecraft.setScreen(parent);
 	}

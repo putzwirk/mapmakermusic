@@ -1,9 +1,11 @@
 package com.putzwirk.mapmakermusic.client.gui;
 
+import com.putzwirk.mapmakermusic.block.ConditionGroup;
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.block.MusicCondition;
 import com.putzwirk.mapmakermusic.block.MusicQueue;
 import com.putzwirk.mapmakermusic.library.MusicLibrary;
+import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -127,14 +129,14 @@ public class MusicQueueScreen extends Screen {
 
 		this.fadeInButton = Button.builder(fadeLabel("Fade in", queue.isFadeIn()), b -> {
 			queue.setFadeIn(!queue.isFadeIn());
-			this.fadeInButton.setMessage(fadeLabel("In", queue.isFadeIn()));
+			this.fadeInButton.setMessage(fadeLabel("Fade in", queue.isFadeIn()));
 		}).tooltip(Tooltip.create(Component.literal("Fade in when the queue starts")))
 				.bounds(leftPos + PAD, topPos + 210, colWidth, 18).build();
 		addRenderableWidget(fadeInButton);
 
 		this.fadeOutButton = Button.builder(fadeLabel("Fade out", queue.isFadeOut()), b -> {
 			queue.setFadeOut(!queue.isFadeOut());
-			this.fadeOutButton.setMessage(fadeLabel("Out", queue.isFadeOut()));
+			this.fadeOutButton.setMessage(fadeLabel("Fade out", queue.isFadeOut()));
 		}).tooltip(Tooltip.create(Component.literal("Fade out when the queue ends")))
 				.bounds(rightX, topPos + 210, colWidth, 18).build();
 		addRenderableWidget(fadeOutButton);
@@ -151,6 +153,7 @@ public class MusicQueueScreen extends Screen {
 		this.catalogList = new CatalogList(this.minecraft, catWidth, 146, topPos + LIST_TOP, topPos + LIST_TOP + 146, ROW_HEIGHT);
 		this.catalogList.setLeftPos(leftPos + PAD);
 		this.catalogList.setRenderSelection(false);
+		this.catalogList.addCatalogEntry(this.catalogList.new Entry(null));
 		for (MusicCondition.Type type : MusicCondition.Type.values()) {
 			this.catalogList.addCatalogEntry(this.catalogList.new Entry(type));
 		}
@@ -161,12 +164,7 @@ public class MusicQueueScreen extends Screen {
 		refreshActive();
 		addRenderableWidget(activeList);
 
-		addRenderableWidget(Button.builder(matchLabel(), b -> {
-			queue().setConditionMatch(queue().getConditionMatch() == MusicQueue.ConditionMatch.ALL
-					? MusicQueue.ConditionMatch.ANY
-					: MusicQueue.ConditionMatch.ALL);
-			b.setMessage(matchLabel());
-		}).tooltip(Tooltip.create(Component.literal("ALL: every rule must match. ANY: a single matching rule is enough.")))
+		addRenderableWidget(Button.builder(Component.literal("Done"), b -> backToParent())
 				.bounds(leftPos + PAD, topPos + 212, listWidth, 18).build());
 
 		this.libraryList = null;
@@ -177,9 +175,8 @@ public class MusicQueueScreen extends Screen {
 		this.fadeOutButton = null;
 	}
 
-	private Component matchLabel() {
-		boolean all = queue().getConditionMatch() == MusicQueue.ConditionMatch.ALL;
-		return Component.literal(all ? "Match: ALL rules (AND)" : "Match: ANY rule (OR)");
+	private void openConditionEditor(MusicCondition condition) {
+		this.minecraft.setScreen(new MusicConditionScreen(this, block, queueIndex, condition));
 	}
 
 	private Component channelLabel() {
@@ -197,10 +194,6 @@ public class MusicQueueScreen extends Screen {
 
 	private static String bracket(String value, boolean good) {
 		return "[" + (good ? "\u00a7a" : "\u00a7c") + value + "\u00a7r]";
-	}
-
-	private void openConditionEditor(int index) {
-		this.minecraft.setScreen(new MusicConditionScreen(this, block, queueIndex, index));
 	}
 
 	private void openMixEditor(int trackIndex) {
@@ -266,23 +259,41 @@ public class MusicQueueScreen extends Screen {
 		playlistList.setScrollAmount(scroll);
 	}
 
+	private ConditionGroup targetGroup() {
+		ActiveList.Entry selected = activeList != null ? activeList.getSelected() : null;
+		if (selected != null && selected.row != null) {
+			if (selected.row.node() instanceof ConditionGroup group) {
+				return group;
+			}
+			if (selected.row.parent() != null) {
+				return selected.row.parent();
+			}
+		}
+		return queue().getRuleRoot();
+	}
+
 	private void addCondition(MusicCondition.Type type) {
-		queue().getConditions().add(type.newDefault());
+		targetGroup().getKids().add(type.newDefault());
 		refreshActive();
 	}
 
-	private void removeCondition(int index) {
-		if (index >= 0 && index < queue().getConditions().size()) {
-			queue().getConditions().remove(index);
+	private void addGroup() {
+		targetGroup().getKids().add(new ConditionGroup());
+		refreshActive();
+	}
+
+	private void removeNode(ConditionGroup parent, int index) {
+		if (parent != null && index >= 0 && index < parent.getKids().size()) {
+			parent.getKids().remove(index);
 			refreshActive();
 		}
 	}
 
-	private void moveCondition(int index, int delta) {
+	private void moveNode(ConditionGroup parent, int index, int delta) {
 		int target = index + delta;
-		if (index >= 0 && index < queue().getConditions().size() && target >= 0 && target < queue().getConditions().size()) {
-			MusicCondition condition = queue().getConditions().remove(index);
-			queue().getConditions().add(target, condition);
+		if (parent != null && index >= 0 && index < parent.getKids().size() && target >= 0 && target < parent.getKids().size()) {
+			Object node = parent.getKids().remove(index);
+			parent.getKids().add(target, node);
 			refreshActive();
 		}
 	}
@@ -290,9 +301,12 @@ public class MusicQueueScreen extends Screen {
 	private void refreshActive() {
 		double scroll = activeList != null ? activeList.getScrollAmount() : 0;
 		activeList.clearActiveEntries();
-		for (int i = 0; i < queue().getConditions().size(); i++) {
-			activeList.addActiveEntry(activeList.new Entry(i));
+		List<ConditionGroup.TreeRow> rows = new ArrayList<>();
+		queue().getRuleRoot().collectRows(rows);
+		for (ConditionGroup.TreeRow row : rows) {
+			activeList.addActiveEntry(activeList.new Entry(row));
 		}
+		activeList.setSelected(null);
 		activeList.setScrollAmount(scroll);
 	}
 
@@ -533,21 +547,26 @@ public class MusicQueueScreen extends Screen {
 
 			@Override
 			public Component getNarration() {
-				return Component.literal(type.displayName());
+				return Component.literal(type == null ? "Add group" : type.displayName());
 			}
 
 			@Override
 			public void render(GuiGraphics guiGraphics, int index, int top, int left, int width, int height, int mouseX, int mouseY, boolean isHovered, float partialTick) {
 				this.rowLeft = left;
 				this.rowWidth = width;
-				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(type.displayName(), width - ROW_GLYPH - 6), left + 2, top + 7, 0xFFFFFF);
+				String name = type == null ? "+ Group" : type.displayName();
+				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(name, width - ROW_GLYPH - 6), left + 2, top + 7, type == null ? 0xFFE08A8A : 0xFFFFFF);
 				int bx = left + width - ROW_GLYPH;
 				drawRowGlyph(guiGraphics, bx, top + 4, GuiIcons.ADD, inGlyph(mouseX, mouseY, bx, top + 4));
 			}
 
 			@Override
 			public boolean mouseClicked(double mouseX, double mouseY, int button) {
-				addCondition(type);
+				if (type == null) {
+					addGroup();
+				} else {
+					addCondition(type);
+				}
 				return true;
 			}
 		}
@@ -567,13 +586,15 @@ public class MusicQueueScreen extends Screen {
 		}
 
 		class Entry extends ObjectSelectionList.Entry<Entry> {
-			private final int index;
+			final ConditionGroup.TreeRow row;
 			private int rowLeft;
 			private int rowWidth;
 			private int rowTop;
+			private int opX;
+			private int opWidth;
 
-			Entry(int index) {
-				this.index = index;
+			Entry(ConditionGroup.TreeRow row) {
+				this.row = row;
 			}
 
 			@Override
@@ -581,8 +602,26 @@ public class MusicQueueScreen extends Screen {
 				return Component.literal(label());
 			}
 
+			private boolean isGroup() {
+				return row.node() instanceof ConditionGroup;
+			}
+
+			private ConditionGroup group() {
+				return (ConditionGroup) row.node();
+			}
+
+			private String opText() {
+				return group().getOp() == ConditionGroup.Op.ALL ? "[ALL]" : "[ANY]";
+			}
+
 			private String label() {
-				return queue().getConditions().get(index).describe();
+				if (isGroup()) {
+					if (row.depth() == 0) {
+						return "Match " + group().getOp().name();
+					}
+					return group().describe();
+				}
+				return ((MusicCondition) row.node()).describe();
 			}
 
 			@Override
@@ -590,16 +629,27 @@ public class MusicQueueScreen extends Screen {
 				this.rowLeft = left;
 				this.rowWidth = width;
 				this.rowTop = top;
-				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(label(), width - 2 * ROW_GLYPH - 10), left + 2, top + 7, 0xFFFFFF);
+				int indent = row.depth() * 8;
 				int x4 = left + width - ROW_GLYPH;
 				int colX = x4 - ROW_GLYPH - 2;
 				int upY = top + 4;
 				int downY = top + 12;
-				boolean canUp = this.index > 0;
-				boolean canDown = this.index < queue().getConditions().size() - 1;
-				drawSpinButton(guiGraphics, colX, upY, GuiIcons.UP, canUp && inSpin(mouseX, mouseY, colX, upY), canUp, 0);
-				drawSpinButton(guiGraphics, colX, downY, GuiIcons.DOWN, canDown && inSpin(mouseX, mouseY, colX, downY), canDown, 1);
-				drawRowGlyph(guiGraphics, x4, top + 4, GuiIcons.REMOVE, inGlyph(mouseX, mouseY, x4, top + 4));
+				if (isGroup()) {
+					String op = row.depth() == 0 ? "Match " + group().getOp().name() : opText();
+					this.opX = left + 2 + indent;
+					this.opWidth = MusicQueueScreen.this.font.width(op);
+					guiGraphics.drawString(MusicQueueScreen.this.font, clipped(op, width - indent - 4), opX, top + 7, 0xFFE08A8A);
+				} else {
+					this.opWidth = 0;
+					guiGraphics.drawString(MusicQueueScreen.this.font, clipped(label(), width - 2 * ROW_GLYPH - 10 - indent), left + 2 + indent, top + 7, 0xFFFFFF);
+				}
+				if (row.depth() > 0) {
+					boolean canUp = row.index() > 0;
+					boolean canDown = row.parent() != null && row.index() < row.parent().getKids().size() - 1;
+					drawSpinButton(guiGraphics, colX, upY, GuiIcons.UP, canUp && inSpin(mouseX, mouseY, colX, upY), canUp, 0);
+					drawSpinButton(guiGraphics, colX, downY, GuiIcons.DOWN, canDown && inSpin(mouseX, mouseY, colX, downY), canDown, 1);
+					drawRowGlyph(guiGraphics, x4, top + 4, GuiIcons.REMOVE, inGlyph(mouseX, mouseY, x4, top + 4));
+				}
 			}
 
 			@Override
@@ -608,19 +658,29 @@ public class MusicQueueScreen extends Screen {
 				int colX = x4 - ROW_GLYPH - 2;
 				int upY = rowTop + 4;
 				int downY = rowTop + 12;
-				if (index > 0 && GuiIcons.inSpin(mouseX, mouseY, colX, upY)) {
-					moveCondition(index, -1);
+				if (isGroup() && mouseX >= opX && mouseX < opX + opWidth) {
+					group().toggleOp();
+					refreshActive();
 					return true;
 				}
-				if (index < queue().getConditions().size() - 1 && GuiIcons.inSpin(mouseX, mouseY, colX, downY)) {
-					moveCondition(index, 1);
-					return true;
+				if (row.depth() > 0) {
+					if (row.index() > 0 && GuiIcons.inSpin(mouseX, mouseY, colX, upY)) {
+						moveNode(row.parent(), row.index(), -1);
+						return true;
+					}
+					if (row.parent() != null && row.index() < row.parent().getKids().size() - 1 && GuiIcons.inSpin(mouseX, mouseY, colX, downY)) {
+						moveNode(row.parent(), row.index(), 1);
+						return true;
+					}
+					if (inGlyph(mouseX, mouseY, x4, rowTop + 4)) {
+						removeNode(row.parent(), row.index());
+						return true;
+					}
 				}
-				if (inGlyph(mouseX, mouseY, x4, rowTop + 4)) {
-					removeCondition(index);
-					return true;
+				activeList.setSelected(this);
+				if (!isGroup()) {
+					openConditionEditor((MusicCondition) row.node());
 				}
-				openConditionEditor(index);
 				return true;
 			}
 		}

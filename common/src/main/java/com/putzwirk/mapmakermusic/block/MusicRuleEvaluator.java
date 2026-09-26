@@ -18,24 +18,30 @@ public final class MusicRuleEvaluator {
 	}
 
 	public static boolean matches(MusicQueue queue, ServerPlayer player) {
-		List<MusicCondition> conditions = queue.getConditions();
-		if (conditions.isEmpty()) {
-			return true;
-		}
-		if (queue.getConditionMatch() == MusicQueue.ConditionMatch.ANY) {
-			for (MusicCondition condition : conditions) {
-				if (matches(condition, player)) {
-					return true;
-				}
+		return matchesNode(queue.getRuleRoot(), player);
+	}
+
+	public static boolean matchesNode(Object node, ServerPlayer player) {
+		if (node instanceof ConditionGroup group) {
+			if (group.getKids().isEmpty()) {
+				return true;
 			}
-			return false;
-		}
-		for (MusicCondition condition : conditions) {
-			if (!matches(condition, player)) {
+			if (group.getOp() == ConditionGroup.Op.ANY) {
+				for (Object kid : group.getKids()) {
+					if (matchesNode(kid, player)) {
+						return true;
+					}
+				}
 				return false;
 			}
+			for (Object kid : group.getKids()) {
+				if (!matchesNode(kid, player)) {
+					return false;
+				}
+			}
+			return true;
 		}
-		return true;
+		return matches((MusicCondition) node, player);
 	}
 
 	public static boolean matches(MusicCondition condition, ServerPlayer player) {

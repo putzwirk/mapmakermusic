@@ -19,24 +19,24 @@ public class MusicQueueTest {
 	}
 
 	@Test
-	public void conditionMatchDefaultsToAll() {
-		assertEquals(MusicQueue.ConditionMatch.ALL, new MusicQueue().getConditionMatch());
+	public void ruleRootDefaultsToAll() {
+		assertEquals(ConditionGroup.Op.ALL, new MusicQueue().getRuleRoot().getOp());
 	}
 
 	@Test
-	public void conditionMatchPersistsAndCopies() {
+	public void ruleRootPersistsAndCopies() {
 		MusicQueue queue = new MusicQueue();
-		queue.setConditionMatch(MusicQueue.ConditionMatch.ANY);
+		queue.getRuleRoot().setOp(ConditionGroup.Op.ANY);
 		MusicQueue loaded = MusicQueue.load(queue.save());
-		assertEquals(MusicQueue.ConditionMatch.ANY, loaded.getConditionMatch());
-		assertEquals(MusicQueue.ConditionMatch.ANY, queue.copy().getConditionMatch());
+		assertEquals(ConditionGroup.Op.ANY, loaded.getRuleRoot().getOp());
+		assertEquals(ConditionGroup.Op.ANY, queue.copy().getRuleRoot().getOp());
 	}
 
 	@Test
-	public void conditionMatchNullFallsBackToAll() {
+	public void ruleRootOpNullFallsBackToAll() {
 		MusicQueue queue = new MusicQueue();
-		queue.setConditionMatch(null);
-		assertEquals(MusicQueue.ConditionMatch.ALL, queue.getConditionMatch());
+		queue.getRuleRoot().setOp(null);
+		assertEquals(ConditionGroup.Op.ALL, queue.getRuleRoot().getOp());
 	}
 
 	@Test
@@ -45,11 +45,11 @@ public class MusicQueueTest {
 		queue.getTracks().add(new MusicQueue.PlaylistItem("cave_theme", 80, 1.0f));
 		queue.getTracks().add(new MusicQueue.PlaylistItem("STOP"));
 		queue.setLoop(false);
-		queue.setConditionMatch(MusicQueue.ConditionMatch.ANY);
+		queue.getRuleRoot().setOp(ConditionGroup.Op.ANY);
 		MusicCondition condition = MusicCondition.Type.POS_X.newDefault();
 		condition.setMin(10);
 		condition.setMax(100);
-		queue.getConditions().add(condition);
+		queue.getRuleRoot().getKids().add(condition);
 
 		MusicQueue loaded = MusicQueue.load(queue.save());
 		assertEquals(2, loaded.getTracks().size());
@@ -57,8 +57,8 @@ public class MusicQueueTest {
 		assertEquals(80, loaded.getTracks().get(0).getVolume());
 		assertTrue(loaded.getTracks().get(1).isStop());
 		assertFalse(loaded.isLoop());
-		assertEquals(1, loaded.getConditions().size());
-		assertEquals("X 10..100", loaded.getConditions().get(0).describe());
+		assertEquals(1, loaded.getRuleRoot().countLeaves());
+		assertEquals("X 10..100", ((MusicCondition) loaded.getRuleRoot().getKids().get(0)).describe());
 	}
 
 	@Test
