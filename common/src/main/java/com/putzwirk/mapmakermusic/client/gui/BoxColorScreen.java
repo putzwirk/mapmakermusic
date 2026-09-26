@@ -123,6 +123,7 @@ public class BoxColorScreen extends Screen {
 				auto = false;
 				syncSliders();
 				syncHex();
+				GuiIcons.click();
 				return true;
 			}
 		}

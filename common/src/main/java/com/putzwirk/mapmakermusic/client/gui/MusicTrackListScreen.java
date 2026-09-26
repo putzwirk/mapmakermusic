@@ -80,6 +80,7 @@ public class MusicTrackListScreen extends Screen {
 
 	private void openQueue(int index) {
 		if (index >= 0 && index < musicBlock.getQueues().size()) {
+			GuiIcons.click();
 			this.minecraft.setScreen(new MusicQueueScreen(this, musicBlock, index));
 		}
 	}
@@ -87,6 +88,7 @@ public class MusicTrackListScreen extends Screen {
 	private void removeQueue(int index) {
 		if (index >= 0 && index < musicBlock.getQueues().size()) {
 			musicBlock.removeQueue(index);
+			GuiIcons.click();
 			refreshQueues();
 		}
 	}
@@ -95,6 +97,7 @@ public class MusicTrackListScreen extends Screen {
 		int target = index + delta;
 		if (index >= 0 && index < musicBlock.getQueues().size() && target >= 0 && target < musicBlock.getQueues().size()) {
 			musicBlock.moveQueue(index, delta);
+			GuiIcons.click();
 			refreshQueues();
 		}
 	}

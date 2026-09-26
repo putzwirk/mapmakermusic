@@ -1,8 +1,11 @@
 package com.putzwirk.mapmakermusic.client.gui;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.resources.sounds.SimpleSoundInstance;
 import net.minecraft.core.BlockPos;
+import net.minecraft.sounds.SoundEvents;
 
 public final class GuiIcons {
 
@@ -56,5 +59,9 @@ public final class GuiIcons {
 		long hash = pos.asLong() * 0x9E3779B97F4A7C15L;
 		float hue = (float) (((hash >>> 16) % 360 + 360) % 360) / 360f;
 		return 0xFF000000 | java.awt.Color.HSBtoRGB(hue, 0.85f, 1f);
+	}
+
+	public static void click() {
+		Minecraft.getInstance().getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0F));
 	}
 }

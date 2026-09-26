@@ -177,6 +177,7 @@ public class MusicQueueScreen extends Screen {
 	}
 
 	private void openConditionEditor(MusicCondition condition) {
+		GuiIcons.click();
 		this.minecraft.setScreen(new MusicConditionScreen(this, block, queueIndex, condition));
 	}
 
@@ -204,6 +205,7 @@ public class MusicQueueScreen extends Screen {
 		if (queue().getTracks().get(trackIndex).isStop()) {
 			return;
 		}
+		GuiIcons.click();
 		this.minecraft.setScreen(new MusicTrackMixScreen(this, block, queueIndex, trackIndex));
 	}
 
@@ -223,6 +225,7 @@ public class MusicQueueScreen extends Screen {
 			}
 		}
 		queue().getTracks().add(new MusicQueue.PlaylistItem(stop ? MusicQueue.PlaylistItem.STOP_TRACK : track));
+		GuiIcons.click();
 		refreshPlaylist();
 	}
 
@@ -235,6 +238,7 @@ public class MusicQueueScreen extends Screen {
 	private void removeTrack(int index) {
 		if (index >= 0 && index < queue().getTracks().size()) {
 			queue().getTracks().remove(index);
+			GuiIcons.click();
 			refreshPlaylist();
 		}
 	}
@@ -244,6 +248,7 @@ public class MusicQueueScreen extends Screen {
 		if (index >= 0 && index < queue().getTracks().size() && target >= 0 && target < queue().getTracks().size()) {
 			MusicQueue.PlaylistItem item = queue().getTracks().remove(index);
 			queue().getTracks().add(target, item);
+			GuiIcons.click();
 			refreshPlaylist();
 		}
 	}
@@ -286,6 +291,7 @@ public class MusicQueueScreen extends Screen {
 
 	private void addCondition(MusicCondition.Type type) {
 		viewed().getKids().add(type.newDefault());
+		GuiIcons.click();
 		refreshActive();
 	}
 
@@ -293,6 +299,7 @@ public class MusicQueueScreen extends Screen {
 		ConditionGroup group = new ConditionGroup();
 		viewed().getKids().add(group);
 		viewedGroup = group;
+		GuiIcons.click();
 		refreshActive();
 	}
 
@@ -300,6 +307,7 @@ public class MusicQueueScreen extends Screen {
 		ConditionGroup parent = viewed();
 		if (index >= 0 && index < parent.getKids().size()) {
 			parent.getKids().remove(index);
+			GuiIcons.click();
 			refreshActive();
 		}
 	}
@@ -310,6 +318,7 @@ public class MusicQueueScreen extends Screen {
 		if (index >= 0 && index < parent.getKids().size() && target >= 0 && target < parent.getKids().size()) {
 			Object node = parent.getKids().remove(index);
 			parent.getKids().add(target, node);
+			GuiIcons.click();
 			refreshActive();
 		}
 	}
@@ -457,23 +466,19 @@ public class MusicQueueScreen extends Screen {
 					duration = MusicLibrary.formatDuration(info == null ? -1f : info.durationSeconds());
 				}
 				int durationWidth = duration.isEmpty() ? 0 : MusicQueueScreen.this.font.width(duration) + 4;
-				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(track, width - ROW_GLYPH - 6 - durationWidth), left + 2, top + 7,
-						MusicQueue.PlaylistItem.isStop(track) ? 0xFFE07A7A : 0xFFFFFF);
-				int bx = left + width - ROW_GLYPH;
-				if (!duration.isEmpty()) {
-					guiGraphics.drawString(MusicQueueScreen.this.font, duration, bx - durationWidth + 2, top + 7, 0x9A9A9A, false);
-				}
+				int bx = left + 2;
 				drawRowGlyph(guiGraphics, bx, top + 4, GuiIcons.ADD, inGlyph(mouseX, mouseY, bx, top + 4));
+				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(track, width - ROW_GLYPH - 6 - durationWidth), left + 2 + ROW_GLYPH + 2, top + 7,
+						MusicQueue.PlaylistItem.isStop(track) ? 0xFFE07A7A : 0xFFFFFF);
+				if (!duration.isEmpty()) {
+					guiGraphics.drawString(MusicQueueScreen.this.font, duration, left + width - 2 - durationWidth + 2, top + 7, 0x9A9A9A, false);
+				}
 			}
 
 			@Override
 			public boolean mouseClicked(double mouseX, double mouseY, int button) {
-				int bx = rowLeft + rowWidth - ROW_GLYPH;
-				if (mouseX >= bx && mouseX < bx + ROW_GLYPH) {
-					addTrack(track);
-					return true;
-				}
-				return false;
+				addTrack(track);
+				return true;
 			}
 		}
 	}
@@ -598,9 +603,9 @@ public class MusicQueueScreen extends Screen {
 				this.rowLeft = left;
 				this.rowWidth = width;
 				String name = type == null ? "+ Group" : type.displayName();
-				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(name, width - ROW_GLYPH - 6), left + 2, top + 7, type == null ? 0xFFE08A8A : 0xFFFFFF);
-				int bx = left + width - ROW_GLYPH;
+				int bx = left + 2;
 				drawRowGlyph(guiGraphics, bx, top + 4, GuiIcons.ADD, inGlyph(mouseX, mouseY, bx, top + 4));
+				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(name, width - ROW_GLYPH - 6), left + 2 + ROW_GLYPH + 2, top + 7, type == null ? 0xFFE08A8A : 0xFFFFFF);
 			}
 
 			@Override
@@ -726,6 +731,7 @@ public class MusicQueueScreen extends Screen {
 				if (kind == Kind.HEADER) {
 					if (mouseX >= opX && mouseX < opX + opWidth) {
 						viewed().toggleOp();
+						GuiIcons.click();
 						refreshActive();
 					}
 					return true;
