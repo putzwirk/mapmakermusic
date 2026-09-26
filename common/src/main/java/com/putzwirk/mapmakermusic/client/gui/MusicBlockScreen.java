@@ -75,20 +75,20 @@ public class MusicBlockScreen extends Screen {
 		}).tooltip(Tooltip.create(Component.literal("Impulse: one shot per signal. Chain: conditions checked every tick."))).bounds(leftPos + FIELD_X, topPos + 32, FIELD_WIDTH, 18).build();
 		addRenderableWidget(triggerButton);
 
-		this.pos1Edit = new EditBox(this.font, leftPos + FIELD_X, topPos + 52, FIELD_WIDTH, 16, Component.literal("First area corner"));
+		this.pos1Edit = new EditBox(this.font, leftPos + FIELD_X, topPos + 72, FIELD_WIDTH, 16, Component.literal("First area corner"));
 		this.pos1Edit.setValue(formatPos(musicBlock.getPos1()));
 		this.pos1Edit.setEditable(gateOn);
 		addRenderableWidget(pos1Edit);
 
-		this.pos2Edit = new EditBox(this.font, leftPos + FIELD_X, topPos + 72, FIELD_WIDTH, 16, Component.literal("Second area corner"));
+		this.pos2Edit = new EditBox(this.font, leftPos + FIELD_X, topPos + 92, FIELD_WIDTH, 16, Component.literal("Second area corner"));
 		this.pos2Edit.setValue(formatPos(musicBlock.getPos2()));
 		this.pos2Edit.setEditable(gateOn);
 		addRenderableWidget(pos2Edit);
 
-		this.gateButton = Button.builder(Component.literal("Area gate: " + (this.areaGate ? "On" : "Off")), b -> {
+		this.gateButton = Button.builder(Component.literal("Area bounds: " + (this.areaGate ? "On" : "Off")), b -> {
 			this.areaGate = !this.areaGate;
 			this.rebuildWidgets();
-		}).tooltip(Tooltip.create(Component.literal("On: only players inside the box hear it. Edit corners or use the area wand."))).bounds(leftPos + FIELD_X, topPos + 92, FIELD_WIDTH, 18).build();
+		}).tooltip(Tooltip.create(Component.literal("bound chain audiobox to area corners."))).bounds(leftPos + FIELD_X, topPos + 52, FIELD_WIDTH, 18).build();
 		this.gateButton.visible = isChain;
 		addRenderableWidget(gateButton);
 
@@ -201,11 +201,11 @@ public class MusicBlockScreen extends Screen {
 		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 12, 0xFFFFFF);
 
 		guiGraphics.drawString(this.font, "Trigger", labelX, topPos + 37, labelColor, false);
-		guiGraphics.drawString(this.font, "Pos1", labelX, topPos + 56, labelColor, false);
-		guiGraphics.drawString(this.font, "Pos2", labelX, topPos + 76, labelColor, false);
 		if (isChain) {
-			guiGraphics.drawString(this.font, "Gate", labelX, topPos + 97, labelColor, false);
+			guiGraphics.drawString(this.font, "Bounds", labelX, topPos + 57, labelColor, false);
 		}
+		guiGraphics.drawString(this.font, "Pos1", labelX, topPos + 76, labelColor, false);
+		guiGraphics.drawString(this.font, "Pos2", labelX, topPos + 96, labelColor, false);
 		guiGraphics.drawString(this.font, "Playback", labelX, topPos + 141, labelColor, false);
 
 		if (isGlobal) {
