@@ -14,6 +14,7 @@ public class MusicCondition {
 		TIME("Time"),
 		WEATHER("Weather"),
 		SCOREBOARD("Scoreboard"),
+		PLAYER("Player"),
 		PLAYER_HEALTH("Player health"),
 		PLAYER_HUNGER("Player hunger"),
 		ENTITY_ALIVE("Entity alive"),
@@ -63,6 +64,7 @@ public class MusicCondition {
 		public String textHint() {
 			return switch (this) {
 				case SCOREBOARD -> "objective";
+				case PLAYER -> "@a, @p or name";
 				case ENTITY_ALIVE -> "entity id";
 				case IN_BIOME -> "biome id";
 				default -> null;
@@ -88,6 +90,7 @@ public class MusicCondition {
 					condition.text = "objective";
 					condition.max = 100;
 				}
+				case PLAYER -> condition.text = "@a";
 				case PLAYER_HEALTH, PLAYER_HUNGER -> condition.max = 20;
 				case ENTITY_ALIVE -> {
 					condition.text = "minecraft:wither";
@@ -187,6 +190,13 @@ public class MusicCondition {
 				default -> "Clear";
 			};
 			case SCOREBOARD -> "Score " + text + " " + format(min) + ".." + format(max);
+			case PLAYER -> {
+				String selector = text == null ? "" : text.trim();
+				if (selector.isEmpty() || selector.equals("@a")) {
+					yield "Any player";
+				}
+				yield "Player " + text;
+			}
 			case PLAYER_HEALTH -> "Health " + format(min) + ".." + format(max);
 			case PLAYER_HUNGER -> "Hunger " + format(min) + ".." + format(max);
 			case ENTITY_ALIVE -> cap(text) + (min >= 0.5 ? " alive" : " gone");

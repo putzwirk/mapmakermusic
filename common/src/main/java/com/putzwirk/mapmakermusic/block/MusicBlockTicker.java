@@ -50,7 +50,7 @@ public class MusicBlockTicker {
 		BoxKey key = keyOf(serverLevel, pos);
 		CHAIN_BOXES.computeIfAbsent(key.dimension(), k -> ConcurrentHashMap.newKeySet()).add(key.pos());
 
-		List<ServerPlayer> targets = musicBe.isAreaGate() ? playersInside(serverLevel, musicBe) : resolveTargets(serverLevel, musicBe);
+		List<ServerPlayer> targets = musicBe.isAreaGate() ? playersInside(serverLevel, musicBe) : allPlayers(serverLevel);
 		Set<UUID> targeted = ConcurrentHashMap.newKeySet();
 		for (ServerPlayer player : targets) {
 			targeted.add(player.getUUID());
@@ -478,6 +478,10 @@ public class MusicBlockTicker {
 		}
 		BlockPos pPos = musicBe.getPlaybackPos();
 		return new Vec3(pPos.getX() + 0.5, pPos.getY() + 0.5, pPos.getZ() + 0.5);
+	}
+
+	private static List<ServerPlayer> allPlayers(ServerLevel level) {
+		return level.players().stream().filter(p -> p instanceof ServerPlayer).map(p -> (ServerPlayer) p).toList();
 	}
 
 	private static List<ServerPlayer> playersInside(ServerLevel level, MusicBlockEntity musicBe) {

@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import net.minecraft.core.BlockPos;
 
 import org.junit.jupiter.api.Test;
 
@@ -59,6 +60,27 @@ public class MusicQueueTest {
 		assertFalse(loaded.isLoop());
 		assertEquals(1, loaded.getRuleRoot().countLeaves());
 		assertEquals("At X 10..100", ((MusicCondition) loaded.getRuleRoot().getKids().get(0)).describe());
+	}
+
+	@Test
+	public void chainSelectorMigratesToPlayerRule() {
+		MusicQueue queue = new MusicQueue();
+		queue.getTracks().add(new MusicQueue.PlaylistItem("theme"));
+		MusicBlockEntity box = new MusicBlockEntity(null, BlockPos.ZERO, null);
+		box.setTriggerMode(MusicBlockEntity.TriggerMode.CHAIN);
+		box.setAreaGate(false);
+		box.setListenerSelector("Steve");
+		box.getQueues().add(queue);
+		MusicBlockEntity loaded = new MusicBlockEntity(null, BlockPos.ZERO, null);
+		loaded.load(box.getUpdateTag());
+		assertEquals("@a", loaded.getListenerSelector());
+		assertEquals(1, loaded.getQueues().get(0).getRuleRoot().countLeaves());
+		MusicCondition migrated = (MusicCondition) loaded.getQueues().get(0).getRuleRoot().getKids().get(0);
+		assertEquals(MusicCondition.Type.PLAYER, migrated.getType());
+		assertEquals("Player Steve", migrated.describe());
+		MusicBlockEntity reloud = new MusicBlockEntity(null, BlockPos.ZERO, null);
+		reloud.load(loaded.getUpdateTag());
+		assertEquals(1, reloud.getQueues().get(0).getRuleRoot().countLeaves());
 	}
 
 	@Test

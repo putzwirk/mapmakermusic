@@ -105,7 +105,8 @@ public class MusicBlockScreen extends Screen {
 					: MusicBlockEntity.PlaybackMode.GLOBAL;
 			this.playbackButton.setMessage(Component.literal("Playback: " + label(this.playbackMode)));
 			boolean global = this.playbackMode == MusicBlockEntity.PlaybackMode.GLOBAL;
-			this.listenerEdit.setVisible(global);
+			boolean impulse = this.triggerMode == MusicBlockEntity.TriggerMode.IMPULSE;
+			this.listenerEdit.setVisible(global && impulse);
 			this.playbackPosEdit.setVisible(!global);
 			this.radiusEdit.setVisible(!global);
 		}).tooltip(Tooltip.create(Component.literal("Click to switch playback positioning"))).bounds(leftPos + FIELD_X, topPos + 136, FIELD_WIDTH, 18).build();
@@ -113,15 +114,15 @@ public class MusicBlockScreen extends Screen {
 
 		this.listenerEdit = new EditBox(this.font, leftPos + FIELD_X, topPos + 168, FIELD_WIDTH, 16, Component.literal("Listener selector"));
 		this.listenerEdit.setValue(musicBlock.getListenerSelector());
-		this.listenerEdit.setVisible(isGlobal);
+		this.listenerEdit.setVisible(isGlobal && this.triggerMode == MusicBlockEntity.TriggerMode.IMPULSE);
 		addRenderableWidget(listenerEdit);
 
-		this.playbackPosEdit = new EditBox(this.font, leftPos + FIELD_X, topPos + 168, 100, 16, Component.literal("Playback point"));
+		this.playbackPosEdit = new EditBox(this.font, leftPos + 52, topPos + 168, 84, 16, Component.literal("Playback point"));
 		this.playbackPosEdit.setValue(formatPos(musicBlock.getPlaybackPos()));
 		this.playbackPosEdit.setVisible(!isGlobal);
 		addRenderableWidget(playbackPosEdit);
 
-		this.radiusEdit = new EditBox(this.font, leftPos + FIELD_X + 106, topPos + 168, 58, 16, Component.literal("Radius"));
+		this.radiusEdit = new EditBox(this.font, leftPos + 194, topPos + 168, 58, 16, Component.literal("Radius"));
 		this.radiusEdit.setValue(String.valueOf(musicBlock.getRadius()));
 		this.radiusEdit.setVisible(!isGlobal);
 		addRenderableWidget(radiusEdit);
@@ -155,9 +156,10 @@ public class MusicBlockScreen extends Screen {
 			musicBlock.setPos2(parsePos(pos2Edit.getValue(), musicBlock.getBlockPos()));
 		}
 		musicBlock.setPlaybackMode(playbackMode);
-		if (playbackMode == MusicBlockEntity.PlaybackMode.GLOBAL) {
+		if (triggerMode == MusicBlockEntity.TriggerMode.IMPULSE) {
 			musicBlock.setListenerSelector(listenerEdit.getValue());
-		} else {
+		}
+		if (playbackMode != MusicBlockEntity.PlaybackMode.GLOBAL) {
 			musicBlock.setPlaybackPos(parsePos(playbackPosEdit.getValue(), musicBlock.getBlockPos()));
 			musicBlock.setRadius(parseInt(radiusEdit.getValue(), 16));
 		}
@@ -226,10 +228,12 @@ public class MusicBlockScreen extends Screen {
 		guiGraphics.drawString(this.font, "Playback", labelX, topPos + 141, labelColor, false);
 
 		if (isGlobal) {
-			guiGraphics.drawString(this.font, "Listener", labelX, topPos + 173, labelColor, false);
+			if (this.triggerMode == MusicBlockEntity.TriggerMode.IMPULSE) {
+				guiGraphics.drawString(this.font, "Listener", labelX, topPos + 173, labelColor, false);
+			}
 		} else {
 			guiGraphics.drawString(this.font, "Point", labelX, topPos + 173, labelColor, false);
-			guiGraphics.drawString(this.font, "Radius", leftPos + FIELD_X + 106, topPos + 173, labelColor, false);
+			guiGraphics.drawString(this.font, "Radius", leftPos + 142, topPos + 173, labelColor, false);
 		}
 		guiGraphics.drawString(this.font, "Priority", labelX, topPos + 190, labelColor, false);
 

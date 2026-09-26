@@ -274,7 +274,7 @@ public class MusicBlockEntity extends BlockEntity {
 
 	public MusicQueue findMatchingQueue(ServerPlayer player) {
 		for (MusicQueue queue : queues) {
-			if (!queue.getTracks().isEmpty() && MusicRuleEvaluator.matches(queue, player)) {
+			if (!queue.getTracks().isEmpty() && MusicRuleEvaluator.matches(queue, player, getBlockPos())) {
 				return queue;
 			}
 		}
@@ -364,6 +364,28 @@ public class MusicBlockEntity extends BlockEntity {
 				if (!queue.isChannelExplicit()) {
 					queue.setChannel(MusicQueue.Channel.SOUND);
 				}
+			}
+		}
+		if (this.triggerMode == TriggerMode.CHAIN && !this.areaGate) {
+			String selector = this.listenerSelector == null ? "" : this.listenerSelector.trim();
+			if (!selector.isEmpty() && !selector.equals("@a")) {
+				for (MusicQueue queue : this.queues) {
+					ConditionGroup root = queue.getRuleRoot();
+					boolean present = false;
+					for (Object kid : root.getKids()) {
+						if (kid instanceof MusicCondition leaf && leaf.getType() == MusicCondition.Type.PLAYER
+								&& selector.equalsIgnoreCase(leaf.getText())) {
+							present = true;
+							break;
+						}
+					}
+					if (!present) {
+						MusicCondition player = MusicCondition.Type.PLAYER.newDefault();
+						player.setText(selector);
+						root.getKids().add(0, player);
+					}
+				}
+				this.listenerSelector = "@a";
 			}
 		}
 	}

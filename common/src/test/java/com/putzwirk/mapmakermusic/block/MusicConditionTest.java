@@ -58,6 +58,15 @@ public class MusicConditionTest {
 	}
 
 	@Test
+	public void playerDescribe() {
+		MusicCondition condition = MusicCondition.Type.PLAYER.newDefault();
+		assertEquals("@a", condition.getText());
+		assertEquals("Any player", condition.describe());
+		condition.setText("Steve");
+		assertEquals("Player Steve", condition.describe());
+	}
+
+	@Test
 	public void scoreDescribe() {
 		MusicCondition condition = MusicCondition.Type.SCOREBOARD.newDefault();
 		condition.setText("kills");

@@ -3,12 +3,14 @@ package com.putzwirk.mapmakermusic.block;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.Scoreboard;
 
@@ -17,44 +19,66 @@ public final class MusicRuleEvaluator {
 	private MusicRuleEvaluator() {
 	}
 
-	public static boolean matches(MusicQueue queue, ServerPlayer player) {
-		return matchesNode(queue.getRuleRoot(), player);
+	public static boolean matches(MusicQueue queue, ServerPlayer player, BlockPos boxPos) {
+		return matchesNode(queue.getRuleRoot(), player, boxPos);
 	}
 
-	public static boolean matchesNode(Object node, ServerPlayer player) {
+	public static boolean matchesNode(Object node, ServerPlayer player, BlockPos boxPos) {
 		if (node instanceof ConditionGroup group) {
 			if (group.getKids().isEmpty()) {
 				return true;
 			}
 			if (group.getOp() == ConditionGroup.Op.ANY) {
 				for (Object kid : group.getKids()) {
-					if (matchesNode(kid, player)) {
+					if (matchesNode(kid, player, boxPos)) {
 						return true;
 					}
 				}
 				return false;
 			}
 			for (Object kid : group.getKids()) {
-				if (!matchesNode(kid, player)) {
+				if (!matchesNode(kid, player, boxPos)) {
 					return false;
 				}
 			}
 			return true;
 		}
-		return matches((MusicCondition) node, player);
+		return matches((MusicCondition) node, player, boxPos);
 	}
 
-	public static boolean matches(MusicCondition condition, ServerPlayer player) {
+	public static boolean matches(MusicCondition condition, ServerPlayer player, BlockPos boxPos) {
 		return switch (condition.getType()) {
 			case TIME -> matchTime(condition, player);
 			case WEATHER -> matchWeather(condition, player);
 			case SCOREBOARD -> matchScore(condition, player);
+			case PLAYER -> matchPlayer(condition, player, boxPos);
 			case PLAYER_HEALTH -> inRange(player.getHealth(), condition);
 			case PLAYER_HUNGER -> inRange(player.getFoodData().getFoodLevel(), condition);
 			case ENTITY_ALIVE -> matchBoss(condition, player);
 			case IN_BIOME -> matchBiome(condition, player);
 			case COORDINATES -> matchCoordinates(condition, player);
 		};
+	}
+
+	private static boolean matchPlayer(MusicCondition condition, ServerPlayer player, BlockPos boxPos) {
+		String selector = condition.getText() == null ? "" : condition.getText().trim();
+		if (selector.isEmpty() || selector.equals("@a")) {
+			return true;
+		}
+		if (selector.equals("@p")) {
+			ServerPlayer nearest = null;
+			double nearestDist = Double.MAX_VALUE;
+			Vec3 boxVec = Vec3.atCenterOf(boxPos);
+			for (ServerPlayer other : player.serverLevel().players().stream().filter(p -> p instanceof ServerPlayer).map(p -> (ServerPlayer) p).toList()) {
+				double dist = other.distanceToSqr(boxVec);
+				if (dist < nearestDist) {
+					nearestDist = dist;
+					nearest = other;
+				}
+			}
+			return nearest != null && nearest.getUUID().equals(player.getUUID());
+		}
+		return player.getScoreboardName().equalsIgnoreCase(selector) || player.getUUID().toString().equalsIgnoreCase(selector);
 	}
 
 	private static boolean matchTime(MusicCondition condition, ServerPlayer player) {
