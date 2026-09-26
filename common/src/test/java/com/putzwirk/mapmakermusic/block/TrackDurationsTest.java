@@ -58,6 +58,32 @@ public class TrackDurationsTest {
 		assertTrue(TrackDurations.seconds(track) < 0f || TrackDurations.seconds(track) == 2.0f);
 	}
 
+	@Test
+	public void finalPageOutsideProbeWindowProbesUnknown(@TempDir Path dir) throws IOException {
+		Path track = dir.resolve("tailed.ogg");
+		byte[] head = syntheticOgg(48000, 96000L);
+		byte[] tail = new byte[70000];
+		byte[] file = new byte[head.length + tail.length];
+		System.arraycopy(head, 0, file, 0, head.length);
+		Files.write(track, file);
+		assertEquals(-1f, TrackDurations.seconds(track));
+	}
+
+	@Test
+	public void coincidentalTailBytesDictateDuration(@TempDir Path dir) throws IOException {
+		Path track = dir.resolve("coincidence.ogg");
+		byte[] head = syntheticOgg(48000, 96000L);
+		ByteBuffer fake = ByteBuffer.allocate(32).order(ByteOrder.LITTLE_ENDIAN);
+		fake.put((byte) 'O').put((byte) 'g').put((byte) 'g').put((byte) 'S');
+		fake.put((byte) 0).put((byte) 2);
+		fake.putLong(172800000L);
+		byte[] file = new byte[head.length + 100 + fake.capacity()];
+		System.arraycopy(head, 0, file, 0, head.length);
+		System.arraycopy(fake.array(), 0, file, head.length + 100, fake.capacity());
+		Files.write(track, file);
+		assertEquals(3600.0f, TrackDurations.seconds(track), 0.001f);
+	}
+
 	private static byte[] syntheticOgg(int sampleRate, long totalSamples) {
 		ByteBuffer page = ByteBuffer.allocate(128).order(ByteOrder.LITTLE_ENDIAN);
 		page.put((byte) 'O').put((byte) 'g').put((byte) 'g').put((byte) 'S');
