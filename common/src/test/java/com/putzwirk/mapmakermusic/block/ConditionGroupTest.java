@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
 import org.junit.jupiter.api.Test;
 
 public class ConditionGroupTest {
@@ -125,5 +127,70 @@ public class ConditionGroupTest {
 		assertEquals(1, rows.get(2).depth());
 		assertEquals(2, rows.get(3).depth());
 		assertEquals(sub, rows.get(2).node());
+	}
+
+	@Test
+	public void deepNestingTruncatesOnLoad() {
+		CompoundTag root = new CompoundTag();
+		root.putString("Op", "ALL");
+		CompoundTag current = root;
+		for (int i = 0; i < 40; i++) {
+			CompoundTag group = new CompoundTag();
+			group.putString("Op", "ALL");
+			CompoundTag kid = new CompoundTag();
+			kid.put("Group", group);
+			ListTag kids = new ListTag();
+			kids.add(kid);
+			current.put("Kids", kids);
+			current = group;
+		}
+		CompoundTag leaf = new CompoundTag();
+		leaf.put("Leaf", MusicCondition.Type.TIME.newDefault().save());
+		ListTag bottom = new ListTag();
+		bottom.add(leaf);
+		current.put("Kids", bottom);
+
+		ConditionGroup loaded = ConditionGroup.load(root);
+		int depth = 0;
+		Object node = loaded;
+		while (node instanceof ConditionGroup group && !group.getKids().isEmpty()
+				&& group.getKids().get(0) instanceof ConditionGroup next) {
+			node = next;
+			depth++;
+		}
+		assertTrue(depth < 40);
+		assertTrue(depth <= ConditionGroup.MAX_DEPTH);
+		assertEquals(0, loaded.countLeaves());
+	}
+
+	@Test
+	public void truncationKeepsShallowSiblings() {
+		CompoundTag deep = new CompoundTag();
+		deep.putString("Op", "ALL");
+		CompoundTag current = deep;
+		for (int i = 0; i < 40; i++) {
+			CompoundTag group = new CompoundTag();
+			group.putString("Op", "ALL");
+			CompoundTag kid = new CompoundTag();
+			kid.put("Group", group);
+			ListTag kids = new ListTag();
+			kids.add(kid);
+			current.put("Kids", kids);
+			current = group;
+		}
+		CompoundTag root = new CompoundTag();
+		root.putString("Op", "ALL");
+		ListTag kids = new ListTag();
+		CompoundTag deepKid = new CompoundTag();
+		deepKid.put("Group", deep);
+		kids.add(deepKid);
+		CompoundTag leafKid = new CompoundTag();
+		leafKid.put("Leaf", MusicCondition.Type.WEATHER.newDefault().save());
+		kids.add(leafKid);
+		root.put("Kids", kids);
+
+		ConditionGroup loaded = ConditionGroup.load(root);
+		assertEquals(1, loaded.countLeaves());
+		assertEquals("When Clear", loaded.describeRules());
 	}
 }

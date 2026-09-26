@@ -8,6 +8,8 @@ import net.minecraft.nbt.Tag;
 
 public class ConditionGroup {
 
+	public static final int MAX_DEPTH = 16;
+
 	public enum Op {
 		ALL,
 		ANY
@@ -158,6 +160,10 @@ public class ConditionGroup {
 	}
 
 	public static ConditionGroup load(CompoundTag tag) {
+		return load(tag, 0);
+	}
+
+	private static ConditionGroup load(CompoundTag tag, int depth) {
 		ConditionGroup group = new ConditionGroup();
 		try {
 			group.op = Op.valueOf(tag.getString("Op"));
@@ -167,7 +173,10 @@ public class ConditionGroup {
 		for (int i = 0; i < kidList.size(); i++) {
 			CompoundTag kidTag = kidList.getCompound(i);
 			if (kidTag.contains("Group")) {
-				group.kids.add(load(kidTag.getCompound("Group")));
+				if (depth + 1 >= MAX_DEPTH) {
+					continue;
+				}
+				group.kids.add(load(kidTag.getCompound("Group"), depth + 1));
 			} else if (kidTag.contains("Leaf")) {
 				group.kids.add(MusicCondition.load(kidTag.getCompound("Leaf")));
 			}
