@@ -10,7 +10,8 @@ import net.minecraft.sounds.SoundEvents;
 public final class GuiIcons {
 
 	public static final int ROW_GLYPH = 14;
-	public static final int SPIN_H = 7;
+	public static final int SPIN_W = 6;
+	public static final int SPIN_H = 6;
 
 	public static final String BACK = "\u2190";
 	public static final String ADD = "+";
@@ -39,13 +40,13 @@ public final class GuiIcons {
 	public static void drawSpinButton(GuiGraphics guiGraphics, Font font, int x, int y, String symbol, boolean hovered, boolean enabled, int textDy) {
 		int face = !enabled ? 0xFF3A3A3A : hovered ? 0xFF9BA3B0 : 0xFF8B8B8B;
 		int text = enabled ? 0xFFFFFF : 0xFF707070;
-		guiGraphics.fill(x, y, x + ROW_GLYPH, y + SPIN_H, 0xFF000000);
-		guiGraphics.fill(x + 1, y + 1, x + ROW_GLYPH - 1, y + SPIN_H - 1, face);
-		guiGraphics.drawCenteredString(font, symbol, x + ROW_GLYPH / 2, y + 2 + textDy, text);
+		guiGraphics.fill(x, y, x + SPIN_W, y + SPIN_H, 0xFF000000);
+		guiGraphics.fill(x + 1, y + 1, x + SPIN_W - 1, y + SPIN_H - 1, face);
+		guiGraphics.drawCenteredString(font, symbol, x + SPIN_W / 2, y + 1 + textDy, text);
 	}
 
 	public static boolean inSpin(double mouseX, double mouseY, int x, int y) {
-		return mouseX >= x && mouseX < x + ROW_GLYPH && mouseY >= y && mouseY < y + SPIN_H;
+		return mouseX >= x && mouseX < x + SPIN_W && mouseY >= y && mouseY < y + SPIN_H;
 	}
 
 	public static int boxOutlineColor(BlockPos pos) {

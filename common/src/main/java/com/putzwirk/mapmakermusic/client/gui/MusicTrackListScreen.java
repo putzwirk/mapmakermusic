@@ -212,17 +212,17 @@ public class MusicTrackListScreen extends Screen {
 				}
 				boolean empty = musicBlock.getQueues().get(this.index).getTrackNames().isEmpty();
 				String[] rows = lines();
-				guiGraphics.drawString(MusicTrackListScreen.this.font, clipped(rows[0], width - 2 * ROW_GLYPH - 10), left + 2, top + 2, empty ? 0xFF8080 : 0xFFFFFF);
-				guiGraphics.drawString(MusicTrackListScreen.this.font, clipped(rows[1], width - 2 * ROW_GLYPH - 10), left + 2, top + 11, 0xB0B0B0, false);
-				guiGraphics.drawString(MusicTrackListScreen.this.font, clipped(rows[2], width - 2 * ROW_GLYPH - 10), left + 2, top + 20, 0xB0B0B0, false);
+				guiGraphics.drawString(MusicTrackListScreen.this.font, clipped(rows[0], width - GuiIcons.SPIN_W - ROW_GLYPH - 8), left + 2, top + 2, empty ? 0xFF8080 : 0xFFFFFF);
+				guiGraphics.drawString(MusicTrackListScreen.this.font, clipped(rows[1], width - GuiIcons.SPIN_W - ROW_GLYPH - 8), left + 2, top + 11, 0xB0B0B0, false);
+				guiGraphics.drawString(MusicTrackListScreen.this.font, clipped(rows[2], width - GuiIcons.SPIN_W - ROW_GLYPH - 8), left + 2, top + 20, 0xB0B0B0, false);
 				int x3 = left + width - ROW_GLYPH;
-				int colX = x3 - ROW_GLYPH - 2;
-				int upY = top + 8;
+				int colX = x3 - GuiIcons.SPIN_W - 2;
+				int upY = top + 9;
 				int downY = top + 16;
 				boolean canUp = this.index > 0;
 				boolean canDown = this.index < musicBlock.getQueues().size() - 1;
 				GuiIcons.drawSpinButton(guiGraphics, MusicTrackListScreen.this.font, colX, upY, GuiIcons.UP, canUp && GuiIcons.inSpin(mouseX, mouseY, colX, upY), canUp, 0);
-				GuiIcons.drawSpinButton(guiGraphics, MusicTrackListScreen.this.font, colX, downY, GuiIcons.DOWN, canDown && GuiIcons.inSpin(mouseX, mouseY, colX, downY), canDown, 1);
+				GuiIcons.drawSpinButton(guiGraphics, MusicTrackListScreen.this.font, colX, downY, GuiIcons.DOWN, canDown && GuiIcons.inSpin(mouseX, mouseY, colX, downY), canDown, 0);
 				GuiIcons.drawRowGlyph(guiGraphics, MusicTrackListScreen.this.font, x3, top + 9, GuiIcons.REMOVE, GuiIcons.inGlyph(mouseX, mouseY, x3, top + 9));
 			}
 
@@ -232,8 +232,8 @@ public class MusicTrackListScreen extends Screen {
 					return false;
 				}
 				int x3 = rowLeft + rowWidth - ROW_GLYPH;
-				int colX = x3 - ROW_GLYPH - 2;
-				int upY = rowTop + 8;
+				int colX = x3 - GuiIcons.SPIN_W - 2;
+				int upY = rowTop + 9;
 				int downY = rowTop + 16;
 				if (index > 0 && GuiIcons.inSpin(mouseX, mouseY, colX, upY)) {
 					moveQueue(index, -1);

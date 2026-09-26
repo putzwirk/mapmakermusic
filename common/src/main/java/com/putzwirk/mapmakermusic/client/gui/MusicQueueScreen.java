@@ -546,15 +546,15 @@ public class MusicQueueScreen extends Screen {
 					return;
 				}
 				int textColor = queue().getTracks().get(this.index).isStop() ? 0xFFE07A7A : 0xFFFFFF;
-				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(label(), width - 2 * ROW_GLYPH - 10), left + 2, top + 7, textColor);
+				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(label(), width - GuiIcons.SPIN_W - ROW_GLYPH - 8), left + 2, top + 7, textColor);
 				int x4 = left + width - ROW_GLYPH;
-				int colX = x4 - ROW_GLYPH - 2;
+				int colX = x4 - GuiIcons.SPIN_W - 2;
 				int upY = top + 4;
-				int downY = top + 12;
+				int downY = top + 11;
 				boolean canUp = this.index > 0;
 				boolean canDown = this.index < queue().getTracks().size() - 1;
 				drawSpinButton(guiGraphics, colX, upY, GuiIcons.UP, canUp && inSpin(mouseX, mouseY, colX, upY), canUp, 0);
-				drawSpinButton(guiGraphics, colX, downY, GuiIcons.DOWN, canDown && inSpin(mouseX, mouseY, colX, downY), canDown, 1);
+				drawSpinButton(guiGraphics, colX, downY, GuiIcons.DOWN, canDown && inSpin(mouseX, mouseY, colX, downY), canDown, 0);
 				drawRowGlyph(guiGraphics, x4, top + 4, GuiIcons.REMOVE, inGlyph(mouseX, mouseY, x4, top + 4));
 			}
 
@@ -564,9 +564,9 @@ public class MusicQueueScreen extends Screen {
 					return false;
 				}
 				int x4 = rowLeft + rowWidth - ROW_GLYPH;
-				int colX = x4 - ROW_GLYPH - 2;
+				int colX = x4 - GuiIcons.SPIN_W - 2;
 				int upY = rowTop + 4;
-				int downY = rowTop + 12;
+				int downY = rowTop + 11;
 				if (index > 0 && GuiIcons.inSpin(mouseX, mouseY, colX, upY)) {
 					moveTrack(index, -1);
 					return true;
@@ -711,9 +711,9 @@ public class MusicQueueScreen extends Screen {
 				this.rowWidth = width;
 				this.rowTop = top;
 				int x4 = left + width - ROW_GLYPH;
-				int colX = x4 - ROW_GLYPH - 2;
+				int colX = x4 - GuiIcons.SPIN_W - 2;
 				int upY = top + 4;
-				int downY = top + 12;
+				int downY = top + 11;
 				if (kind == Kind.HEADER) {
 					String header = headerText();
 					this.opX = left + 2;
@@ -728,11 +728,11 @@ public class MusicQueueScreen extends Screen {
 				}
 				this.opWidth = 0;
 				int color = isGroup() ? 0xFFE08A8A : 0xFFFFFF;
-				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(label(), width - 2 * ROW_GLYPH - 10), left + 2, top + 7, color);
+				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(label(), width - GuiIcons.SPIN_W - ROW_GLYPH - 8), left + 2, top + 7, color);
 				boolean canUp = this.index > 0;
 				boolean canDown = this.index < viewed().getKids().size() - 1;
 				drawSpinButton(guiGraphics, colX, upY, GuiIcons.UP, canUp && inSpin(mouseX, mouseY, colX, upY), canUp, 0);
-				drawSpinButton(guiGraphics, colX, downY, GuiIcons.DOWN, canDown && inSpin(mouseX, mouseY, colX, downY), canDown, 1);
+				drawSpinButton(guiGraphics, colX, downY, GuiIcons.DOWN, canDown && inSpin(mouseX, mouseY, colX, downY), canDown, 0);
 				drawRowGlyph(guiGraphics, x4, top + 4, GuiIcons.REMOVE, inGlyph(mouseX, mouseY, x4, top + 4));
 			}
 
@@ -753,9 +753,9 @@ public class MusicQueueScreen extends Screen {
 					return true;
 				}
 				int x4 = rowLeft + rowWidth - ROW_GLYPH;
-				int colX = x4 - ROW_GLYPH - 2;
+				int colX = x4 - GuiIcons.SPIN_W - 2;
 				int upY = rowTop + 4;
-				int downY = rowTop + 12;
+				int downY = rowTop + 11;
 				if (index > 0 && GuiIcons.inSpin(mouseX, mouseY, colX, upY)) {
 					moveNode(index, -1);
 					return true;
