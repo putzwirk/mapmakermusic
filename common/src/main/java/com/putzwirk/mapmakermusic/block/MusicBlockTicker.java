@@ -36,6 +36,8 @@ public class MusicBlockTicker {
 		boolean stopped;
 		boolean fadingGap;
 		int nextTrack;
+		List<Integer> order;
+		int orderPos;
 	}
 
 	private static float fadeOutSeconds() {
@@ -95,7 +97,7 @@ public class MusicBlockTicker {
 			if (queue == null) {
 				continue;
 			}
-			startQueue(serverLevel, key, musicBe, player, musicBe.getQueues().indexOf(queue), 0, 0f, true, true);
+			startFresh(serverLevel, key, musicBe, player, musicBe.getQueues().indexOf(queue), true);
 		}
 	}
 
@@ -232,7 +234,7 @@ public class MusicBlockTicker {
 		}
 		if (state == null || state.stopped || state.queueIndex != queueIndex) {
 			if (!adoptSaved(level, key, musicBe, player, uuid, queueIndex)) {
-				startQueue(level, key, musicBe, player, queueIndex, 0, 0f, true, false);
+				startFresh(level, key, musicBe, player, queueIndex, false);
 			}
 			return;
 		}
@@ -250,12 +252,21 @@ public class MusicBlockTicker {
 		state.trackIndex = saved.trackIndex;
 		state.startedTick = saved.startedTick;
 		state.sound = musicBe.getQueues().get(saved.queueIndex).getChannel() == MusicQueue.Channel.SOUND;
+		if (saved.order != null && saved.order.length == musicBe.getQueues().get(saved.queueIndex).getTracks().size()
+				&& saved.orderPos >= 0 && saved.orderPos < saved.order.length
+				&& saved.order[saved.orderPos] == saved.trackIndex) {
+			state.order = new ArrayList<>(saved.order.length);
+			for (int slot : saved.order) {
+				state.order.add(slot);
+			}
+			state.orderPos = saved.orderPos;
+		}
 		STATES.computeIfAbsent(key, k -> new ConcurrentHashMap<>()).put(uuid, state);
 		advanceClock(level, key, musicBe, player, uuid, state, false);
 		return true;
 	}
 
-	private static void startQueue(ServerLevel level, BoxKey key, MusicBlockEntity musicBe, ServerPlayer player, int queueIndex, int trackIndex, float offsetSeconds, boolean fresh, boolean stealClaim) {
+	private static void startQueue(ServerLevel level, BoxKey key, MusicBlockEntity musicBe, ServerPlayer player, int queueIndex, int trackIndex, float offsetSeconds, boolean fresh, boolean stealClaim, List<Integer> order, int orderPos) {
 		List<MusicQueue> queues = musicBe.getQueues();
 		if (queueIndex < 0 || queueIndex >= queues.size()) {
 			return;
@@ -316,9 +327,33 @@ public class MusicBlockTicker {
 		state.trackIndex = trackIndex;
 		state.startedTick = now - (long) (offsetSeconds * 20f);
 		state.sound = sound;
+		state.order = order == null ? null : new ArrayList<>(order);
+		state.orderPos = orderPos;
 		STATES.computeIfAbsent(key, k -> new ConcurrentHashMap<>()).put(uuid, state);
 		PlaybackSaveData.get(level.getServer()).put(PlaybackSaveData.boxId(key.dimension(), key.pos()), uuid,
-				new PlaybackSaveData.Entry(queueIndex, trackIndex, state.startedTick));
+				new PlaybackSaveData.Entry(queueIndex, trackIndex, state.startedTick, toOrderArray(state.order), state.orderPos));
+	}
+
+	private static int[] toOrderArray(List<Integer> order) {
+		if (order == null) {
+			return null;
+		}
+		int[] array = new int[order.size()];
+		for (int i = 0; i < array.length; i++) {
+			array[i] = order.get(i);
+		}
+		return array;
+	}
+
+	private static void startFresh(ServerLevel level, BoxKey key, MusicBlockEntity musicBe, ServerPlayer player, int queueIndex, boolean stealClaim) {
+		MusicQueue queue = musicBe.getQueues().get(queueIndex);
+		List<Integer> order = null;
+		int first = 0;
+		if (queue.isShuffle() && queue.getTracks().size() > 1) {
+			order = MusicQueue.shuffledOrder(queue.getTracks().size());
+			first = order.get(0);
+		}
+		startQueue(level, key, musicBe, player, queueIndex, first, 0f, true, stealClaim, order, 0);
 	}
 
 	private static void advanceClock(ServerLevel level, BoxKey key, MusicBlockEntity musicBe, ServerPlayer player, UUID uuid, PlaybackState state, boolean allowFadeIn) {
@@ -339,7 +374,7 @@ public class MusicBlockTicker {
 			float gapElapsed = (level.getGameTime() - state.startedTick) / 20f;
 			if (gapElapsed >= fadeOutSeconds()) {
 				state.fadingGap = false;
-				startQueue(level, key, musicBe, player, state.queueIndex, state.nextTrack, 0f, true, false);
+				startQueue(level, key, musicBe, player, state.queueIndex, state.nextTrack, 0f, true, false, state.order, state.orderPos);
 			}
 			return;
 		}
@@ -356,13 +391,31 @@ public class MusicBlockTicker {
 
 	private static void advanceTrack(ServerLevel level, BoxKey key, MusicBlockEntity musicBe, ServerPlayer player, UUID uuid, PlaybackState state, boolean allowFadeIn, boolean allowGap) {
 		MusicQueue queue = musicBe.getQueues().get(state.queueIndex);
-		int next = state.trackIndex + 1;
-		if (next >= queue.getTracks().size()) {
-			if (!queue.isLoop()) {
-				settle(level, key, uuid, state.queueIndex);
-				return;
+		int size = queue.getTracks().size();
+		List<Integer> order = state.order;
+		int orderPos = state.orderPos;
+		int next;
+		if (order != null) {
+			if (orderPos + 1 >= order.size()) {
+				if (!queue.isLoop()) {
+					settle(level, key, uuid, state.queueIndex);
+					return;
+				}
+				order = MusicQueue.shuffledOrder(size);
+				orderPos = 0;
+			} else {
+				orderPos = orderPos + 1;
 			}
-			next = 0;
+			next = order.get(orderPos);
+		} else {
+			next = state.trackIndex + 1;
+			if (next >= size) {
+				if (!queue.isLoop()) {
+					settle(level, key, uuid, state.queueIndex);
+					return;
+				}
+				next = 0;
+			}
 		}
 		float fade = fadeOutSeconds();
 		float currentDur = trackDuration(queue.getTracks().get(state.trackIndex).getTrack());
@@ -376,9 +429,13 @@ public class MusicBlockTicker {
 			MusicRemotes.getRemote().stopMusic(player, true);
 			state.fadingGap = true;
 			state.nextTrack = next;
+			state.orderPos = orderPos;
+			if (order != null && state.order != order) {
+				state.order = new ArrayList<>(order);
+			}
 			state.startedTick = level.getGameTime();
 			PlaybackSaveData.get(level.getServer()).put(PlaybackSaveData.boxId(key.dimension(), key.pos()), uuid,
-					new PlaybackSaveData.Entry(state.queueIndex, state.trackIndex, state.startedTick));
+					new PlaybackSaveData.Entry(state.queueIndex, state.trackIndex, state.startedTick, toOrderArray(state.order), state.orderPos));
 			return;
 		}
 		if (MusicDebug.ENABLED) {
@@ -387,7 +444,7 @@ public class MusicBlockTicker {
 		if (!state.sound && queue.isFadeOut() && !longTransition) {
 			MusicRemotes.getRemote().stopMusic(player, false);
 		}
-		startQueue(level, key, musicBe, player, state.queueIndex, next, 0f, true, false);
+		startQueue(level, key, musicBe, player, state.queueIndex, next, 0f, true, false, order, orderPos);
 	}
 
 	private static void stopState(ServerLevel level, BoxKey key, MusicBlockEntity musicBe, UUID uuid, ServerPlayer player) {

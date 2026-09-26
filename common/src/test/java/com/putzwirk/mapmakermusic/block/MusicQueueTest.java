@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.List;
 import net.minecraft.core.BlockPos;
 
 import org.junit.jupiter.api.Test;
@@ -81,6 +82,27 @@ public class MusicQueueTest {
 		MusicBlockEntity reloud = new MusicBlockEntity(null, BlockPos.ZERO, null);
 		reloud.load(loaded.getUpdateTag());
 		assertEquals(1, reloud.getQueues().get(0).getRuleRoot().countLeaves());
+	}
+
+	@Test
+	public void shuffledOrderIsAPermutation() {
+		for (int size : new int[] {0, 1, 2, 5}) {
+			List<Integer> order = MusicQueue.shuffledOrder(size);
+			assertEquals(size, order.size());
+			assertEquals(size, new java.util.HashSet<>(order).size());
+			for (int i = 0; i < size; i++) {
+				assertTrue(order.contains(i));
+			}
+		}
+	}
+
+	@Test
+	public void shufflePersistsAndCopies() {
+		MusicQueue queue = new MusicQueue();
+		assertFalse(queue.isShuffle());
+		queue.setShuffle(true);
+		assertTrue(MusicQueue.load(queue.save()).isShuffle());
+		assertTrue(queue.copy().isShuffle());
 	}
 
 	@Test

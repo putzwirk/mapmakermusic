@@ -17,11 +17,19 @@ public class PlaybackSaveData extends SavedData {
 		public final int queueIndex;
 		public final int trackIndex;
 		public final long startedTick;
+		public final int[] order;
+		public final int orderPos;
 
 		public Entry(int queueIndex, int trackIndex, long startedTick) {
+			this(queueIndex, trackIndex, startedTick, null, 0);
+		}
+
+		public Entry(int queueIndex, int trackIndex, long startedTick, int[] order, int orderPos) {
 			this.queueIndex = queueIndex;
 			this.trackIndex = trackIndex;
 			this.startedTick = startedTick;
+			this.order = order;
+			this.orderPos = orderPos;
 		}
 	}
 
@@ -92,7 +100,17 @@ public class PlaybackSaveData extends SavedData {
 				CompoundTag playerTag = playerList.getCompound(j);
 				try {
 					UUID uuid = playerTag.getUUID("UUID");
-					players.put(uuid, new Entry(playerTag.getInt("Queue"), playerTag.getInt("Track"), playerTag.getLong("Started")));
+					int[] order = null;
+					int orderPos = 0;
+					if (playerTag.contains("Order")) {
+						ListTag orderList = playerTag.getList("Order", Tag.TAG_INT);
+						order = new int[orderList.size()];
+						for (int k = 0; k < order.length; k++) {
+							order[k] = orderList.getInt(k);
+						}
+						orderPos = playerTag.getInt("OrderPos");
+					}
+					players.put(uuid, new Entry(playerTag.getInt("Queue"), playerTag.getInt("Track"), playerTag.getLong("Started"), order, orderPos));
 				} catch (IllegalArgumentException ignored) {
 				}
 			}
@@ -116,6 +134,14 @@ public class PlaybackSaveData extends SavedData {
 				playerTag.putInt("Queue", player.getValue().queueIndex);
 				playerTag.putInt("Track", player.getValue().trackIndex);
 				playerTag.putLong("Started", player.getValue().startedTick);
+				if (player.getValue().order != null) {
+					ListTag orderList = new ListTag();
+					for (int slot : player.getValue().order) {
+						orderList.add(net.minecraft.nbt.IntTag.valueOf(slot));
+					}
+					playerTag.put("Order", orderList);
+					playerTag.putInt("OrderPos", player.getValue().orderPos);
+				}
 				playerList.add(playerTag);
 			}
 			boxTag.put("Players", playerList);

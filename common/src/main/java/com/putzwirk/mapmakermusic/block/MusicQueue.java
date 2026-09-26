@@ -99,6 +99,7 @@ public class MusicQueue {
 	private boolean fadeIn = true;
 	private boolean fadeOut = true;
 	private boolean loop = true;
+	private boolean shuffle = false;
 	private final ConditionGroup ruleRoot = new ConditionGroup();
 
 	public List<PlaylistItem> getTracks() {
@@ -159,6 +160,23 @@ public class MusicQueue {
 		this.loop = loop;
 	}
 
+	public boolean isShuffle() {
+		return shuffle;
+	}
+
+	public void setShuffle(boolean shuffle) {
+		this.shuffle = shuffle;
+	}
+
+	public static List<Integer> shuffledOrder(int size) {
+		List<Integer> order = new ArrayList<>(size);
+		for (int i = 0; i < size; i++) {
+			order.add(i);
+		}
+		java.util.Collections.shuffle(order);
+		return order;
+	}
+
 	public ConditionGroup getRuleRoot() {
 		return ruleRoot;
 	}
@@ -181,6 +199,7 @@ public class MusicQueue {
 		copy.fadeIn = fadeIn;
 		copy.fadeOut = fadeOut;
 		copy.loop = loop;
+		copy.shuffle = shuffle;
 		copy.ruleRoot.getKids().clear();
 		copy.ruleRoot.getKids().addAll(ruleRoot.copy().getKids());
 		copy.ruleRoot.setOp(ruleRoot.getOp());
@@ -200,6 +219,7 @@ public class MusicQueue {
 		tag.putBoolean("FadeIn", fadeIn);
 		tag.putBoolean("FadeOut", fadeOut);
 		tag.putBoolean("Loop", loop);
+		tag.putBoolean("Shuffle", shuffle);
 
 		tag.put("RuleRoot", ruleRoot.save());
 
@@ -243,6 +263,7 @@ public class MusicQueue {
 		} else {
 			queue.loop = true;
 		}
+		queue.shuffle = tag.contains("Shuffle") && tag.getBoolean("Shuffle");
 
 		if (tag.contains("RuleRoot")) {
 			ConditionGroup loaded = ConditionGroup.load(tag.getCompound("RuleRoot"));

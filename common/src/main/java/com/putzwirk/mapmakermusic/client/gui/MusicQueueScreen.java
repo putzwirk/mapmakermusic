@@ -36,6 +36,7 @@ public class MusicQueueScreen extends Screen {
 
 	private Button channelButton;
 	private Button loopButton;
+	private Button shuffleButton;
 	private Button fadeInButton;
 	private Button fadeOutButton;
 
@@ -113,19 +114,27 @@ public class MusicQueueScreen extends Screen {
 		refreshPlaylist();
 		addRenderableWidget(playlistList);
 
+		int modeWidth = (colWidth * 2 + GAP - 2 * GAP) / 3;
 		this.channelButton = Button.builder(channelLabel(), b -> {
 			queue.setChannel(queue.getChannel() == MusicQueue.Channel.MUSIC ? MusicQueue.Channel.SOUND : MusicQueue.Channel.MUSIC);
 			this.channelButton.setMessage(channelLabel());
 		}).tooltip(Tooltip.create(Component.literal("Music: one track at a time, resumes after relog. Sound: overlapping one-shots.")))
-				.bounds(leftPos + PAD, topPos + 166, colWidth, 18).build();
+				.bounds(leftPos + PAD, topPos + 166, modeWidth, 18).build();
 		addRenderableWidget(channelButton);
 
 		this.loopButton = Button.builder(loopLabel(), b -> {
 			queue.setLoop(!queue.isLoop());
 			this.loopButton.setMessage(loopLabel());
 		}).tooltip(Tooltip.create(Component.literal("Repeat the queue endlessly")))
-				.bounds(rightX, topPos + 166, colWidth, 18).build();
+				.bounds(leftPos + PAD + modeWidth + GAP, topPos + 166, modeWidth, 18).build();
 		addRenderableWidget(loopButton);
+
+		this.shuffleButton = Button.builder(shuffleLabel(), b -> {
+			queue.setShuffle(!queue.isShuffle());
+			this.shuffleButton.setMessage(shuffleLabel());
+		}).tooltip(Tooltip.create(Component.literal("Shuffle the order each time the playlist starts")))
+				.bounds(leftPos + PAD + 2 * (modeWidth + GAP), topPos + 166, modeWidth, 18).build();
+		addRenderableWidget(shuffleButton);
 
 		this.fadeInButton = Button.builder(fadeLabel("Fade in", queue.isFadeIn()), b -> {
 			queue.setFadeIn(!queue.isFadeIn());
@@ -175,6 +184,7 @@ public class MusicQueueScreen extends Screen {
 		this.playlistList = null;
 		this.channelButton = null;
 		this.loopButton = null;
+		this.shuffleButton = null;
 		this.fadeInButton = null;
 		this.fadeOutButton = null;
 	}
@@ -191,6 +201,10 @@ public class MusicQueueScreen extends Screen {
 
 	private Component loopLabel() {
 		return Component.literal("Looping " + bracket(queue().isLoop() ? "YES" : "NO", queue().isLoop()));
+	}
+
+	private Component shuffleLabel() {
+		return Component.literal("Shuffle " + bracket(queue().isShuffle() ? "YES" : "NO", queue().isShuffle()));
 	}
 
 	private static Component fadeLabel(String name, boolean value) {
