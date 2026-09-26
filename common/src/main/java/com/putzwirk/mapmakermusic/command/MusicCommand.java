@@ -105,7 +105,7 @@ public final class MusicCommand {
 		CommandSourceStack source = ctx.getSource();
 
 		for (ServerPlayer player : targets) {
-			MusicRemotes.getRemote().playSound(player, name, volume, pitch, position, maxDistance);
+			MusicRemotes.getRemote().playSound(player, name, volume, pitch, position, maxDistance, false);
 		}
 
 		String where = position == null
@@ -120,7 +120,7 @@ public final class MusicCommand {
 		CommandSourceStack source = ctx.getSource();
 
 		for (ServerPlayer player : targets) {
-			MusicRemotes.getRemote().stopSound(player);
+			MusicRemotes.getRemote().stopSound(player, false);
 		}
 
 		source.sendSuccess(() -> Component.literal("Stopped custom sound effects for " + describeTargets(targets)), true);

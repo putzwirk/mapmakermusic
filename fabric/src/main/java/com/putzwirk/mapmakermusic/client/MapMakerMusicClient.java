@@ -96,11 +96,13 @@ public class MapMakerMusicClient implements ClientModInitializer {
 			float pitch = buf.readFloat();
 			Vec3 position = buf.readBoolean() ? new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()) : null;
 			float maxDistance = buf.readFloat();
-			client.execute(() -> this.musicPlayer.playSound(name, volume, pitch, position, maxDistance));
+			boolean fadeIn = buf.readBoolean();
+			client.execute(() -> this.musicPlayer.playSound(name, volume, pitch, position, maxDistance, fadeIn));
 		});
 
 		ClientPlayNetworking.registerGlobalReceiver(MusicNetworking.STOP_SOUND, (client, handler, buf, responseSender) -> {
-			client.execute(this.musicPlayer::stopSounds);
+			boolean fadeOut = buf.readBoolean();
+			client.execute(() -> this.musicPlayer.stopSounds(fadeOut));
 		});
 
 		ClientPlayNetworking.registerGlobalReceiver(MusicNetworking.STOP_ALL, (client, handler, buf, responseSender) -> {

@@ -18,11 +18,11 @@ public interface MusicRemote {
 		}
 
 		@Override
-		public void playSound(ServerPlayer player, String name, int volume, float pitch, Vec3 position, float maxDistance) {
+		public void playSound(ServerPlayer player, String name, int volume, float pitch, Vec3 position, float maxDistance, boolean fadeIn) {
 		}
 
 		@Override
-		public void stopSound(ServerPlayer player) {
+		public void stopSound(ServerPlayer player, boolean fadeOut) {
 		}
 
 		@Override
@@ -50,9 +50,9 @@ public interface MusicRemote {
 
 	void stopMusic(ServerPlayer player, boolean fadeOut);
 
-	void playSound(ServerPlayer player, String name, int volume, float pitch, Vec3 position, float maxDistance);
+	void playSound(ServerPlayer player, String name, int volume, float pitch, Vec3 position, float maxDistance, boolean fadeIn);
 
-	void stopSound(ServerPlayer player);
+	void stopSound(ServerPlayer player, boolean fadeOut);
 
 	void stopAll(ServerPlayer player);
 

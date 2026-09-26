@@ -184,7 +184,7 @@ public class MusicBlockTicker {
 					continue;
 				}
 				if (state.sound) {
-					MusicRemotes.getRemote().stopSound(player);
+					MusicRemotes.getRemote().stopSound(player, fade);
 				} else {
 					MusicRemotes.getRemote().stopMusic(player, fade);
 				}
@@ -253,7 +253,7 @@ public class MusicBlockTicker {
 
 		if (item.isStop()) {
 			if (sound) {
-				MusicRemotes.getRemote().stopSound(player);
+				MusicRemotes.getRemote().stopSound(player, queue.isFadeOut());
 			} else {
 				MusicRemotes.getRemote().stopMusic(player, queue.isFadeOut());
 				MUSIC_CLAIM.remove(uuid, key);
@@ -278,7 +278,7 @@ public class MusicBlockTicker {
 		long now = level.getGameTime();
 
 		if (sound) {
-			MusicRemotes.getRemote().playSound(player, item.getTrack(), volume, pitch, playbackAt(musicBe), musicBe.getRadius());
+			MusicRemotes.getRemote().playSound(player, item.getTrack(), volume, pitch, playbackAt(musicBe), musicBe.getRadius(), queue.isFadeIn());
 		} else {
 			boolean fadeIn = fresh && queue.isFadeIn();
 			MusicRemotes.getRemote().playMusic(player, item.getTrack(), volume, pitch, fadeIn, queue.isFadeOut(), playbackAt(musicBe), musicBe.getRadius(), fresh, queue.isLoop(), offsetSeconds);
@@ -347,7 +347,7 @@ public class MusicBlockTicker {
 		}
 		if (player != null) {
 			if (state.sound) {
-				MusicRemotes.getRemote().stopSound(player);
+				MusicRemotes.getRemote().stopSound(player, musicBe.isFadeOut());
 			} else {
 				MusicRemotes.getRemote().stopMusic(player, musicBe.isFadeOut());
 				MUSIC_CLAIM.remove(uuid, key);

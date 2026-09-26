@@ -232,6 +232,10 @@ public final class MusicPlayer {
 	}
 
 	public void playSound(String rawName, int volumePercent, float pitch, Vec3 position, float maxDistance) {
+		playSound(rawName, volumePercent, pitch, position, maxDistance, false);
+	}
+
+	public void playSound(String rawName, int volumePercent, float pitch, Vec3 position, float maxDistance, boolean fadeIn) {
 		float volumeMultiplier = clampVolume(volumePercent);
 		String key = normalizeName(rawName);
 		Path path = resolveTrack(key);
@@ -242,7 +246,7 @@ public final class MusicPlayer {
 		if (path == null) {
 			if (MusicLibrary.hasServerTrack(key)) {
 				final String retryName = rawName;
-				this.queuePending(key, () -> playSound(retryName, volumePercent, pitch, position, maxDistance));
+				this.queuePending(key, () -> playSound(retryName, volumePercent, pitch, position, maxDistance, fadeIn));
 				requestTrack(key);
 				notifyPlayer("Downloading custom sound: " + rawName);
 			} else {
@@ -294,10 +298,10 @@ public final class MusicPlayer {
 						AL10.alSourcef(source, AL10.AL_REFERENCE_DISTANCE, 0f);
 					}
 
-					AL10.alSourcef(source, AL10.AL_GAIN, masterVolume() * volumeMultiplier);
-					AL10.alSourcePlay(source);
+				AL10.alSourcef(source, AL10.AL_GAIN, fadeIn ? 0f : masterVolume() * volumeMultiplier);
+				AL10.alSourcePlay(source);
 
-					this.activeSounds.add(new Voice(source, buffer, false, volumeMultiplier, pitch, position, maxDistance, false));
+				this.activeSounds.add(new Voice(source, buffer, fadeIn, volumeMultiplier, pitch, position, maxDistance, false));
 				}, Minecraft.getInstance());
 	}
 
@@ -335,10 +339,22 @@ public final class MusicPlayer {
 	}
 
 	public void stopSounds() {
-		for (Voice voice : this.activeSounds) {
-			forceStop(voice);
+		stopSounds(false);
+	}
+
+	public void stopSounds(boolean fadeOut) {
+		if (!fadeOut) {
+			for (Voice voice : this.activeSounds) {
+				forceStop(voice);
+			}
+			this.activeSounds.clear();
+			return;
 		}
-		this.activeSounds.clear();
+		for (Voice voice : this.activeSounds) {
+			voice.fadeIn = false;
+			voice.fadeOut = true;
+			voice.ticksElapsed = 0;
+		}
 	}
 
 	public void stopAll() {
@@ -475,6 +491,21 @@ public final class MusicPlayer {
 			if (!isPlaying(sound)) {
 				forceStop(sound);
 				soundIterator.remove();
+			} else if (sound.fadeOut) {
+				sound.ticksElapsed++;
+				float t = Math.min(1f, sound.ticksElapsed / (float) FADE_TICKS);
+				AL10.alSourcef(sound.source, AL10.AL_GAIN, baseMaster * sound.volumeMultiplier * (1f - t));
+				if (t >= 1f) {
+					forceStop(sound);
+					soundIterator.remove();
+				}
+			} else if (sound.fadeIn) {
+				sound.ticksElapsed++;
+				float t = Math.min(1f, sound.ticksElapsed / (float) FADE_TICKS);
+				AL10.alSourcef(sound.source, AL10.AL_GAIN, baseMaster * sound.volumeMultiplier * t);
+				if (t >= 1f) {
+					sound.fadeIn = false;
+				}
 			} else {
 				AL10.alSourcef(sound.source, AL10.AL_GAIN, baseMaster * sound.volumeMultiplier);
 			}
@@ -829,6 +860,7 @@ public final class MusicPlayer {
 		float maxDistance;
 		int ticksElapsed;
 		boolean fadeIn;
+		boolean fadeOut;
 		boolean loop;
 
 		Voice(int source, int buffer, boolean fadeIn, float volumeMultiplier, float pitch, Vec3 position, float maxDistance, boolean loop) {

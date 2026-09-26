@@ -18,13 +18,13 @@ public final class ForgeMusicRemote implements MusicRemote {
 	}
 
 	@Override
-	public void playSound(ServerPlayer player, String name, int volume, float pitch, Vec3 position, float maxDistance) {
-		MusicNetworking.sendToPlayer(player, new MusicNetworking.PlaySoundPacket(name, volume, pitch, position, maxDistance));
+	public void playSound(ServerPlayer player, String name, int volume, float pitch, Vec3 position, float maxDistance, boolean fadeIn) {
+		MusicNetworking.sendToPlayer(player, new MusicNetworking.PlaySoundPacket(name, volume, pitch, position, maxDistance, fadeIn));
 	}
 
 	@Override
-	public void stopSound(ServerPlayer player) {
-		MusicNetworking.sendToPlayer(player, new MusicNetworking.StopSoundPacket());
+	public void stopSound(ServerPlayer player, boolean fadeOut) {
+		MusicNetworking.sendToPlayer(player, new MusicNetworking.StopSoundPacket(fadeOut));
 	}
 
 	@Override

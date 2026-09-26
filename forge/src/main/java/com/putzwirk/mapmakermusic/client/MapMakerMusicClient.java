@@ -57,12 +57,12 @@ public final class MapMakerMusicClient {
 		});
 	}
 
-	public static void onPlaySound(String name, int volume, float pitch, Vec3 position, float maxDistance) {
-		Minecraft.getInstance().execute(() -> MUSIC_PLAYER.playSound(name, volume, pitch, position, maxDistance));
+	public static void onPlaySound(String name, int volume, float pitch, Vec3 position, float maxDistance, boolean fadeIn) {
+		Minecraft.getInstance().execute(() -> MUSIC_PLAYER.playSound(name, volume, pitch, position, maxDistance, fadeIn));
 	}
 
-	public static void onStopSound() {
-		Minecraft.getInstance().execute(MUSIC_PLAYER::stopSounds);
+	public static void onStopSound(boolean fadeOut) {
+		Minecraft.getInstance().execute(() -> MUSIC_PLAYER.stopSounds(fadeOut));
 	}
 
 	public static void onStopAll() {

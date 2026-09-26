@@ -18,7 +18,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import java.util.function.Supplier;
 
 public final class MusicNetworking {
-	private static final String PROTOCOL_VERSION = "11";
+	private static final String PROTOCOL_VERSION = "12";
 	public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
 			MapMakerMusic.id("main"),
 			() -> PROTOCOL_VERSION,
@@ -147,13 +147,15 @@ public final class MusicNetworking {
 		public final float pitch;
 		public final Vec3 position;
 		public final float maxDistance;
+		public final boolean fadeIn;
 
-		public PlaySoundPacket(String name, int volume, float pitch, Vec3 position, float maxDistance) {
+		public PlaySoundPacket(String name, int volume, float pitch, Vec3 position, float maxDistance, boolean fadeIn) {
 			this.name = name;
 			this.volume = volume;
 			this.pitch = pitch;
 			this.position = position;
 			this.maxDistance = maxDistance;
+			this.fadeIn = fadeIn;
 		}
 
 		public PlaySoundPacket(FriendlyByteBuf buf) {
@@ -162,6 +164,7 @@ public final class MusicNetworking {
 			this.pitch = buf.readFloat();
 			this.position = buf.readBoolean() ? new Vec3(buf.readDouble(), buf.readDouble(), buf.readDouble()) : null;
 			this.maxDistance = buf.readFloat();
+			this.fadeIn = buf.readBoolean();
 		}
 
 		public void encode(FriendlyByteBuf buf) {
@@ -175,27 +178,33 @@ public final class MusicNetworking {
 				buf.writeDouble(this.position.z);
 			}
 			buf.writeFloat(this.maxDistance);
+			buf.writeBoolean(this.fadeIn);
 		}
 
 		public static void handle(PlaySoundPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
 			NetworkEvent.Context context = contextSupplier.get();
-			runOnMainThread(context, () -> MapMakerMusicClient.onPlaySound(msg.name, msg.volume, msg.pitch, msg.position, msg.maxDistance));
+			runOnMainThread(context, () -> MapMakerMusicClient.onPlaySound(msg.name, msg.volume, msg.pitch, msg.position, msg.maxDistance, msg.fadeIn));
 		}
 	}
 
 	public static class StopSoundPacket {
-		public StopSoundPacket() {
+		public final boolean fadeOut;
+
+		public StopSoundPacket(boolean fadeOut) {
+			this.fadeOut = fadeOut;
 		}
 
 		public StopSoundPacket(FriendlyByteBuf buf) {
+			this.fadeOut = buf.readBoolean();
 		}
 
 		public void encode(FriendlyByteBuf buf) {
+			buf.writeBoolean(this.fadeOut);
 		}
 
 		public static void handle(StopSoundPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
 			NetworkEvent.Context context = contextSupplier.get();
-			runOnMainThread(context, MapMakerMusicClient::onStopSound);
+			runOnMainThread(context, () -> MapMakerMusicClient.onStopSound(msg.fadeOut));
 		}
 	}
 

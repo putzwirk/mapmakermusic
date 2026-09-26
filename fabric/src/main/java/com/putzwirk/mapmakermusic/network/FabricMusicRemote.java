@@ -39,7 +39,7 @@ public final class FabricMusicRemote implements MusicRemote {
 	}
 
 	@Override
-	public void playSound(ServerPlayer player, String name, int volume, float pitch, Vec3 position, float maxDistance) {
+	public void playSound(ServerPlayer player, String name, int volume, float pitch, Vec3 position, float maxDistance, boolean fadeIn) {
 		FriendlyByteBuf buf = PacketByteBufs.create();
 		buf.writeUtf(name);
 		buf.writeInt(volume);
@@ -51,12 +51,15 @@ public final class FabricMusicRemote implements MusicRemote {
 			buf.writeDouble(position.z);
 		}
 		buf.writeFloat(maxDistance);
+		buf.writeBoolean(fadeIn);
 		ServerPlayNetworking.send(player, MusicNetworking.PLAY_SOUND, buf);
 	}
 
 	@Override
-	public void stopSound(ServerPlayer player) {
-		ServerPlayNetworking.send(player, MusicNetworking.STOP_SOUND, PacketByteBufs.create());
+	public void stopSound(ServerPlayer player, boolean fadeOut) {
+		FriendlyByteBuf buf = PacketByteBufs.create();
+		buf.writeBoolean(fadeOut);
+		ServerPlayNetworking.send(player, MusicNetworking.STOP_SOUND, buf);
 	}
 
 	@Override
