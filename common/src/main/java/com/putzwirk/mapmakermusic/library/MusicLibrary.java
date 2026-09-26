@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 public final class MusicLibrary {
 	private static final Logger LOGGER = LoggerFactory.getLogger("MapMakerMusic Library");
 
-	public static final long MAX_TRACK_BYTES = 20L * 1024L * 1024L;
 	public static final float MAX_TRACK_SECONDS = 9f * 3600f + 59f * 60f + 59f;
 
 	public record TrackInfo(Path path, long size, float durationSeconds) {
@@ -133,9 +132,6 @@ public final class MusicLibrary {
 		TrackInfo info = trackInfo().get(key);
 		if (info == null) {
 			return "Track not found: " + key;
-		}
-		if (info.size() > MAX_TRACK_BYTES) {
-			return "Track too large (max 20 MB): " + key;
 		}
 		if (info.durationSeconds() >= 0f && info.durationSeconds() > MAX_TRACK_SECONDS) {
 			return "Track too long (max 9:59:59): " + key;

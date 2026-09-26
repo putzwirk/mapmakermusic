@@ -35,7 +35,6 @@ public class LibraryFormatTest {
 
 	@Test
 	public void bounds() {
-		assertEquals(20L * 1024L * 1024L, MusicLibrary.MAX_TRACK_BYTES);
 		assertEquals(9f * 3600f + 59f * 60f + 59f, MusicLibrary.MAX_TRACK_SECONDS, 0.001f);
 		assertEquals(MusicQueue.PlaylistItem.STOP_TRACK, "STOP");
 	}
