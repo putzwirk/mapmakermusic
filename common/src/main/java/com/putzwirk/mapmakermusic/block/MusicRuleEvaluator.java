@@ -11,6 +11,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.Scoreboard;
@@ -22,34 +23,34 @@ public final class MusicRuleEvaluator {
 	private MusicRuleEvaluator() {
 	}
 
-	public static boolean matches(MusicQueue queue, ServerPlayer player, BlockPos boxPos) {
-		return matchesNode(queue.getRuleRoot(), player, boxPos);
+	public static boolean matches(MusicQueue queue, ServerPlayer player, BlockPos boxPos, AABB area, ServerLevel level) {
+		return matchesNode(queue.getRuleRoot(), player, boxPos, area, level);
 	}
 
-	public static boolean matchesNode(Object node, ServerPlayer player, BlockPos boxPos) {
+	public static boolean matchesNode(Object node, ServerPlayer player, BlockPos boxPos, AABB area, ServerLevel level) {
 		if (node instanceof ConditionGroup group) {
 			if (group.getKids().isEmpty()) {
 				return true;
 			}
 			if (group.getOp() == ConditionGroup.Op.ANY) {
 				for (Object kid : group.getKids()) {
-					if (matchesNode(kid, player, boxPos)) {
+					if (matchesNode(kid, player, boxPos, area, level)) {
 						return true;
 					}
 				}
 				return false;
 			}
 			for (Object kid : group.getKids()) {
-				if (!matchesNode(kid, player, boxPos)) {
+				if (!matchesNode(kid, player, boxPos, area, level)) {
 					return false;
 				}
 			}
 			return true;
 		}
-		return matches((MusicCondition) node, player, boxPos);
+		return matches((MusicCondition) node, player, boxPos, area, level);
 	}
 
-	public static boolean matches(MusicCondition condition, ServerPlayer player, BlockPos boxPos) {
+	public static boolean matches(MusicCondition condition, ServerPlayer player, BlockPos boxPos, AABB area, ServerLevel level) {
 		return switch (condition.getType()) {
 			case TIME -> matchTime(condition, player);
 			case WEATHER -> matchWeather(condition, player);
@@ -57,7 +58,7 @@ public final class MusicRuleEvaluator {
 			case PLAYER -> matchPlayer(condition, player, boxPos);
 			case PLAYER_HEALTH -> inRange(player.getHealth(), condition);
 			case PLAYER_HUNGER -> inRange(player.getFoodData().getFoodLevel(), condition);
-			case ENTITY_ALIVE -> matchBoss(condition, player);
+			case ENTITY_ALIVE -> matchBoss(condition, player, area, level);
 			case IN_BIOME -> matchBiome(condition, player);
 			case COORDINATES -> matchCoordinates(condition, player);
 		};
@@ -117,18 +118,23 @@ public final class MusicRuleEvaluator {
 		return inRange(score, condition);
 	}
 
-	private static boolean matchBoss(MusicCondition condition, ServerPlayer player) {
+	private static boolean matchBoss(MusicCondition condition, ServerPlayer player, AABB area, ServerLevel level) {
 		MinecraftServer server = player.getServer();
 		if (server == null) {
 			return false;
 		}
 		String id = condition.getText() == null ? "" : condition.getText().trim();
 		Optional<EntityType<?>> type = EntityType.byString(id);
-		boolean alive = type.map(resolved -> {
-			String key = EntityType.getKey(resolved).toString();
-			return ALIVE_CACHE.get(server, server.getTickCount(), key, () -> scanAlive(server, resolved));
-		}).orElse(false);
+		boolean alive = type.map(resolved -> aliveFor(resolved, server, area, level)).orElse(false);
 		return bossMatches(alive, condition);
+	}
+
+	private static boolean aliveFor(EntityType<?> type, MinecraftServer server, AABB area, ServerLevel level) {
+		if (area != null && level != null) {
+			return !level.getEntitiesOfClass(Entity.class, area, entity -> entity.getType() == type && entity.isAlive()).isEmpty();
+		}
+		String key = EntityType.getKey(type).toString();
+		return ALIVE_CACHE.get(server, server.getTickCount(), key, () -> scanAlive(server, type));
 	}
 
 	static boolean bossMatches(boolean alive, MusicCondition condition) {

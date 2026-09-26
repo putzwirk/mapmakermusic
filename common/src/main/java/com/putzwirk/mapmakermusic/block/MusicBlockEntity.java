@@ -8,12 +8,14 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.NbtUtils;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.protocol.Packet;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.AABB;
 import javax.annotation.Nullable;
 
 public class MusicBlockEntity extends BlockEntity {
@@ -295,8 +297,14 @@ public class MusicBlockEntity extends BlockEntity {
 	}
 
 	public MusicQueue findMatchingQueue(ServerPlayer player) {
+		AABB area = null;
+		ServerLevel level = null;
+		if (isAreaGate() && getLevel() instanceof ServerLevel serverLevel) {
+			area = MusicBlockTicker.areaOf(this);
+			level = serverLevel;
+		}
 		for (MusicQueue queue : queues) {
-			if (!queue.getTracks().isEmpty() && MusicRuleEvaluator.matches(queue, player, getBlockPos())) {
+			if (!queue.getTracks().isEmpty() && MusicRuleEvaluator.matches(queue, player, getBlockPos(), area, level)) {
 				return queue;
 			}
 		}
