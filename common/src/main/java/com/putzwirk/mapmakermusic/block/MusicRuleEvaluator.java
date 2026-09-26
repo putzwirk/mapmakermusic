@@ -118,14 +118,20 @@ public final class MusicRuleEvaluator {
 	}
 
 	private static boolean matchBoss(MusicCondition condition, ServerPlayer player) {
-		Optional<EntityType<?>> type = EntityType.byString(condition.getText());
 		MinecraftServer server = player.getServer();
-		if (type.isEmpty() || server == null) {
+		if (server == null) {
 			return false;
 		}
+		String id = condition.getText() == null ? "" : condition.getText().trim();
+		Optional<EntityType<?>> type = EntityType.byString(id);
+		boolean alive = type.map(resolved -> {
+			String key = EntityType.getKey(resolved).toString();
+			return ALIVE_CACHE.get(server, server.getTickCount(), key, () -> scanAlive(server, resolved));
+		}).orElse(false);
+		return bossMatches(alive, condition);
+	}
 
-		String key = EntityType.getKey(type.get()).toString();
-		boolean alive = ALIVE_CACHE.get(server, server.getTickCount(), key, () -> scanAlive(server, type.get()));
+	static boolean bossMatches(boolean alive, MusicCondition condition) {
 		return alive == (condition.getMin() >= 0.5);
 	}
 
