@@ -468,7 +468,7 @@ public class MusicQueueScreen extends Screen {
 				int durationWidth = duration.isEmpty() ? 0 : MusicQueueScreen.this.font.width(duration) + 4;
 				int bx = left + 2;
 				drawRowGlyph(guiGraphics, bx, top + 4, GuiIcons.ADD, inGlyph(mouseX, mouseY, bx, top + 4));
-				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(track, width - ROW_GLYPH - 6 - durationWidth), left + 2 + ROW_GLYPH + 2, top + 7,
+				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(track, width - ROW_GLYPH - 6 - durationWidth), left + 2 + ROW_GLYPH, top + 7,
 						MusicQueue.PlaylistItem.isStop(track) ? 0xFFE07A7A : 0xFFFFFF);
 				if (!duration.isEmpty()) {
 					guiGraphics.drawString(MusicQueueScreen.this.font, duration, left + width - 2 - durationWidth + 2, top + 7, 0x9A9A9A, false);
@@ -605,7 +605,7 @@ public class MusicQueueScreen extends Screen {
 				String name = type == null ? "+ Group" : type.displayName();
 				int bx = left + 2;
 				drawRowGlyph(guiGraphics, bx, top + 4, GuiIcons.ADD, inGlyph(mouseX, mouseY, bx, top + 4));
-				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(name, width - ROW_GLYPH - 6), left + 2 + ROW_GLYPH + 2, top + 7, type == null ? 0xFFE08A8A : 0xFFFFFF);
+				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(name, width - ROW_GLYPH - 6), left + 2 + ROW_GLYPH, top + 7, type == null ? 0xFFE08A8A : 0xFFFFFF);
 			}
 
 			@Override
