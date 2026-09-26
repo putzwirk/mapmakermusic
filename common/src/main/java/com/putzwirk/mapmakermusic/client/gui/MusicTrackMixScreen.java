@@ -14,7 +14,7 @@ public class MusicTrackMixScreen extends Screen {
 
 	private static final int BG_WIDTH = 220;
 	private static final int BG_HEIGHT = 134;
-	private static final int PAD = 12;
+	private static final int PAD = GuiLayout.SCREEN_PADDING;
 	private static final int FIELD_WIDTH = BG_WIDTH - 2 * PAD;
 
 	private final Screen parent;
@@ -45,16 +45,16 @@ public class MusicTrackMixScreen extends Screen {
 		int topPos = (this.height - BG_HEIGHT) / 2;
 
 		addRenderableWidget(Button.builder(Component.literal(GuiIcons.BACK), b -> backToParent())
-				.tooltip(Tooltip.create(Component.literal("Back"))).bounds(leftPos + PAD, topPos + 8, 18, 18).build());
+				.tooltip(Tooltip.create(Component.literal("Back"))).bounds(leftPos + PAD, topPos + GuiLayout.BACK_TOP, GuiLayout.BACK_SIZE, GuiLayout.BACK_SIZE).build());
 
-		this.volumeEdit = new EditBox(this.font, leftPos + PAD, topPos + 44, FIELD_WIDTH, 18, Component.literal("Volume"));
+		this.volumeEdit = new EditBox(this.font, leftPos + PAD, topPos + 44, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT, Component.literal("Volume"));
 		this.volumeEdit.setHint(Component.literal("volume"));
 		this.volumeEdit.setValue(String.valueOf(volumeValue()));
 		this.volumeEdit.setResponder(text -> item().setVolume(parseIntOrNull(text)));
 		this.volumeEdit.setTooltip(Tooltip.create(Component.literal("Scroll to adjust")));
 		addRenderableWidget(volumeEdit);
 
-		this.pitchEdit = new EditBox(this.font, leftPos + PAD, topPos + 80, FIELD_WIDTH, 18, Component.literal("Pitch"));
+		this.pitchEdit = new EditBox(this.font, leftPos + PAD, topPos + 80, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT, Component.literal("Pitch"));
 		this.pitchEdit.setHint(Component.literal("pitch"));
 		this.pitchEdit.setValue(String.valueOf(pitchValue()));
 		this.pitchEdit.setResponder(text -> item().setPitch(parseFloatOrNull(text)));
@@ -62,7 +62,7 @@ public class MusicTrackMixScreen extends Screen {
 		addRenderableWidget(pitchEdit);
 
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> backToParent())
-				.bounds(leftPos + PAD, topPos + BG_HEIGHT - 30, FIELD_WIDTH, 18).build());
+				.bounds(leftPos + PAD, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT).build());
 	}
 
 	private int volumeValue() {
@@ -123,7 +123,7 @@ public class MusicTrackMixScreen extends Screen {
 		int topPos = (this.height - BG_HEIGHT) / 2;
 		guiGraphics.fill(leftPos, topPos, leftPos + BG_WIDTH, topPos + BG_HEIGHT, 0xF0101010);
 		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, GuiIcons.boxOutlineColor(block.getBlockPos(), block.getOutlineColor()));
-		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 12, 0xFFFFFF);
+		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + GuiLayout.TITLE_TOP, 0xFFFFFF);
 		guiGraphics.drawString(this.font, "Volume", leftPos + PAD, topPos + 32, 0xE0E0E0, false);
 		guiGraphics.drawString(this.font, "Pitch", leftPos + PAD, topPos + 68, 0xE0E0E0, false);
 		super.render(guiGraphics, mouseX, mouseY, delta);
