@@ -401,6 +401,7 @@ public final class MusicPlayer {
 					int source = AL10.alGenSources();
 					if (buffer == 0 || source == 0) {
 						LOGGER.warn("Failed to allocate OpenAL resources for sound '{}'", rawName);
+						decoded.free();
 						if (buffer != 0) {
 							AL10.alDeleteBuffers(buffer);
 						}
@@ -411,6 +412,7 @@ public final class MusicPlayer {
 					}
 
 					AL10.alBufferData(buffer, data.alFormat, data.pcm, data.sampleRate);
+					decoded.free();
 					storeCachedBuffer(key, position != null, soundPath, data, buffer, 0f);
 
 					AL10.alSourcei(source, AL10.AL_LOOPING, AL10.AL_FALSE);
@@ -787,6 +789,7 @@ public final class MusicPlayer {
 
 					int buffer = AL10.alGenBuffers();
 					AL10.alBufferData(buffer, data.alFormat, data.pcm, data.sampleRate);
+					decoded.free();
 
 					int source = AL10.alGenSources();
 					AL10.alSourcei(source, AL10.AL_LOOPING, loop ? AL10.AL_TRUE : AL10.AL_FALSE);

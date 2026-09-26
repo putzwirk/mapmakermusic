@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.openal.AL10;
 import org.lwjgl.stb.STBVorbis;
+import org.lwjgl.system.libc.LibCStdlib;
 
 public final class OggDecoder {
 
@@ -31,7 +32,9 @@ public final class OggDecoder {
 		int channels = channelsBuf.get(0);
 		int sampleRate = sampleRateBuf.get(0);
 		int format = channels == 1 ? AL10.AL_FORMAT_MONO16 : AL10.AL_FORMAT_STEREO16;
-		return new OggData(pcm, format, sampleRate, channels);
+		OggData data = new OggData(pcm, format, sampleRate, channels);
+		data.stbOwned = true;
+		return data;
 	}
 
 	public static final class OggData {
@@ -39,12 +42,20 @@ public final class OggDecoder {
 		public final int alFormat;
 		public final int sampleRate;
 		public final int channels;
+		private boolean stbOwned;
 
 		public OggData(ShortBuffer pcm, int alFormat, int sampleRate, int channels) {
 			this.pcm = pcm;
 			this.alFormat = alFormat;
 			this.sampleRate = sampleRate;
 			this.channels = channels;
+		}
+
+		public void free() {
+			if (stbOwned) {
+				stbOwned = false;
+				LibCStdlib.free(pcm);
+			}
 		}
 
 		public OggData asMono() {
