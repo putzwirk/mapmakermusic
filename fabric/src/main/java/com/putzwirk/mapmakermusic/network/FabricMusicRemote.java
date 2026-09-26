@@ -11,7 +11,7 @@ import net.minecraft.world.phys.Vec3;
 public final class FabricMusicRemote implements MusicRemote {
 
 	@Override
-	public void playMusic(ServerPlayer player, String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop) {
+	public void playMusic(ServerPlayer player, String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop, float startOffsetSeconds) {
 		FriendlyByteBuf buf = PacketByteBufs.create();
 		buf.writeUtf(name);
 		buf.writeInt(volume);
@@ -27,6 +27,7 @@ public final class FabricMusicRemote implements MusicRemote {
 		buf.writeFloat(maxDistance);
 		buf.writeBoolean(restart);
 		buf.writeBoolean(loop);
+		buf.writeFloat(startOffsetSeconds);
 		ServerPlayNetworking.send(player, MusicNetworking.PLAY_MUSIC, buf);
 	}
 

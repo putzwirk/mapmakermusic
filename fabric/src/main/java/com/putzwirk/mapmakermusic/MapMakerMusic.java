@@ -94,8 +94,10 @@ public class MapMakerMusic implements ModInitializer {
 			AreaWandHandler.forgetPlayer(handler.getPlayer().getUUID());
 			MusicBlockTicker.forgetPlayer(handler.getPlayer().getUUID());
 		});
-		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
-				MusicRemotes.getRemote().syncLibrary(handler.getPlayer(), MusicLibrary.scanTrackSizes()));
+		ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
+			MusicRemotes.getRemote().syncLibrary(handler.getPlayer(), MusicLibrary.scanTrackSizes());
+			MusicBlockTicker.onPlayerLogin(handler.getPlayer());
+		});
 		ServerPlayNetworking.registerGlobalReceiver(MusicNetworking.WAND_PUNCH_BLOCK, (server, player, handler, buf, responseSender) -> {
 			BlockPos pos = buf.readBlockPos();
 			server.execute(() -> AreaWandHandler.handleWandPunch(player, pos));

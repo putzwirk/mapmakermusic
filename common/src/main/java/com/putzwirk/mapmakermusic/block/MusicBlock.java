@@ -67,6 +67,14 @@ public class MusicBlock extends Block implements EntityBlock {
 		super.neighborChanged(state, level, pos, block, fromPos, isMoving);
 	}
 
+	@Override
+	public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+		if (!level.isClientSide && state.getBlock() != newState.getBlock()) {
+			MusicBlockTicker.removeBox(level, pos);
+		}
+		super.onRemove(state, level, pos, newState, isMoving);
+	}
+
 	@Nullable
 	@Override
 	public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {

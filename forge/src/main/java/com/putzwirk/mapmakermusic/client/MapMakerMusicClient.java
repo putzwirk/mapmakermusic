@@ -43,10 +43,10 @@ public final class MapMakerMusicClient {
 		MusicBlockScreen.setPacketSender((pos, data) -> MusicNetworking.sendToServer(new MusicNetworking.ForgeUpdateMusicBlockPacket(pos, data)));
 	}
 
-	public static void onPlayMusic(String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop) {
+	public static void onPlayMusic(String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop, float startOffsetSeconds) {
 		Minecraft.getInstance().execute(() -> {
 			stopVanillaMusic();
-			MUSIC_PLAYER.playMusic(name, volume, pitch, fadeIn, fadeOut, position, maxDistance, restart, loop);
+			MUSIC_PLAYER.playMusic(name, volume, pitch, fadeIn, fadeOut, position, maxDistance, restart, loop, startOffsetSeconds);
 		});
 	}
 

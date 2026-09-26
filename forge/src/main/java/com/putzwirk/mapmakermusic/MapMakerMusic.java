@@ -124,6 +124,7 @@ public class MapMakerMusic {
 	public void onPlayerLogin(PlayerEvent.PlayerLoggedInEvent event) {
 		if (event.getEntity() instanceof ServerPlayer player) {
 			MusicRemotes.getRemote().syncLibrary(player, MusicLibrary.scanTrackSizes());
+			MusicBlockTicker.onPlayerLogin(player);
 		}
 	}
 

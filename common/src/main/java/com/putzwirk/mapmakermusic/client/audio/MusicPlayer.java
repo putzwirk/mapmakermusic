@@ -142,6 +142,10 @@ public final class MusicPlayer {
 	}
 
 	public void playMusic(String rawName, int volumePercent, float pitch, boolean enableFadeIn, boolean enableFadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop) {
+		playMusic(rawName, volumePercent, pitch, enableFadeIn, enableFadeOut, position, maxDistance, restart, loop, -1f);
+	}
+
+	public void playMusic(String rawName, int volumePercent, float pitch, boolean enableFadeIn, boolean enableFadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop, float startOffsetSeconds) {
 		float volumeMultiplier = clampVolume(volumePercent);
 		pitch = clampPitch(pitch);
 		String key = normalizeName(rawName);
@@ -156,7 +160,7 @@ public final class MusicPlayer {
 				final int retryVolume = volumePercent;
 				final float retryPitch = pitch;
 				final Vec3 retryPosition = position;
-				this.pendingPlayback = () -> playMusic(retryName, retryVolume, retryPitch, enableFadeIn, enableFadeOut, retryPosition, maxDistance, restart, loop);
+				this.pendingPlayback = () -> playMusic(retryName, retryVolume, retryPitch, enableFadeIn, enableFadeOut, retryPosition, maxDistance, restart, loop, startOffsetSeconds);
 				requestTrack(key);
 				notifyPlayer("Downloading custom music: " + rawName);
 			} else {
@@ -212,7 +216,7 @@ public final class MusicPlayer {
 			}
 		}
 
-		float resumeOffset = restart ? 0f : this.lastPositions.getOrDefault(key, 0f);
+		float resumeOffset = startOffsetSeconds >= 0f ? startOffsetSeconds : (restart ? 0f : this.lastPositions.getOrDefault(key, 0f));
 		this.lastPositions.keySet().retainAll(Collections.singleton(key));
 		if (restart) {
 			this.lastPositions.remove(key);

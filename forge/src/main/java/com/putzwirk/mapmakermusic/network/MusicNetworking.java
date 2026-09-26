@@ -18,7 +18,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import java.util.function.Supplier;
 
 public final class MusicNetworking {
-	private static final String PROTOCOL_VERSION = "10";
+	private static final String PROTOCOL_VERSION = "11";
 	public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
 			MapMakerMusic.id("main"),
 			() -> PROTOCOL_VERSION,
@@ -68,8 +68,9 @@ public final class MusicNetworking {
 		public final float maxDistance;
 		public final boolean restart;
 		public final boolean loop;
+		public final float startOffsetSeconds;
 
-		public PlayMusicPacket(String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop) {
+		public PlayMusicPacket(String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop, float startOffsetSeconds) {
 			this.name = name;
 			this.volume = volume;
 			this.pitch = pitch;
@@ -79,6 +80,7 @@ public final class MusicNetworking {
 			this.maxDistance = maxDistance;
 			this.restart = restart;
 			this.loop = loop;
+			this.startOffsetSeconds = startOffsetSeconds;
 		}
 
 		public PlayMusicPacket(FriendlyByteBuf buf) {
@@ -91,6 +93,7 @@ public final class MusicNetworking {
 			this.maxDistance = buf.readFloat();
 			this.restart = buf.readBoolean();
 			this.loop = buf.readBoolean();
+			this.startOffsetSeconds = buf.readFloat();
 		}
 
 		public void encode(FriendlyByteBuf buf) {
@@ -108,11 +111,12 @@ public final class MusicNetworking {
 			buf.writeFloat(this.maxDistance);
 			buf.writeBoolean(this.restart);
 			buf.writeBoolean(this.loop);
+			buf.writeFloat(this.startOffsetSeconds);
 		}
 
 		public static void handle(PlayMusicPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
 			NetworkEvent.Context context = contextSupplier.get();
-			runOnMainThread(context, () -> MapMakerMusicClient.onPlayMusic(msg.name, msg.volume, msg.pitch, msg.fadeIn, msg.fadeOut, msg.position, msg.maxDistance, msg.restart, msg.loop));
+			runOnMainThread(context, () -> MapMakerMusicClient.onPlayMusic(msg.name, msg.volume, msg.pitch, msg.fadeIn, msg.fadeOut, msg.position, msg.maxDistance, msg.restart, msg.loop, msg.startOffsetSeconds));
 		}
 	}
 

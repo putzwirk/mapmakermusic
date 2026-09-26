@@ -71,9 +71,10 @@ public class MapMakerMusicClient implements ClientModInitializer {
 			float maxDistance = buf.readFloat();
 			boolean restart = buf.readBoolean();
 			boolean loop = buf.readBoolean();
+			float startOffsetSeconds = buf.readFloat();
 			client.execute(() -> {
 				stopVanillaMusic();
-				this.musicPlayer.playMusic(name, volume, pitch, fadeIn, fadeOut, position, maxDistance, restart, loop);
+				this.musicPlayer.playMusic(name, volume, pitch, fadeIn, fadeOut, position, maxDistance, restart, loop, startOffsetSeconds);
 			});
 		});
 

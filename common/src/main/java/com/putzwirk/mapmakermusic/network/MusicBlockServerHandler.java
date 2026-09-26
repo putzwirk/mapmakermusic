@@ -15,7 +15,7 @@ public class MusicBlockServerHandler {
 		if (be instanceof MusicBlockEntity musicBe) {
 			musicBe.load(packet.data);
 			musicBe.setChanged();
-			MusicBlockTicker.invalidateArea(packet.pos.asLong());
+			MusicBlockTicker.invalidateBox(player.level(), packet.pos);
 			player.level().sendBlockUpdated(packet.pos, musicBe.getBlockState(), musicBe.getBlockState(), 3);
 		}
 	}
