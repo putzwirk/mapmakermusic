@@ -129,7 +129,7 @@ public class MusicBlockScreen extends Screen {
 		this.priorityEdit = new EditBox(this.font, leftPos + FIELD_X, topPos + 186, FIELD_WIDTH, 16, Component.literal("Priority"));
 		this.priorityEdit.setValue(String.valueOf(musicBlock.getPriority()));
 		this.priorityEdit.setFilter(text -> text.matches("-?\\d*"));
-		this.priorityEdit.setTooltip(Tooltip.create(Component.literal("Higher wins overlapping boxes. Scroll to adjust")));
+		this.priorityEdit.setTooltip(Tooltip.create(Component.literal("Higher priority wins. Scroll to adjust")));
 		addRenderableWidget(priorityEdit);
 
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> saveAndClose())
