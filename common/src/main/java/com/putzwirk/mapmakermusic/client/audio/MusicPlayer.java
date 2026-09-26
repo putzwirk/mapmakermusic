@@ -71,7 +71,7 @@ public final class MusicPlayer {
 	private final List<Voice> activeSounds = new ArrayList<>();
 
 	private Voice currentMusic;
-	private Voice previousMusic;
+	private final List<Voice> fadingVoices = new ArrayList<>();
 	private Path currentMusicPath;
 	private String currentTrackKey;
 
@@ -212,10 +212,7 @@ public final class MusicPlayer {
 		}
 
 		if (!enableFadeOut) {
-			if (this.previousMusic != null) {
-				forceStop(this.previousMusic);
-				this.previousMusic = null;
-			}
+			clearFadingVoices();
 			if (this.currentMusic != null) {
 				forceStop(this.currentMusic);
 				this.currentMusic = null;
@@ -310,19 +307,18 @@ public final class MusicPlayer {
 		if (this.currentTrackKey != null && this.currentMusic != null) {
 			savePositionOf(this.currentTrackKey, this.currentMusic);
 		}
-		if (this.previousMusic != null) {
-			forceStop(this.previousMusic);
-			this.previousMusic = null;
-		}
 		if (this.currentMusic != null) {
 			if (enableFadeOut) {
-				this.previousMusic = this.currentMusic;
-				this.previousMusic.ticksElapsed = 0;
-				this.previousMusic.fadeIn = false;
+				this.currentMusic.ticksElapsed = 0;
+				this.currentMusic.fadeIn = false;
+				this.currentMusic.fadeOut = true;
+				this.fadingVoices.add(this.currentMusic);
 			} else {
 				forceStop(this.currentMusic);
 			}
 			this.currentMusic = null;
+		} else if (!enableFadeOut) {
+			clearFadingVoices();
 		}
 		this.currentMusicPath = null;
 		this.currentTrackKey = null;
@@ -383,10 +379,7 @@ public final class MusicPlayer {
 			forceStop(this.currentMusic);
 			this.currentMusic = null;
 		}
-		if (this.previousMusic != null) {
-			forceStop(this.previousMusic);
-			this.previousMusic = null;
-		}
+		clearFadingVoices();
 		this.currentMusicPath = null;
 		this.currentTrackKey = null;
 		this.desiredTrackKey = null;
@@ -449,14 +442,17 @@ public final class MusicPlayer {
 
 		float baseMaster = masterVolume();
 
-		if (this.previousMusic != null) {
-			this.previousMusic.ticksElapsed++;
-			float t = Math.min(1f, this.previousMusic.ticksElapsed / (float) FADE_TICKS);
-			float gain = baseMaster * this.previousMusic.volumeMultiplier * (1f - t);
-			AL10.alSourcef(this.previousMusic.source, AL10.AL_GAIN, gain);
+		Iterator<Voice> fadingIterator = this.fadingVoices.iterator();
+		while (fadingIterator.hasNext()) {
+			Voice fading = fadingIterator.next();
+			fading.ticksElapsed++;
+			float t = Math.min(1f, fading.ticksElapsed / (float) FADE_TICKS);
+			if (isPlaying(fading)) {
+				AL10.alSourcef(fading.source, AL10.AL_GAIN, baseMaster * fading.volumeMultiplier * (1f - t));
+			}
 			if (t >= 1f) {
-				forceStop(this.previousMusic);
-				this.previousMusic = null;
+				forceStop(fading);
+				fadingIterator.remove();
 			}
 		}
 
@@ -527,11 +523,18 @@ public final class MusicPlayer {
 	private void handleContextChange(long newContext) {
 		this.activeAlContext = newContext;
 		this.currentMusic = null;
-		this.previousMusic = null;
+		clearFadingVoices();
 		this.isLoadingTrack = false;
 		this.activeSounds.clear();
 
 		resumeDesiredMusic();
+	}
+
+	private void clearFadingVoices() {
+		for (Voice voice : this.fadingVoices) {
+			forceStop(voice);
+		}
+		this.fadingVoices.clear();
 	}
 
 	private void recoverInterruptedMusic() {
@@ -594,15 +597,15 @@ public final class MusicPlayer {
 
 					OggDecoder.OggData data = position == null ? decoded : decoded.asMono();
 
-					if (this.previousMusic != null) {
-						forceStop(this.previousMusic);
-						this.previousMusic = null;
-					}
 					if (this.currentMusic != null) {
 						if (enableFadeOut) {
-							this.previousMusic = this.currentMusic;
-							this.previousMusic.ticksElapsed = 0;
-							this.previousMusic.fadeIn = false;
+							this.currentMusic.ticksElapsed = 0;
+							this.currentMusic.fadeIn = false;
+							this.currentMusic.fadeOut = true;
+							this.fadingVoices.add(this.currentMusic);
+							while (this.fadingVoices.size() > 3) {
+								forceStop(this.fadingVoices.remove(0));
+							}
 						} else {
 							forceStop(this.currentMusic);
 						}
