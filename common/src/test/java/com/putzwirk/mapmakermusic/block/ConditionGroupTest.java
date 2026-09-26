@@ -42,6 +42,15 @@ public class ConditionGroupTest {
 	}
 
 	@Test
+	public void emptyGroupsAreSkipped() {
+		ConditionGroup root = new ConditionGroup();
+		root.setOp(ConditionGroup.Op.ANY);
+		root.getKids().add(new ConditionGroup());
+		root.getKids().add(MusicCondition.Type.TIME.newDefault());
+		assertEquals("When Daytime", root.describeRules());
+	}
+
+	@Test
 	public void toggleOp() {
 		ConditionGroup group = new ConditionGroup();
 		assertEquals(ConditionGroup.Op.ALL, group.getOp());

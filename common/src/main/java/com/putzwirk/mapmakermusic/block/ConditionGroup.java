@@ -63,6 +63,9 @@ public class ConditionGroup {
 		}
 		List<String> parts = new ArrayList<>();
 		for (Object kid : kids) {
+			if (kid instanceof ConditionGroup sub && sub.countLeaves() == 0) {
+				continue;
+			}
 			parts.add(describeNode(kid));
 		}
 		return "When " + String.join(op == Op.ALL ? " and " : " or ", parts);
@@ -70,15 +73,18 @@ public class ConditionGroup {
 
 	private static String describeNode(Object node) {
 		if (node instanceof ConditionGroup group) {
-			if (group.kids.isEmpty()) {
-				return "always";
-			}
 			List<String> parts = new ArrayList<>();
 			for (Object kid : group.kids) {
+				if (kid instanceof ConditionGroup sub && sub.countLeaves() == 0) {
+					continue;
+				}
 				parts.add(describeNode(kid));
 			}
+			if (parts.isEmpty()) {
+				return "always";
+			}
 			String joined = String.join(group.op == Op.ALL ? " and " : " or ", parts);
-			return group.kids.size() > 1 ? "(" + joined + ")" : joined;
+			return parts.size() > 1 ? "(" + joined + ")" : parts.get(0);
 		}
 		return ((MusicCondition) node).describe();
 	}
