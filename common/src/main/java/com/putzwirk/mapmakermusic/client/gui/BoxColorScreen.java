@@ -53,30 +53,31 @@ public class BoxColorScreen extends Screen {
 
 		int leftPos = (this.width - BG_WIDTH) / 2;
 		int topPos = (this.height - BG_HEIGHT) / 2;
-		int x = leftPos + 12;
+		int x = leftPos + GuiLayout.SCREEN_PADDING;
+		int contentWidth = BG_WIDTH - 2 * GuiLayout.SCREEN_PADDING;
 
-		this.hueSlider = new HsbSlider(x, topPos + 56, 240, "Hue", 360, hue, v -> {
+		this.hueSlider = new HsbSlider(x, topPos + 56, contentWidth, "Hue", 360, hue, v -> {
 			hue = v;
 			auto = false;
 			syncHex();
 		});
 		addRenderableWidget(hueSlider);
 
-		this.saturationSlider = new HsbSlider(x, topPos + 78, 240, "Saturation", 100, saturation, v -> {
+		this.saturationSlider = new HsbSlider(x, topPos + 56 + GuiLayout.SECTION_SPACING, contentWidth, "Saturation", 100, saturation, v -> {
 			saturation = v;
 			auto = false;
 			syncHex();
 		});
 		addRenderableWidget(saturationSlider);
 
-		this.brightnessSlider = new HsbSlider(x, topPos + 100, 240, "Brightness", 100, brightness, v -> {
+		this.brightnessSlider = new HsbSlider(x, topPos + 56 + 2 * GuiLayout.SECTION_SPACING, contentWidth, "Brightness", 100, brightness, v -> {
 			brightness = v;
 			auto = false;
 			syncHex();
 		});
 		addRenderableWidget(brightnessSlider);
 
-		this.hexEdit = new EditBox(this.font, x, topPos + 126, 96, 18, Component.literal("Hex"));
+		this.hexEdit = new EditBox(this.font, x, topPos + 126, 96, GuiLayout.BUTTON_HEIGHT, Component.literal("Hex"));
 		this.hexEdit.setMaxLength(7);
 		this.hexEdit.setValue(toHex(packed()));
 		this.hexEdit.setResponder(text -> {
@@ -89,6 +90,7 @@ public class BoxColorScreen extends Screen {
 		});
 		addRenderableWidget(hexEdit);
 
+		int smallWidth = (contentWidth - 96 - 2 * GuiLayout.WIDGET_SPACING) / 2;
 		addRenderableWidget(Button.builder(Component.literal("Random"), b -> {
 			hue = this.minecraft.level.random.nextInt(360);
 			saturation = 85;
@@ -96,22 +98,23 @@ public class BoxColorScreen extends Screen {
 			auto = false;
 			syncSliders();
 			syncHex();
-		}).bounds(x + 102, topPos + 126, 66, 18).build());
+		}).bounds(x + 96 + GuiLayout.WIDGET_SPACING, topPos + 126, smallWidth, GuiLayout.BUTTON_HEIGHT).build());
 
 		addRenderableWidget(Button.builder(Component.literal("Auto"), b -> {
 			auto = true;
 			setFromPacked(GuiIcons.boxOutlineColor(block.getBlockPos(), null));
 			syncSliders();
 			syncHex();
-		}).bounds(x + 174, topPos + 126, 66, 18).build());
+		}).bounds(x + 96 + GuiLayout.WIDGET_SPACING + smallWidth + GuiLayout.WIDGET_SPACING, topPos + 126, smallWidth, GuiLayout.BUTTON_HEIGHT).build());
 
 		this.presetX = x;
 		this.presetY = topPos + 152;
 
+		int halfWidth = (contentWidth - GuiLayout.WIDGET_SPACING) / 2;
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> saveAndClose())
-				.bounds(x, topPos + BG_HEIGHT - 26, 114, 18).build());
+				.bounds(x, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, halfWidth, GuiLayout.BUTTON_HEIGHT).build());
 		addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> onClose())
-				.bounds(x + 126, topPos + BG_HEIGHT - 26, 114, 18).build());
+				.bounds(x + halfWidth + GuiLayout.WIDGET_SPACING, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, halfWidth, GuiLayout.BUTTON_HEIGHT).build());
 	}
 
 	@Override
@@ -190,11 +193,11 @@ public class BoxColorScreen extends Screen {
 		int topPos = (this.height - BG_HEIGHT) / 2;
 		guiGraphics.fill(leftPos, topPos, leftPos + BG_WIDTH, topPos + BG_HEIGHT, 0xF0101010);
 		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, packed());
-		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 12, 0xFFFFFF);
+		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + GuiLayout.TITLE_TOP, 0xFFFFFF);
 
 		int color = auto ? GuiIcons.boxOutlineColor(block.getBlockPos(), null) : packed();
-		guiGraphics.fill(leftPos + 12, topPos + 28, leftPos + BG_WIDTH - 12, topPos + 48, 0xFF000000);
-		guiGraphics.fill(leftPos + 13, topPos + 29, leftPos + BG_WIDTH - 13, topPos + 47, color);
+		guiGraphics.fill(leftPos + GuiLayout.SCREEN_PADDING, topPos + 28, leftPos + BG_WIDTH - GuiLayout.SCREEN_PADDING, topPos + 48, 0xFF000000);
+		guiGraphics.fill(leftPos + GuiLayout.SCREEN_PADDING + 1, topPos + 29, leftPos + BG_WIDTH - GuiLayout.SCREEN_PADDING - 1, topPos + 47, color);
 		if (auto) {
 			guiGraphics.drawString(this.font, "Auto", leftPos + 16, topPos + 34, 0xFFFFFF, false);
 		}
@@ -218,7 +221,7 @@ public class BoxColorScreen extends Screen {
 		private final IntConsumer onChange;
 
 		HsbSlider(int x, int y, int width, String name, int max, int current, IntConsumer onChange) {
-			super(x, y, width, 18, Component.literal(""), (double) current / max);
+			super(x, y, width, GuiLayout.BUTTON_HEIGHT, Component.literal(""), (double) current / max);
 			this.name = name;
 			this.max = max;
 			this.onChange = onChange;
