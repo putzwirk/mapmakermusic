@@ -73,7 +73,7 @@ public class MusicBlockScreen extends Screen {
 					? MusicBlockEntity.TriggerMode.CHAIN
 					: MusicBlockEntity.TriggerMode.IMPULSE;
 			this.rebuildWidgets();
-		}).tooltip(Tooltip.create(Component.literal("Impulse: one shot per signal. Chain: conditions checked every tick."))).bounds(leftPos + FIELD_X, topPos + 32, FIELD_WIDTH, 18).build();
+		}).tooltip(Tooltip.create(Component.literal("Impulse: one shot per signal. Chain: conditions checked every tick."))).bounds(leftPos + FIELD_X, topPos + 32, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT).build();
 		addRenderableWidget(triggerButton);
 
 		this.pos1Edit = new EditBox(this.font, leftPos + FIELD_X, topPos + 72, FIELD_WIDTH, 16, Component.literal("First area corner"));
@@ -89,7 +89,7 @@ public class MusicBlockScreen extends Screen {
 		this.gateButton = Button.builder(Component.literal("Area bounds: " + (this.areaGate ? "On" : "Off")), b -> {
 			this.areaGate = !this.areaGate;
 			this.rebuildWidgets();
-		}).tooltip(Tooltip.create(Component.literal("bound chain audiobox to area corners."))).bounds(leftPos + FIELD_X, topPos + 52, FIELD_WIDTH, 18).build();
+		}).tooltip(Tooltip.create(Component.literal("bound chain audiobox to area corners."))).bounds(leftPos + FIELD_X, topPos + 52, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT).build();
 		this.gateButton.visible = isChain;
 		addRenderableWidget(gateButton);
 
@@ -97,7 +97,7 @@ public class MusicBlockScreen extends Screen {
 			applySetupFields();
 			this.minecraft.setScreen(new MusicTrackListScreen(this, musicBlock));
 		}).tooltip(Tooltip.create(Component.literal("Choose tracks, per-track mix, order, and rules")))
-				.bounds(leftPos + 12, topPos + 114, BG_WIDTH - 24, 20).build());
+				.bounds(leftPos + GuiLayout.SCREEN_PADDING, topPos + 114, BG_WIDTH - 2 * GuiLayout.SCREEN_PADDING, GuiLayout.BUTTON_HEIGHT).build());
 
 		this.playbackButton = Button.builder(Component.literal("Playback: " + label(this.playbackMode)), b -> {
 			this.playbackMode = this.playbackMode == MusicBlockEntity.PlaybackMode.GLOBAL
@@ -109,7 +109,7 @@ public class MusicBlockScreen extends Screen {
 			this.listenerEdit.setVisible(global && impulse);
 			this.playbackPosEdit.setVisible(!global);
 			this.radiusEdit.setVisible(!global);
-		}).tooltip(Tooltip.create(Component.literal("Click to switch playback positioning"))).bounds(leftPos + FIELD_X, topPos + 136, FIELD_WIDTH, 18).build();
+		}).tooltip(Tooltip.create(Component.literal("Click to switch playback positioning"))).bounds(leftPos + FIELD_X, topPos + 136, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT).build();
 		addRenderableWidget(playbackButton);
 
 		this.listenerEdit = new EditBox(this.font, leftPos + FIELD_X, topPos + 168, FIELD_WIDTH, 16, Component.literal("Listener selector"));
@@ -134,9 +134,9 @@ public class MusicBlockScreen extends Screen {
 		addRenderableWidget(priorityEdit);
 
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> saveAndClose())
-				.bounds(leftPos + 12, topPos + BG_HEIGHT - 26, 118, 18).build());
+				.bounds(leftPos + GuiLayout.SCREEN_PADDING, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, 116, GuiLayout.BUTTON_HEIGHT).build());
 		addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> onClose())
-				.bounds(leftPos + 134, topPos + BG_HEIGHT - 26, 118, 18).build());
+				.bounds(leftPos + GuiLayout.SCREEN_PADDING + 116 + GuiLayout.WIDGET_SPACING, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, 116, GuiLayout.BUTTON_HEIGHT).build());
 	}
 
 	private String label(MusicBlockEntity.TriggerMode mode) {
@@ -201,14 +201,14 @@ public class MusicBlockScreen extends Screen {
 
 		int leftPos = (this.width - BG_WIDTH) / 2;
 		int topPos = (this.height - BG_HEIGHT) / 2;
-		int labelX = leftPos + 12;
+		int labelX = leftPos + GuiLayout.SCREEN_PADDING;
 		int labelColor = 0xE0E0E0;
 		boolean isChain = this.triggerMode == MusicBlockEntity.TriggerMode.CHAIN;
 		boolean isGlobal = this.playbackMode == MusicBlockEntity.PlaybackMode.GLOBAL;
 
 		guiGraphics.fill(leftPos, topPos, leftPos + BG_WIDTH, topPos + BG_HEIGHT, 0xF0101010);
 		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, GuiIcons.boxOutlineColor(musicBlock.getBlockPos(), musicBlock.getOutlineColor()));
-		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + 12, 0xFFFFFF);
+		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + GuiLayout.TITLE_TOP, 0xFFFFFF);
 
 		guiGraphics.drawString(this.font, "Trigger", labelX, topPos + 37, labelColor, false);
 		boolean gateOn = isChain && this.areaGate;
