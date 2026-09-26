@@ -42,6 +42,11 @@ public class MusicBlockTicker {
 		return com.putzwirk.mapmakermusic.client.audio.MusicPlayer.FADE_TICKS / 20f;
 	}
 
+	private static boolean fadeApplies(String track) {
+		float duration = trackDuration(track);
+		return duration < 0f || duration >= fadeOutSeconds();
+	}
+
 	private static final Map<BoxKey, Map<UUID, PlaybackState>> STATES = new ConcurrentHashMap<>();
 	private static final Map<String, Set<Long>> CHAIN_BOXES = new ConcurrentHashMap<>();
 	private static final Map<UUID, BoxKey> MUSIC_CLAIM = new ConcurrentHashMap<>();
@@ -290,9 +295,10 @@ public class MusicBlockTicker {
 		long now = level.getGameTime();
 
 		if (sound) {
-			MusicRemotes.getRemote().playSound(player, item.getTrack(), volume, pitch, playbackAt(musicBe), musicBe.getRadius(), queue.isFadeIn());
+			MusicRemotes.getRemote().playSound(player, item.getTrack(), volume, pitch, playbackAt(musicBe), musicBe.getRadius(),
+					queue.isFadeIn() && fadeApplies(item.getTrack()));
 		} else {
-			boolean fadeIn = fresh && queue.isFadeIn();
+			boolean fadeIn = fresh && queue.isFadeIn() && fadeApplies(item.getTrack());
 			MusicRemotes.getRemote().playMusic(player, item.getTrack(), volume, pitch, fadeIn, queue.isFadeOut(), playbackAt(musicBe), musicBe.getRadius(), fresh, queue.isLoop(), offsetSeconds);
 		}
 
@@ -349,7 +355,9 @@ public class MusicBlockTicker {
 			}
 			next = 0;
 		}
-		if (allowGap && !state.sound && queue.isFadeOut()) {
+		if (allowGap && !state.sound && queue.isFadeOut()
+				&& trackDuration(queue.getTracks().get(state.trackIndex).getTrack()) >= fadeOutSeconds()
+				&& trackDuration(queue.getTracks().get(next).getTrack()) >= fadeOutSeconds()) {
 			MusicRemotes.getRemote().stopMusic(player, true);
 			state.fadingGap = true;
 			state.nextTrack = next;
