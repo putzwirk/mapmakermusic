@@ -14,7 +14,7 @@ public class MusicCondition {
 		TIME("Time"),
 		WEATHER("Weather"),
 		SCOREBOARD("Scoreboard"),
-		PLAYER("Player"),
+		PLAYER("For player"),
 		PLAYER_HEALTH("Player health"),
 		PLAYER_HUNGER("Player hunger"),
 		ENTITY_ALIVE("Entity count"),
