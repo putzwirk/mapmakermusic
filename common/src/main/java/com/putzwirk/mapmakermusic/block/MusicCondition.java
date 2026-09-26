@@ -222,14 +222,14 @@ public class MusicCondition {
 			}
 			case PLAYER_HEALTH -> "Health " + format(min) + ".." + format(max);
 			case PLAYER_HUNGER -> "Hunger " + format(min) + ".." + format(max);
-			case ENTITY_ALIVE -> describeCount();
-			case IN_BIOME -> "Biome " + text;
+		case ENTITY_ALIVE -> describeCount();
+		case IN_BIOME -> "Biome " + pretty(text);
 			case COORDINATES -> describeCoords();
 		};
 	}
 
 	private String describeCount() {
-		String who = cap(shortId(text));
+		String who = pretty(text);
 		String want = tag == null ? "" : tag.trim();
 		if (!want.isEmpty()) {
 			who = (who.isEmpty() ? "" : who + " ") + "#" + want;
@@ -282,12 +282,13 @@ public class MusicCondition {
 		return Character.toUpperCase(value.charAt(0)) + value.substring(1);
 	}
 
-	private static String shortId(String value) {
+	static String pretty(String value) {
 		if (value == null) {
 			return "";
 		}
 		int separator = value.indexOf(':');
-		return separator >= 0 ? value.substring(separator + 1) : value;
+		String path = separator >= 0 ? value.substring(separator + 1) : value;
+		return cap(path.replace('_', ' '));
 	}
 
 	public CompoundTag save() {

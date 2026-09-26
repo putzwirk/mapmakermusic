@@ -108,6 +108,20 @@ public class MusicConditionTest {
 	}
 
 	@Test
+	public void longIdsDescribePretty() {
+		MusicCondition biome = MusicCondition.Type.IN_BIOME.newDefault();
+		biome.setText("minecraft:old_growth_birch_forest");
+		assertEquals("Biome Old growth birch forest", biome.describe());
+
+		MusicCondition entity = MusicCondition.Type.ENTITY_ALIVE.newDefault();
+		entity.setText("minecraft:iron_golem");
+		assertEquals("Iron golem >= 1", entity.describe());
+
+		assertEquals("", MusicCondition.pretty(null));
+		assertEquals("Wither", MusicCondition.pretty("wither"));
+	}
+
+	@Test
 	public void playerDescribe() {
 		MusicCondition condition = MusicCondition.Type.PLAYER.newDefault();
 		assertEquals("@a", condition.getText());
