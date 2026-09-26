@@ -93,8 +93,11 @@ public class MusicQueueScreen extends Screen {
 
 		this.libraryList = new LibraryList(this.minecraft, colWidth, LIST_HEIGHT, topPos + LIST_TOP, topPos + LIST_TOP + LIST_HEIGHT, ROW_HEIGHT);
 		this.libraryList.setLeftPos(leftPos + PAD);
+		this.libraryList.addLibraryEntry(this.libraryList.new Entry(MusicQueue.PlaylistItem.STOP_TRACK));
 		for (String track : MusicLibrary.scanTrackNames()) {
-			this.libraryList.addLibraryEntry(this.libraryList.new Entry(track));
+			if (!MusicQueue.PlaylistItem.isStop(track)) {
+				this.libraryList.addLibraryEntry(this.libraryList.new Entry(track));
+			}
 		}
 		addRenderableWidget(libraryList);
 
@@ -201,14 +204,28 @@ public class MusicQueueScreen extends Screen {
 	}
 
 	private void addTrack(String track) {
+		boolean stop = MusicQueue.PlaylistItem.isStop(track);
 		for (MusicQueue.PlaylistItem item : queue().getTracks()) {
-			if (item.getTrack().equalsIgnoreCase(track)) {
+			if (stop ? item.isStop() : item.getTrack().equalsIgnoreCase(track)) {
 				refreshPlaylist();
 				return;
 			}
 		}
-		queue().getTracks().add(new MusicQueue.PlaylistItem(track));
+		if (!stop) {
+			String reason = MusicLibrary.playlistBlockReason(track);
+			if (reason != null) {
+				notifyPlayer(reason);
+				return;
+			}
+		}
+		queue().getTracks().add(new MusicQueue.PlaylistItem(stop ? MusicQueue.PlaylistItem.STOP_TRACK : track));
 		refreshPlaylist();
+	}
+
+	private void notifyPlayer(String message) {
+		if (this.minecraft != null && this.minecraft.player != null) {
+			this.minecraft.player.displayClientMessage(Component.literal(message), true);
+		}
 	}
 
 	private void removeTrack(int index) {
@@ -364,8 +381,17 @@ public class MusicQueueScreen extends Screen {
 			public void render(GuiGraphics guiGraphics, int index, int top, int left, int width, int height, int mouseX, int mouseY, boolean isHovered, float partialTick) {
 				this.rowLeft = left;
 				this.rowWidth = width;
-				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(track, width - ROW_GLYPH - 6), left + 2, top + 7, 0xFFFFFF);
+				String duration = "";
+				if (!MusicQueue.PlaylistItem.isStop(track)) {
+					MusicLibrary.TrackInfo info = MusicLibrary.trackInfo().get(track);
+					duration = MusicLibrary.formatDuration(info == null ? -1f : info.durationSeconds());
+				}
+				int durationWidth = duration.isEmpty() ? 0 : MusicQueueScreen.this.font.width(duration) + 4;
+				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(track, width - ROW_GLYPH - 6 - durationWidth), left + 2, top + 7, 0xFFFFFF);
 				int bx = left + width - ROW_GLYPH;
+				if (!duration.isEmpty()) {
+					guiGraphics.drawString(MusicQueueScreen.this.font, duration, bx - durationWidth + 2, top + 7, 0x9A9A9A, false);
+				}
 				drawRowGlyph(guiGraphics, bx, top + 4, GuiIcons.ADD, inGlyph(mouseX, mouseY, bx, top + 4));
 			}
 
