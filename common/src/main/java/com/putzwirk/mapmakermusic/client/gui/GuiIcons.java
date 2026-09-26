@@ -10,7 +10,7 @@ import net.minecraft.sounds.SoundEvents;
 public final class GuiIcons {
 
 	public static final int ROW_GLYPH = 14;
-	public static final int SPIN_W = 6;
+	public static final int SPIN_W = 7;
 	public static final int SPIN_H = 6;
 
 	public static final String BACK = "\u2190";
@@ -42,7 +42,7 @@ public final class GuiIcons {
 		int text = enabled ? 0xFFFFFF : 0xFF707070;
 		guiGraphics.fill(x, y, x + SPIN_W, y + SPIN_H, 0xFF000000);
 		guiGraphics.fill(x + 1, y + 1, x + SPIN_W - 1, y + SPIN_H - 1, face);
-		guiGraphics.drawCenteredString(font, symbol, x + SPIN_W / 2 + 1, y + 1 + textDy - 4, text);
+		guiGraphics.drawCenteredString(font, symbol, x + SPIN_W / 2 + 1, y + 1 + textDy - 3, text);
 	}
 
 	public static boolean inSpin(double mouseX, double mouseY, int x, int y) {
