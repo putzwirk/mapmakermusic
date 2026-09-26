@@ -209,6 +209,7 @@ public final class MusicPlayer {
 	private boolean isLoadingTrack = false;
 	private long activeAlContext;
 	private long decodeEpoch = 0;
+	private long lastMusicRequestMillis = 0;
 
 	private String lastKnownWorldId = null;
 
@@ -459,6 +460,7 @@ public final class MusicPlayer {
 			LOGGER.info("[dbg] stoprx current={} fading={} fadeOut={}", this.currentTrackKey, this.fadingVoices.size(), enableFadeOut);
 		}
 		this.isLoadingTrack = false;
+		this.lastMusicRequestMillis = System.currentTimeMillis();
 		if (this.currentTrackKey != null && this.currentMusic != null) {
 			savePositionOf(this.currentTrackKey, this.currentMusic);
 		}
@@ -576,6 +578,10 @@ public final class MusicPlayer {
 		this.desiredPlaybackPos = state.playbackPos;
 		this.desiredMaxDistance = state.maxDistance;
 		this.lastPositions.put(state.trackKey, state.position);
+
+		if (System.currentTimeMillis() - this.lastMusicRequestMillis < 3000L) {
+			return;
+		}
 
 		float volumeMultiplier = clampVolume(state.volumePercent);
 		startTrack(path, state.trackKey, volumeMultiplier, state.pitch, state.playbackPos, state.maxDistance, state.position, true, true, true);
@@ -749,6 +755,7 @@ public final class MusicPlayer {
 
 	private void startTrack(Path path, String key, float volumeMultiplier, float pitch, Vec3 position, float maxDistance, float resumeOffsetSeconds, boolean enableFadeIn, boolean enableFadeOut, boolean loop) {
 		this.decodeEpoch++;
+		this.lastMusicRequestMillis = System.currentTimeMillis();
 		CachedBuffer cached = takeCachedBuffer(key, position != null, path);
 		if (cached != null) {
 			retireCurrentMusic(enableFadeOut);
