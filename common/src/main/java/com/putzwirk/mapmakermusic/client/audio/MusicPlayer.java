@@ -49,7 +49,7 @@ public final class MusicPlayer {
 	}
 
 	public interface TrackFinishedCallback {
-		void onTrackFinished();
+		void onTrackFinished(String trackKey);
 	}
 
 	private static volatile TrackRequester trackRequester;
@@ -63,7 +63,7 @@ public final class MusicPlayer {
 		trackFinishedCallback = callback;
 	}
 
-	private Runnable pendingPlayback;
+	private final Map<String, List<Runnable>> pendingPlaybacks = new ConcurrentHashMap<>();
 
 	private final Map<String, Path> musicCache = new ConcurrentHashMap<>();
 	private final Map<String, Float> lastPositions = new ConcurrentHashMap<>();
@@ -134,11 +134,16 @@ public final class MusicPlayer {
 
 	public void onTrackDownloaded(String name) {
 		rescanMusicFolder(false);
-		Runnable pending = this.pendingPlayback;
-		this.pendingPlayback = null;
-		if (pending != null) {
-			pending.run();
+		List<Runnable> runnables = this.pendingPlaybacks.remove(normalizeName(name));
+		if (runnables != null) {
+			for (Runnable pending : new ArrayList<>(runnables)) {
+				pending.run();
+			}
 		}
+	}
+
+	private void queuePending(String key, Runnable playback) {
+		this.pendingPlaybacks.computeIfAbsent(key, k -> new ArrayList<>()).add(playback);
 	}
 
 	public void playMusic(String rawName, int volumePercent, float pitch, boolean enableFadeIn, boolean enableFadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop) {
@@ -160,7 +165,7 @@ public final class MusicPlayer {
 				final int retryVolume = volumePercent;
 				final float retryPitch = pitch;
 				final Vec3 retryPosition = position;
-				this.pendingPlayback = () -> playMusic(retryName, retryVolume, retryPitch, enableFadeIn, enableFadeOut, retryPosition, maxDistance, restart, loop, startOffsetSeconds);
+				this.queuePending(key, () -> playMusic(retryName, retryVolume, retryPitch, enableFadeIn, enableFadeOut, retryPosition, maxDistance, restart, loop, startOffsetSeconds));
 				requestTrack(key);
 				notifyPlayer("Downloading custom music: " + rawName);
 			} else {
@@ -236,7 +241,7 @@ public final class MusicPlayer {
 		if (path == null) {
 			if (MusicLibrary.hasServerTrack(key)) {
 				final String retryName = rawName;
-				this.pendingPlayback = () -> playSound(retryName, volumePercent, pitch, position, maxDistance);
+				this.queuePending(key, () -> playSound(retryName, volumePercent, pitch, position, maxDistance));
 				requestTrack(key);
 				notifyPlayer("Downloading custom sound: " + rawName);
 			} else {
@@ -520,6 +525,7 @@ public final class MusicPlayer {
 
 	private void handleFinishedMusic() {
 		Voice finished = this.currentMusic;
+		String finishedKey = this.currentTrackKey;
 		this.currentMusic = null;
 		this.currentTrackKey = null;
 		this.currentMusicPath = null;
@@ -533,8 +539,8 @@ public final class MusicPlayer {
 			this.worldStates.remove(worldId);
 		}
 		TrackFinishedCallback callback = trackFinishedCallback;
-		if (callback != null) {
-			callback.onTrackFinished();
+		if (callback != null && finishedKey != null) {
+			callback.onTrackFinished(finishedKey);
 		}
 	}
 

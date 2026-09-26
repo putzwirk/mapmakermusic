@@ -375,13 +375,18 @@ public final class MusicNetworking {
 	}
 
 	public static class TrackFinishedPacket {
-		public TrackFinishedPacket() {
+		public final String trackKey;
+
+		public TrackFinishedPacket(String trackKey) {
+			this.trackKey = trackKey;
 		}
 
 		public TrackFinishedPacket(FriendlyByteBuf buf) {
+			this.trackKey = buf.readUtf();
 		}
 
 		public void encode(FriendlyByteBuf buf) {
+			buf.writeUtf(this.trackKey);
 		}
 
 		public static void handle(TrackFinishedPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
@@ -389,7 +394,7 @@ public final class MusicNetworking {
 			context.enqueueWork(() -> {
 				ServerPlayer player = context.getSender();
 				if (player != null) {
-					MusicBlockTicker.onTrackFinished(player);
+					MusicBlockTicker.onTrackFinished(player, msg.trackKey);
 				}
 			});
 			context.setPacketHandled(true);

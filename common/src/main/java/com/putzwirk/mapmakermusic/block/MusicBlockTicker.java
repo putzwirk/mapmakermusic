@@ -88,11 +88,12 @@ public class MusicBlockTicker {
 		}
 	}
 
-	public static void onTrackFinished(ServerPlayer player) {
+	public static void onTrackFinished(ServerPlayer player, String trackKey) {
 		UUID uuid = player.getUUID();
 		if (!(player.level() instanceof ServerLevel serverLevel)) {
 			return;
 		}
+		String wanted = normalizeTrack(trackKey);
 		for (Map.Entry<BoxKey, Map<UUID, PlaybackState>> entry : STATES.entrySet()) {
 			PlaybackState state = entry.getValue().get(uuid);
 			if (state == null || state.stopped || state.sound) {
@@ -110,11 +111,23 @@ public class MusicBlockTicker {
 			if (state.trackIndex < 0 || state.trackIndex >= queue.getTracks().size()) {
 				continue;
 			}
+			String current = normalizeTrack(queue.getTracks().get(state.trackIndex).getTrack());
+			if (!current.equals(wanted)) {
+				continue;
+			}
 			if (trackDuration(queue.getTracks().get(state.trackIndex).getTrack()) >= 0f) {
 				continue;
 			}
 			advanceTrack(serverLevel, entry.getKey(), musicBe, player, uuid, state, true);
 		}
+	}
+
+	private static String normalizeTrack(String track) {
+		String key = track == null ? "" : track.trim().toLowerCase(Locale.ROOT);
+		if (key.endsWith(".ogg")) {
+			key = key.substring(0, key.length() - 4);
+		}
+		return key;
 	}
 
 	public static void onPlayerLogin(ServerPlayer player) {

@@ -37,7 +37,7 @@ public final class MapMakerMusicClient {
 	public static void init() {
 		MUSIC_PLAYER.init();
 		MusicPlayer.setTrackRequester(name -> MusicNetworking.sendToServer(new MusicNetworking.TrackRequestPacket(name)));
-		MusicPlayer.setTrackFinishedCallback(() -> MusicNetworking.sendToServer(new MusicNetworking.TrackFinishedPacket()));
+		MusicPlayer.setTrackFinishedCallback(trackKey -> MusicNetworking.sendToServer(new MusicNetworking.TrackFinishedPacket(trackKey)));
 		MinecraftForge.EVENT_BUS.register(new MapMakerMusicClient());
 
 		MusicBlockScreen.setPacketSender((pos, data) -> MusicNetworking.sendToServer(new MusicNetworking.ForgeUpdateMusicBlockPacket(pos, data)));

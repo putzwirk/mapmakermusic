@@ -52,7 +52,11 @@ public class MapMakerMusicClient implements ClientModInitializer {
 			buf.writeUtf(name);
 			ClientPlayNetworking.send(MusicNetworking.TRACK_REQUEST, buf);
 		});
-		MusicPlayer.setTrackFinishedCallback(() -> ClientPlayNetworking.send(MusicNetworking.TRACK_FINISHED, new FriendlyByteBuf(Unpooled.buffer())));
+		MusicPlayer.setTrackFinishedCallback(trackKey -> {
+			FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+			buf.writeUtf(trackKey);
+			ClientPlayNetworking.send(MusicNetworking.TRACK_FINISHED, buf);
+		});
 
 		MusicBlockScreen.setPacketSender((pos, data) -> {
 			FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());

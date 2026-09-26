@@ -106,8 +106,10 @@ public class MapMakerMusic implements ModInitializer {
 			String name = buf.readUtf();
 			server.execute(() -> TrackTransfer.sendTrack(player, name));
 		});
-		ServerPlayNetworking.registerGlobalReceiver(MusicNetworking.TRACK_FINISHED, (server, player, handler, buf, responseSender) ->
-				server.execute(() -> MusicBlockTicker.onTrackFinished(player)));
+		ServerPlayNetworking.registerGlobalReceiver(MusicNetworking.TRACK_FINISHED, (server, player, handler, buf, responseSender) -> {
+			String trackKey = buf.readUtf();
+			server.execute(() -> MusicBlockTicker.onTrackFinished(player, trackKey));
+		});
 		LOGGER.info("MapMakerMusic initialized");
 	}
 
