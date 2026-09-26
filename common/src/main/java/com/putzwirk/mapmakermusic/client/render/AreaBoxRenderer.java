@@ -56,9 +56,10 @@ public final class AreaBoxRenderer {
 		poseStack.translate(-camPos.x, -camPos.y, -camPos.z);
 
 		for (Entry entry : cachedBoxes) {
-			AABB grown = entry.area.inflate(growFor(entry.pos));
+			double grow = growFor(entry.pos);
+			AABB grown = entry.area.inflate(grow);
 			LevelRenderer.renderLineBox(poseStack, buffers.getBuffer(RenderType.lines()), grown, entry.rgb[0], entry.rgb[1], entry.rgb[2], 1f);
-			LevelRenderer.renderLineBox(poseStack, buffers.getBuffer(RenderType.lines()), new AABB(entry.pos), entry.rgb[0], entry.rgb[1], entry.rgb[2], 1f);
+			LevelRenderer.renderLineBox(poseStack, buffers.getBuffer(RenderType.lines()), new AABB(entry.pos).inflate(grow), entry.rgb[0], entry.rgb[1], entry.rgb[2], 1f);
 		}
 
 		AABB preview = selectionPreview(client);
