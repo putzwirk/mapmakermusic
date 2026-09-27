@@ -41,4 +41,16 @@ public interface ConditionKind {
 	default String runAction(String actionId, MusicCondition condition, Minecraft minecraft) {
 		return null;
 	}
+
+	default int editorWidth() {
+		return 248;
+	}
+
+	default int editorHeight() {
+		return 150;
+	}
+
+	default List<String> editorNotes() {
+		return List.of();
+	}
 }

@@ -44,6 +44,7 @@ public final class MapMakerMusicClient {
 
 		MusicBlockScreen.setPacketSender((pos, data) -> MusicNetworking.sendToServer(new MusicNetworking.ForgeUpdateMusicBlockPacket(pos, data)));
 		ConditionTestNet.setSender(command -> MusicNetworking.sendToServer(new MusicNetworking.TestPacket(command)));
+		ConditionTestNet.setSuggestionSender(command -> MusicNetworking.sendToServer(new MusicNetworking.TestSuggestPacket(command)));
 	}
 
 	public static void onPlayMusic(String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop, float startOffsetSeconds) {
@@ -89,6 +90,10 @@ public final class MapMakerMusicClient {
 
 	public static void onTestResult(String command, boolean pass) {
 		Minecraft.getInstance().execute(() -> MusicConditionScreen.handleTestResult(command, pass));
+	}
+
+	public static void onSuggestionResult(String command, int start, java.util.List<String> suggestions) {
+		Minecraft.getInstance().execute(() -> MusicConditionScreen.handleSuggestionResult(command, start, suggestions));
 	}
 
 	public static void onTrackData(String name, int totalLength, byte[] data, boolean last) {

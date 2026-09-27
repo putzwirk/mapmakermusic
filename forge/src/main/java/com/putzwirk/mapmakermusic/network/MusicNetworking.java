@@ -45,6 +45,8 @@ public final class MusicNetworking {
 		CHANNEL.registerMessage(id++, TrackFinishedPacket.class, TrackFinishedPacket::encode, TrackFinishedPacket::new, TrackFinishedPacket::handle);
 		CHANNEL.registerMessage(id++, TestPacket.class, TestPacket::encode, TestPacket::new, TestPacket::handle);
 		CHANNEL.registerMessage(id++, TestResultPacket.class, TestResultPacket::encode, TestResultPacket::new, TestResultPacket::handle);
+		CHANNEL.registerMessage(id++, TestSuggestPacket.class, TestSuggestPacket::encode, TestSuggestPacket::new, TestSuggestPacket::handle);
+		CHANNEL.registerMessage(id++, TestSuggestResultPacket.class, TestSuggestResultPacket::encode, TestSuggestResultPacket::new, TestSuggestResultPacket::handle);
 	}
 
 	public static void sendToPlayer(ServerPlayer player, Object message) {
@@ -492,6 +494,70 @@ public final class MusicNetworking {
 		public static void handle(TestResultPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
 			NetworkEvent.Context context = contextSupplier.get();
 			runOnMainThread(context, () -> MapMakerMusicClient.onTestResult(msg.command, msg.pass));
+		}
+	}
+
+	public static class TestSuggestPacket {
+		public final String command;
+
+		public TestSuggestPacket(String command) {
+			this.command = command;
+		}
+
+		public TestSuggestPacket(FriendlyByteBuf buf) {
+			this.command = buf.readUtf();
+		}
+
+		public void encode(FriendlyByteBuf buf) {
+			buf.writeUtf(this.command);
+		}
+
+		public static void handle(TestSuggestPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
+			NetworkEvent.Context context = contextSupplier.get();
+			context.enqueueWork(() -> {
+				ServerPlayer player = context.getSender();
+				if (player != null) {
+					ConditionTestHandler.handleSuggestions(player, msg.command);
+				}
+			});
+			context.setPacketHandled(true);
+		}
+	}
+
+	public static class TestSuggestResultPacket {
+		public final String command;
+		public final int start;
+		public final java.util.List<String> suggestions;
+
+		public TestSuggestResultPacket(String command, int start, java.util.List<String> suggestions) {
+			this.command = command;
+			this.start = start;
+			this.suggestions = suggestions;
+		}
+
+		public TestSuggestResultPacket(FriendlyByteBuf buf) {
+			this.command = buf.readUtf();
+			this.start = buf.readInt();
+			int count = buf.readInt();
+			java.util.List<String> list = new java.util.ArrayList<>(count);
+			for (int i = 0; i < count; i++) {
+				list.add(buf.readUtf());
+			}
+			this.suggestions = list;
+		}
+
+		public void encode(FriendlyByteBuf buf) {
+			buf.writeUtf(this.command);
+			buf.writeInt(this.start);
+			buf.writeInt(this.suggestions.size());
+			for (String suggestion : this.suggestions) {
+				buf.writeUtf(suggestion);
+			}
+		}
+
+		public static void handle(TestSuggestResultPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
+			NetworkEvent.Context context = contextSupplier.get();
+			runOnMainThread(context, () -> MapMakerMusicClient.onSuggestionResult(msg.command, msg.start, msg.suggestions));
 		}
 	}
 }

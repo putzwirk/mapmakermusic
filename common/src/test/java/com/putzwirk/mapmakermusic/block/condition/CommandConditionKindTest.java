@@ -98,4 +98,16 @@ public class CommandConditionKindTest {
 		assertTrue(KIND.editorFields().stream().anyMatch(spec -> spec.type() == FieldSpec.FieldType.ACTION));
 		assertEquals("empty", KIND.runAction(CommandConditionKind.TEST_ACTION, KIND.newDefault(), null));
 	}
+
+	@Test
+	public void editorIsWideWithCommandAutocompleteAndExamples() {
+		assertEquals(420, KIND.editorWidth());
+		assertEquals(240, KIND.editorHeight());
+		assertTrue(KIND.editorFields().stream().anyMatch(spec -> spec.type() == FieldSpec.FieldType.LONG_TEXT && "command".equals(spec.suggest())));
+		assertEquals(4, KIND.editorNotes().size());
+		assertTrue(KIND.editorNotes().contains("scoreboard players get @s kills"));
+		assertEquals(248, new TimeConditionKind().editorWidth());
+		assertEquals(150, new TimeConditionKind().editorHeight());
+		assertTrue(new TimeConditionKind().editorNotes().isEmpty());
+	}
 }

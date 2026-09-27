@@ -67,8 +67,27 @@ public final class CommandConditionKind implements ConditionKind {
 	@Override
 	public List<FieldSpec> editorFields() {
 		return List.of(
-				FieldSpec.longText(COMMAND_KEY, "Command", "command to test, without leading slash"),
+				FieldSpec.longText(COMMAND_KEY, "Command", "command to test, without leading slash", "command"),
 				FieldSpec.action(TEST_ACTION, "Test now"));
+	}
+
+	@Override
+	public int editorWidth() {
+		return 420;
+	}
+
+	@Override
+	public int editorHeight() {
+		return 240;
+	}
+
+	@Override
+	public List<String> editorNotes() {
+		return List.of(
+				"scoreboard players get @s kills",
+				"clear @s minecraft:diamond 0",
+				"data get entity @s Health",
+				"xp query @s levels");
 	}
 
 	@Override

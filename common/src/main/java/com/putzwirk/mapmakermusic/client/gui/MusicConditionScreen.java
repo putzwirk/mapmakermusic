@@ -6,6 +6,7 @@ import com.putzwirk.mapmakermusic.block.condition.CommandConditionKind;
 import com.putzwirk.mapmakermusic.block.condition.ConditionKind;
 import com.putzwirk.mapmakermusic.block.condition.CoordinatesConditionKind;
 import com.putzwirk.mapmakermusic.block.condition.FieldSpec;
+import com.putzwirk.mapmakermusic.network.ConditionTestNet;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,16 +25,17 @@ import org.lwjgl.glfw.GLFW;
 
 public class MusicConditionScreen extends Screen {
 
-	private static final int BG_WIDTH = 248;
-	private static final int BG_HEIGHT = 150;
 	private static final int MAX_SUGGESTIONS = 8;
 	private static final int SUGGESTION_ROW = 11;
+	private static final int NOTE_ROW = 14;
 
 	private final Screen parent;
 	private final MusicBlockEntity block;
 	private final int queueIndex;
 	private final MusicCondition original;
 	private final MusicCondition condition;
+	private final int bgWidth;
+	private final int bgHeight;
 
 	private EditBox suggestionBox;
 	private String suggestParamKey;
@@ -44,18 +46,30 @@ public class MusicConditionScreen extends Screen {
 	private final EditBox[] coordEdits = new EditBox[6];
 	private List<String> suggestions = List.of();
 	private int suggestionIndex;
+	private List<String> serverSuggestions = List.of();
+	private int suggestStart = -1;
+	private String lastSuggestRequest;
+	private String testStatus;
+	private int testStatusColor;
+	private int testStatusY = -1;
+	private List<String> notes = List.of();
+	private int notesY;
 
 	public MusicConditionScreen(Screen parent, MusicBlockEntity block, int queueIndex, MusicCondition condition) {
-		super(Component.literal(kindOf(condition) == null ? "Unknown" : kindOf(condition).displayName()));
+		super(Component.literal(titleOf(condition)));
 		this.parent = parent;
 		this.block = block;
 		this.queueIndex = queueIndex;
 		this.original = condition;
 		this.condition = condition.copy();
+		ConditionKind kind = condition.kind();
+		this.bgWidth = kind == null ? 248 : kind.editorWidth();
+		this.bgHeight = kind == null ? 150 : kind.editorHeight();
 	}
 
-	private static ConditionKind kindOf(MusicCondition condition) {
-		return condition.kind();
+	private static String titleOf(MusicCondition condition) {
+		ConditionKind kind = condition.kind();
+		return kind == null ? "Unknown" : kind.displayName();
 	}
 
 	@Override
@@ -71,10 +85,10 @@ public class MusicConditionScreen extends Screen {
 			coordEdits[i] = null;
 		}
 
-		int leftPos = (this.width - BG_WIDTH) / 2;
-		int topPos = (this.height - BG_HEIGHT) / 2;
+		int leftPos = (this.width - bgWidth) / 2;
+		int topPos = (this.height - bgHeight) / 2;
 		int x = leftPos + GuiLayout.SCREEN_PADDING;
-		int contentWidth = BG_WIDTH - 2 * GuiLayout.SCREEN_PADDING;
+		int contentWidth = bgWidth - 2 * GuiLayout.SCREEN_PADDING;
 		int fieldWidth = (contentWidth - GuiLayout.WIDGET_SPACING) / 2;
 
 		addRenderableWidget(Button.builder(Component.literal(GuiIcons.BACK), b -> {
@@ -84,17 +98,28 @@ public class MusicConditionScreen extends Screen {
 
 		ConditionKind kind = condition.kind();
 		int row = 0;
+		boolean hasAction = false;
 		if (kind != null) {
 			for (FieldSpec spec : kind.editorFields()) {
 				if (!kind.fieldVisible(spec, condition)) {
 					continue;
 				}
+				if (spec.type() == FieldSpec.FieldType.ACTION) {
+					hasAction = true;
+				}
 				row += addField(kind, spec, x, topPos + 30 + row * GuiLayout.SECTION_SPACING, contentWidth, fieldWidth);
 			}
 		}
+		int below = topPos + 30 + row * GuiLayout.SECTION_SPACING;
+		if (hasAction) {
+			testStatusY = below;
+			below += GuiLayout.SECTION_SPACING;
+		}
+		notes = kind == null ? List.of() : kind.editorNotes();
+		notesY = below;
 
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> saveAndClose())
-				.bounds(x, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, contentWidth, GuiLayout.BUTTON_HEIGHT).build());
+				.bounds(x, topPos + bgHeight - GuiLayout.BOTTOM_OFFSET, contentWidth, GuiLayout.BUTTON_HEIGHT).build());
 	}
 
 	private int addField(ConditionKind kind, FieldSpec spec, int x, int y, int contentWidth, int fieldWidth) {
@@ -103,13 +128,9 @@ public class MusicConditionScreen extends Screen {
 				addModeButton(kind, x, y, contentWidth);
 				yield 1;
 			}
-			case TEXT, ENTITY_ID -> {
-				addTextBox(spec, x, y, contentWidth, false);
+			case TEXT, ENTITY_ID, LONG_TEXT -> {
+				addTextBox(spec, x, y, contentWidth);
 				yield 1;
-			}
-			case LONG_TEXT -> {
-				addTextBox(spec, x, y, contentWidth, true);
-				yield 2;
 			}
 			case NUMBER -> {
 				addNumberBox(spec, x, y, contentWidth);
@@ -137,11 +158,10 @@ public class MusicConditionScreen extends Screen {
 		}).bounds(x, y, contentWidth, GuiLayout.BUTTON_HEIGHT).build());
 	}
 
-	private void addTextBox(FieldSpec spec, int x, int y, int contentWidth, boolean tall) {
-		int height = tall ? 2 * GuiLayout.SECTION_SPACING - 4 : GuiLayout.BUTTON_HEIGHT;
-		EditBox box = new EditBox(this.font, x, y, contentWidth, height, Component.literal(spec.label()));
+	private void addTextBox(FieldSpec spec, int x, int y, int contentWidth) {
+		EditBox box = new EditBox(this.font, x, y, contentWidth, GuiLayout.BUTTON_HEIGHT, Component.literal(spec.label()));
 		box.setHint(Component.literal(spec.hint() == null ? "value" : spec.hint()));
-		box.setMaxLength(tall ? 512 : 128);
+		box.setMaxLength(spec.type() == FieldSpec.FieldType.LONG_TEXT ? 512 : 128);
 		box.setValue(condition.params().getString(spec.key()));
 		box.setResponder(text -> {
 			condition.params().putString(spec.key(), text);
@@ -150,7 +170,8 @@ public class MusicConditionScreen extends Screen {
 			}
 		});
 		addRenderableWidget(box);
-		if (spec.type() == FieldSpec.FieldType.ENTITY_ID && suggestionBox == null) {
+		if (spec.suggest() != null && suggestionBox == null
+				&& (spec.type() == FieldSpec.FieldType.TEXT || spec.type() == FieldSpec.FieldType.ENTITY_ID || spec.type() == FieldSpec.FieldType.LONG_TEXT)) {
 			suggestionBox = box;
 			suggestParamKey = spec.key();
 			suggestKey = spec.suggest();
@@ -234,7 +255,28 @@ public class MusicConditionScreen extends Screen {
 		if (!current.equals(command)) {
 			return;
 		}
-		button.setMessage(Component.literal("Test now: " + (pass ? "PASS" : "FAIL")));
+		testStatus = pass ? "PASS" : "FAIL";
+		testStatusColor = pass ? 0x55FF55 : 0xFF5555;
+	}
+
+	public static void handleSuggestionResult(String echo, int start, List<String> texts) {
+		Minecraft client = Minecraft.getInstance();
+		if (client == null || !(client.screen instanceof MusicConditionScreen screen)) {
+			return;
+		}
+		screen.showSuggestions(echo, start, texts);
+	}
+
+	private void showSuggestions(String echo, int start, List<String> texts) {
+		if (suggestionBox == null || !"command".equals(suggestKey)) {
+			return;
+		}
+		if (!suggestionBox.getValue().equals(echo)) {
+			return;
+		}
+		serverSuggestions = List.copyOf(texts);
+		suggestStart = start;
+		refreshSuggestions();
 	}
 
 	private double dbl(String key) {
@@ -322,8 +364,16 @@ public class MusicConditionScreen extends Screen {
 			return;
 		}
 		String pick = suggestions.get(Math.min(suggestionIndex, suggestions.size() - 1));
-		suggestionBox.setValue(pick);
-		condition.params().putString(suggestParamKey, pick);
+		if (suggestStart >= 0) {
+			String current = suggestionBox.getValue();
+			int cut = Math.max(0, Math.min(suggestStart, current.length()));
+			String completed = current.substring(0, cut) + pick;
+			suggestionBox.setValue(completed);
+			condition.params().putString(suggestParamKey, completed);
+		} else {
+			suggestionBox.setValue(pick);
+			condition.params().putString(suggestParamKey, pick);
+		}
 		suggestionBox.moveCursorToEnd();
 		refreshSuggestions();
 	}
@@ -331,6 +381,18 @@ public class MusicConditionScreen extends Screen {
 	private void refreshSuggestions() {
 		if (suggestionBox == null || !suggestionBox.visible || !suggestionBox.isFocused()) {
 			suggestions = List.of();
+			return;
+		}
+		if ("command".equals(suggestKey)) {
+			String current = suggestionBox.getValue();
+			if (!current.equals(lastSuggestRequest)) {
+				lastSuggestRequest = current;
+				ConditionTestNet.requestSuggestions(current);
+			}
+			suggestions = serverSuggestions.size() > MAX_SUGGESTIONS ? serverSuggestions.subList(0, MAX_SUGGESTIONS) : serverSuggestions;
+			if (suggestionIndex >= suggestions.size()) {
+				suggestionIndex = 0;
+			}
 			return;
 		}
 		String current = suggestionBox.getValue().trim().toLowerCase(Locale.ROOT);
@@ -447,11 +509,19 @@ public class MusicConditionScreen extends Screen {
 	@Override
 	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
 		this.renderBackground(guiGraphics);
-		int leftPos = (this.width - BG_WIDTH) / 2;
-		int topPos = (this.height - BG_HEIGHT) / 2;
-		guiGraphics.fill(leftPos, topPos, leftPos + BG_WIDTH, topPos + BG_HEIGHT, 0xF0101010);
-		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, GuiIcons.boxOutlineColor(block.getBlockPos(), block.getOutlineColor()));
+		int leftPos = (this.width - bgWidth) / 2;
+		int topPos = (this.height - bgHeight) / 2;
+		guiGraphics.fill(leftPos, topPos, leftPos + bgWidth, topPos + bgHeight, 0xF0101010);
+		guiGraphics.renderOutline(leftPos, topPos, bgWidth, bgHeight, GuiIcons.boxOutlineColor(block.getBlockPos(), block.getOutlineColor()));
 		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + GuiLayout.TITLE_TOP, 0xFFFFFF);
+		int labelX = leftPos + GuiLayout.SCREEN_PADDING;
+		if (testStatus != null && testStatusY >= 0) {
+			guiGraphics.drawString(this.font, testStatus, labelX, testStatusY + 5, testStatusColor, false);
+		}
+		for (int i = 0; i < notes.size(); i++) {
+			String shown = this.font.plainSubstrByWidth(notes.get(i), bgWidth - 2 * GuiLayout.SCREEN_PADDING, false);
+			guiGraphics.drawString(this.font, shown, labelX, notesY + i * NOTE_ROW, 0x9A9A9A, false);
+		}
 
 		super.render(guiGraphics, mouseX, mouseY, delta);
 		renderSuggestions(guiGraphics);

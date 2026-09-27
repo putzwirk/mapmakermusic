@@ -17,8 +17,8 @@ public record FieldSpec(FieldType type, String key, String secondKey, String lab
 		return new FieldSpec(FieldType.TEXT, key, null, label, null, hint, null);
 	}
 
-	public static FieldSpec longText(String key, String label, String hint) {
-		return new FieldSpec(FieldType.LONG_TEXT, key, null, label, null, hint, null);
+	public static FieldSpec longText(String key, String label, String hint, String suggest) {
+		return new FieldSpec(FieldType.LONG_TEXT, key, null, label, null, hint, suggest);
 	}
 
 	public static FieldSpec number(String key, String label) {
