@@ -79,7 +79,7 @@ public final class CommandConditionKind implements ConditionKind {
 
 	@Override
 	public int editorHeight() {
-		return 280;
+		return 290;
 	}
 
 	@Override

@@ -4,8 +4,11 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
+import com.mojang.brigadier.suggestion.Suggestions;
+import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CompletableFuture;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.ResourceLocationArgument;
@@ -29,7 +32,9 @@ public final class CheckCommand {
 						.then(Commands.literal("night").executes(ctx -> timeResult(ctx, "night", 0, 0)))
 						.then(Commands.literal("range")
 								.then(Commands.argument("min", IntegerArgumentType.integer(0, 23999))
+										.suggests((ctx, builder) -> suggestTimes(builder))
 										.then(Commands.argument("max", IntegerArgumentType.integer(0, 23999))
+												.suggests((ctx, builder) -> suggestTimes(builder))
 												.executes(ctx -> timeResult(ctx, "range",
 														IntegerArgumentType.getInteger(ctx, "min"),
 														IntegerArgumentType.getInteger(ctx, "max")))))))
@@ -58,7 +63,7 @@ public final class CheckCommand {
 		return biomeMatches(want.toString(), actual) ? 1 : 0;
 	}
 
-	private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions> suggestBiomes(CommandSourceStack source, com.mojang.brigadier.suggestion.SuggestionsBuilder builder) {
+	private static CompletableFuture<Suggestions> suggestBiomes(CommandSourceStack source, SuggestionsBuilder builder) {
 		MinecraftServer server = source.getServer();
 		if (server != null) {
 			String remaining = builder.getRemaining().toLowerCase(Locale.ROOT);
@@ -67,6 +72,16 @@ public final class CheckCommand {
 				if (id.toLowerCase(Locale.ROOT).startsWith(remaining)) {
 					builder.suggest(id);
 				}
+			}
+		}
+		return builder.buildFuture();
+	}
+
+	static CompletableFuture<Suggestions> suggestTimes(SuggestionsBuilder builder) {
+		String remaining = builder.getRemaining();
+		for (String value : List.of("0", "6000", "12000", "18000")) {
+			if (value.startsWith(remaining)) {
+				builder.suggest(value);
 			}
 		}
 		return builder.buildFuture();

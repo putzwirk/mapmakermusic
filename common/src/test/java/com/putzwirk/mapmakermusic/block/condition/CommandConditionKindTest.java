@@ -103,7 +103,7 @@ public class CommandConditionKindTest {
 	@Test
 	public void editorIsWideWithCommandAutocompleteAndExamples() {
 		assertEquals(420, KIND.editorWidth());
-		assertEquals(280, KIND.editorHeight());
+		assertEquals(290, KIND.editorHeight());
 		assertTrue(KIND.editorFields().stream().anyMatch(spec -> spec.type() == FieldSpec.FieldType.LONG_TEXT && "command".equals(spec.suggest())));
 		assertTrue(KIND.editorNotes().isEmpty());
 		assertEquals(13, KIND.editorPresets().size());

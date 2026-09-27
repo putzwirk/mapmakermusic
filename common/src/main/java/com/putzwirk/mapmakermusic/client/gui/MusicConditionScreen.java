@@ -254,8 +254,8 @@ public class MusicConditionScreen extends Screen {
 		}
 		showPresetsCaption = true;
 		presetsCaptionX = x + contentWidth / 2;
-		presetsCaptionY = y + GuiLayout.SECTION_SPACING;
-		int gridTop = y + 2 * GuiLayout.SECTION_SPACING;
+		presetsCaptionY = y + 2 * GuiLayout.SECTION_SPACING;
+		int gridTop = y + 3 * GuiLayout.SECTION_SPACING;
 		int cols = 3;
 		int buttonWidth = (contentWidth - (cols - 1) * GuiLayout.WIDGET_SPACING) / cols;
 		for (int i = 0; i < presets.size(); i++) {
@@ -265,7 +265,7 @@ public class MusicConditionScreen extends Screen {
 			addRenderableWidget(Button.builder(Component.literal(preset.label()), b -> applyPreset(preset))
 					.bounds(bx, by, buttonWidth, GuiLayout.BUTTON_HEIGHT).build());
 		}
-		return 2 + (presets.size() + cols - 1) / cols;
+		return 3 + (presets.size() + cols - 1) / cols;
 	}
 
 	private void applyPreset(Preset preset) {

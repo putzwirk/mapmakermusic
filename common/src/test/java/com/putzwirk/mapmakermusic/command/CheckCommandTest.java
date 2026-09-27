@@ -3,6 +3,14 @@ package com.putzwirk.mapmakermusic.command;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.suggestion.Suggestion;
+import java.util.List;
+import net.minecraft.commands.CommandSource;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.phys.Vec2;
+import net.minecraft.world.phys.Vec3;
 import org.junit.jupiter.api.Test;
 
 public class CheckCommandTest {
@@ -49,5 +57,18 @@ public class CheckCommandTest {
 		assertTrue(CheckCommand.biomeMatches("minecraft:plains", "MINECRAFT:PLAINS"));
 		assertFalse(CheckCommand.biomeMatches("minecraft:plains", "minecraft:desert"));
 		assertFalse(CheckCommand.biomeMatches("minecraft:plains", ""));
+	}
+
+	@Test
+	public void rangeArgsSuggestDayAnchors() {
+		CommandDispatcher<CommandSourceStack> dispatcher = new CommandDispatcher<>();
+		CheckCommand.register(dispatcher);
+		CommandSourceStack source = new CommandSourceStack(CommandSource.NULL, Vec3.ZERO, Vec2.ZERO, null, 2, "", Component.literal("test"), null, null);
+		List<String> texts = dispatcher.getCompletionSuggestions(dispatcher.parse("mmcheck time range 6", source)).join().getList()
+				.stream().map(Suggestion::getText).toList();
+		assertTrue(texts.contains("6000"));
+		List<String> empty = dispatcher.getCompletionSuggestions(dispatcher.parse("mmcheck time range ", source)).join().getList()
+				.stream().map(Suggestion::getText).toList();
+		assertTrue(empty.containsAll(List.of("0", "6000", "12000", "18000")));
 	}
 }
