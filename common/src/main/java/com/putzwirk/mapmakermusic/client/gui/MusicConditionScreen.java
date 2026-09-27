@@ -5,6 +5,7 @@ import com.putzwirk.mapmakermusic.block.MusicCondition;
 import com.putzwirk.mapmakermusic.block.condition.CommandConditionKind;
 import com.putzwirk.mapmakermusic.block.condition.ConditionKind;
 import com.putzwirk.mapmakermusic.block.condition.FieldSpec;
+import com.putzwirk.mapmakermusic.block.condition.Preset;
 import com.putzwirk.mapmakermusic.network.ConditionTestNet;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,6 +40,8 @@ public class MusicConditionScreen extends Screen {
 	private EditBox suggestionBox;
 	private String suggestParamKey;
 	private String suggestKey;
+	private EditBox presetBox;
+	private String presetKey;
 	private final List<EditBox> doubleBoxes = new ArrayList<>();
 	private final List<String> doubleKeys = new ArrayList<>();
 	private final Map<String, Button> actionButtons = new HashMap<>();
@@ -79,6 +82,8 @@ public class MusicConditionScreen extends Screen {
 		suggestionBox = null;
 		suggestParamKey = null;
 		suggestKey = null;
+		presetBox = null;
+		presetKey = null;
 
 		int leftPos = (this.width - bgWidth) / 2;
 		int topPos = (this.height - bgHeight) / 2;
@@ -139,6 +144,9 @@ public class MusicConditionScreen extends Screen {
 				addActionButton(kind, spec, x, y, contentWidth);
 				yield 1;
 			}
+			case PRESETS -> {
+				yield addPresetGrid(kind, x, y, contentWidth);
+			}
 			default -> {
 				yield 0;
 			}
@@ -169,6 +177,10 @@ public class MusicConditionScreen extends Screen {
 			suggestionBox = box;
 			suggestParamKey = spec.key();
 			suggestKey = spec.suggest();
+		}
+		if (spec.type() == FieldSpec.FieldType.LONG_TEXT && presetBox == null) {
+			presetBox = box;
+			presetKey = spec.key();
 		}
 	}
 
@@ -201,8 +213,35 @@ public class MusicConditionScreen extends Screen {
 		doubleKeys.add(spec.secondKey());
 	}
 
-	private void addActionButton(ConditionKind kind, FieldSpec spec, int x, int y, int contentWidth) {
-		Button button = Button.builder(Component.literal(spec.label()), b -> {
+	private int addPresetGrid(ConditionKind kind, int x, int y, int contentWidth) {
+		List<Preset> presets = kind.editorPresets();
+		if (presets.isEmpty() || presetBox == null) {
+			return 0;
+		}
+		int cols = 3;
+		int buttonWidth = (contentWidth - (cols - 1) * GuiLayout.WIDGET_SPACING) / cols;
+		for (int i = 0; i < presets.size(); i++) {
+			Preset preset = presets.get(i);
+			int bx = x + (i % cols) * (buttonWidth + GuiLayout.WIDGET_SPACING);
+			int by = y + (i / cols) * GuiLayout.SECTION_SPACING;
+			addRenderableWidget(Button.builder(Component.literal(preset.label()), b -> applyPreset(preset))
+					.bounds(bx, by, buttonWidth, GuiLayout.BUTTON_HEIGHT).build());
+		}
+		return (presets.size() + cols - 1) / cols;
+	}
+
+	private void applyPreset(Preset preset) {
+		if (presetBox == null || presetKey == null) {
+			return;
+		}
+		presetBox.setValue(preset.command());
+		condition.params().putString(presetKey, preset.command());
+		presetBox.moveCursorToEnd();
+		testStatus = null;
+		refreshSuggestions();
+	}
+
+	private void addActionButton(ConditionKind kind, FieldSpec spec, int x, int y, int contentWidth) {		Button button = Button.builder(Component.literal(spec.label()), b -> {
 			String result = kind.runAction(spec.key(), condition, this.minecraft);
 			b.setMessage(Component.literal(result == null ? spec.label() : spec.label() + ": " + result));
 		}).bounds(x, y, contentWidth, GuiLayout.BUTTON_HEIGHT).build();

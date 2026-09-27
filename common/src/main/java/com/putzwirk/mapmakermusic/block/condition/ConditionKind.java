@@ -53,4 +53,8 @@ public interface ConditionKind {
 	default List<String> editorNotes() {
 		return List.of();
 	}
+
+	default List<Preset> editorPresets() {
+		return List.of();
+	}
 }

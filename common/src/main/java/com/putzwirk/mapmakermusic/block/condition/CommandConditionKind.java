@@ -68,6 +68,7 @@ public final class CommandConditionKind implements ConditionKind {
 	public List<FieldSpec> editorFields() {
 		return List.of(
 				FieldSpec.longText(COMMAND_KEY, "Command", "command to test, without leading slash", "command"),
+				FieldSpec.presets(),
 				FieldSpec.action(TEST_ACTION, "Test now"));
 	}
 
@@ -83,19 +84,21 @@ public final class CommandConditionKind implements ConditionKind {
 
 	@Override
 	public List<String> editorNotes() {
+		return List.of("Click a preset, or type your own command");
+	}
+
+	@Override
+	public List<Preset> editorPresets() {
 		return List.of(
-				"Example usage:",
-				"scoreboard players get @s kills",
-				"scoreboard players get @s deaths",
-				"clear @s minecraft:diamond 0",
-				"clear @s minecraft:apple 0",
-				"data get entity @s Health",
-				"data get entity @s Air",
-				"data get entity @s FallDistance",
-				"xp query @s levels",
-				"xp query @s points",
-				"execute if score @s kills matches 10.. run xp query @s levels",
-				"execute if entity @s[gamemode=creative] run xp query @s levels");
+				new Preset("Health", "data get entity @s Health"),
+				new Preset("Hunger", "data get entity @s foodLevel"),
+				new Preset("Name", "execute if entity @s[name=Steve] run xp query @s levels"),
+				new Preset("Score", "execute if score @s kills matches 10.. run xp query @s levels"),
+				new Preset("Day", "mmcheck time day"),
+				new Preset("Night", "mmcheck time night"),
+				new Preset("Weather", "mmcheck weather clear"),
+				new Preset("Biome", "mmcheck biome minecraft:plains"),
+				new Preset("Entities", "execute if entity @e[type=minecraft:cow,distance=..30] run xp query @s levels"));
 	}
 
 	@Override

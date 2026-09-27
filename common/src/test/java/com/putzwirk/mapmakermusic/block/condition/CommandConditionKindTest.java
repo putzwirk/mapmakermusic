@@ -104,10 +104,12 @@ public class CommandConditionKindTest {
 		assertEquals(420, KIND.editorWidth());
 		assertEquals(300, KIND.editorHeight());
 		assertTrue(KIND.editorFields().stream().anyMatch(spec -> spec.type() == FieldSpec.FieldType.LONG_TEXT && "command".equals(spec.suggest())));
-		assertEquals("Example usage:", KIND.editorNotes().get(0));
-		assertTrue(KIND.editorNotes().contains("scoreboard players get @s kills"));
-		assertTrue(KIND.editorNotes().contains("data get entity @s FallDistance"));
-		assertTrue(KIND.editorNotes().contains("execute if score @s kills matches 10.. run xp query @s levels"));
+		assertEquals(1, KIND.editorNotes().size());
+		assertEquals("Click a preset, or type your own command", KIND.editorNotes().get(0));
+		assertEquals(9, KIND.editorPresets().size());
+		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Day") && preset.command().equals("mmcheck time day")));
+		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Health") && preset.command().equals("data get entity @s Health")));
+		assertTrue(KIND.editorFields().stream().anyMatch(spec -> spec.type() == FieldSpec.FieldType.PRESETS));
 		ConditionKind plain = new ConditionKind() {
 			@Override
 			public net.minecraft.resources.ResourceLocation id() {

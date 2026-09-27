@@ -9,7 +9,8 @@ public record FieldSpec(FieldType type, String key, String secondKey, String lab
 		RANGE,
 		MODE_CYCLE,
 		ENTITY_ID,
-		ACTION
+		ACTION,
+		PRESETS
 	}
 
 	public static FieldSpec text(String key, String label, String hint) {
@@ -38,5 +39,9 @@ public record FieldSpec(FieldType type, String key, String secondKey, String lab
 
 	public static FieldSpec action(String actionId, String label) {
 		return new FieldSpec(FieldType.ACTION, actionId, null, label, null, null, null);
+	}
+
+	public static FieldSpec presets() {
+		return new FieldSpec(FieldType.PRESETS, null, null, "", null, null, null);
 	}
 }
