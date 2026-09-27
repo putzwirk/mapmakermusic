@@ -135,6 +135,7 @@ public final class AreaWandHandler {
 		musicBe.setPos1(pos1);
 		musicBe.setPos2(pos2);
 		musicBe.setChanged();
+		musicBe.broadcastUpdate();
 
 		POS1.remove(player.getUUID());
 		sendSelection(player, null);

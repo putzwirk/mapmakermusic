@@ -31,6 +31,7 @@ public class MusicBlockServerHandler {
 			musicBe.setChanged();
 			MusicBlockTicker.invalidateBox(player.level(), packet.pos);
 			player.level().sendBlockUpdated(packet.pos, musicBe.getBlockState(), musicBe.getBlockState(), 3);
+			musicBe.broadcastUpdate();
 		}
 	}
 }

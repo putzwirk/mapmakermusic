@@ -468,4 +468,17 @@ public class MusicBlockEntity extends BlockEntity {
 	public Packet<ClientGamePacketListener> getUpdatePacket() {
 		return ClientboundBlockEntityDataPacket.create(this);
 	}
+
+	public void broadcastUpdate() {
+		if (!(getLevel() instanceof ServerLevel serverLevel)) {
+			return;
+		}
+		Packet<?> packet = getUpdatePacket();
+		if (packet == null) {
+			return;
+		}
+		for (ServerPlayer player : serverLevel.players()) {
+			player.connection.send(packet);
+		}
+	}
 }
