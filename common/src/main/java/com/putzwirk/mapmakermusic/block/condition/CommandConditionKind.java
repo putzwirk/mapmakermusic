@@ -90,8 +90,8 @@ public final class CommandConditionKind implements ConditionKind {
 	@Override
 	public List<Preset> editorPresets() {
 		return List.of(
-				new Preset("Health", "execute if data entity @s Health"),
-				new Preset("Hunger", "execute if data entity @s foodLevel"),
+				new Preset("Health", "execute if data entity @s {Health:20.0f}"),
+				new Preset("Hunger", "execute if data entity @s {foodLevel:0}"),
 				new Preset("Name", "execute if entity @s[name=Steve]"),
 				new Preset("Score", "execute if score @s kills matches 10.."),
 				new Preset("Day", "mmcheck time day"),
