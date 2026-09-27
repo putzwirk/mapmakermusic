@@ -29,6 +29,7 @@ public class MusicConditionScreen extends Screen {
 	private static final int MAX_SUGGESTIONS = 8;
 	private static final int SUGGESTION_ROW = 11;
 	private static final int NOTE_ROW = 14;
+	private static final int COMMAND_DROPDOWN_RESERVE_ROWS = 5;
 
 	private final Screen parent;
 	private final MusicBlockEntity block;
@@ -73,6 +74,14 @@ public class MusicConditionScreen extends Screen {
 		return kind == null ? "Unknown" : kind.displayName();
 	}
 
+	private int panelTop() {
+		ConditionKind kind = condition.kind();
+		if (kind != null && kind.editorTopAnchor() && this.height >= bgHeight + 40) {
+			return 20;
+		}
+		return (this.height - bgHeight) / 2;
+	}
+
 	@Override
 	protected void init() {
 		super.init();
@@ -88,7 +97,7 @@ public class MusicConditionScreen extends Screen {
 		presetKey = null;
 
 		int leftPos = (this.width - bgWidth) / 2;
-		int topPos = (this.height - bgHeight) / 2;
+		int topPos = panelTop();
 		int x = leftPos + GuiLayout.SCREEN_PADDING;
 		int contentWidth = bgWidth - 2 * GuiLayout.SCREEN_PADDING;
 		int fieldWidth = (contentWidth - GuiLayout.WIDGET_SPACING) / 2;
@@ -136,9 +145,13 @@ public class MusicConditionScreen extends Screen {
 				addModeButton(kind, x, y, contentWidth);
 				yield 1;
 			}
-			case TEXT, ENTITY_ID, LONG_TEXT -> {
+			case TEXT, ENTITY_ID -> {
 				addTextBox(spec, x, y, contentWidth);
 				yield 1;
+			}
+			case LONG_TEXT -> {
+				addTextBox(spec, x, y, contentWidth);
+				yield "command".equals(spec.suggest()) ? 1 + COMMAND_DROPDOWN_RESERVE_ROWS : 1;
 			}
 			case NUMBER -> {
 				addNumberBox(spec, x, y, contentWidth);
@@ -489,7 +502,7 @@ public class MusicConditionScreen extends Screen {
 	public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float delta) {
 		this.renderBackground(guiGraphics);
 		int leftPos = (this.width - bgWidth) / 2;
-		int topPos = (this.height - bgHeight) / 2;
+		int topPos = panelTop();
 		guiGraphics.fill(leftPos, topPos, leftPos + bgWidth, topPos + bgHeight, 0xF0101010);
 		guiGraphics.renderOutline(leftPos, topPos, bgWidth, bgHeight, GuiIcons.boxOutlineColor(block.getBlockPos(), block.getOutlineColor()));
 		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + GuiLayout.TITLE_TOP, 0xFFFFFF);

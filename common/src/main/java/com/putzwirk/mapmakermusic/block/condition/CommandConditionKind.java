@@ -67,8 +67,8 @@ public final class CommandConditionKind implements ConditionKind {
 	@Override
 	public List<FieldSpec> editorFields() {
 		return List.of(
-				FieldSpec.presets(),
 				FieldSpec.longText(COMMAND_KEY, "Command", "command to test, without leading slash", "command"),
+				FieldSpec.presets(),
 				FieldSpec.action(TEST_ACTION, "Test now"));
 	}
 
@@ -79,7 +79,12 @@ public final class CommandConditionKind implements ConditionKind {
 
 	@Override
 	public int editorHeight() {
-		return 300;
+		return 360;
+	}
+
+	@Override
+	public boolean editorTopAnchor() {
+		return true;
 	}
 
 	@Override
@@ -98,7 +103,13 @@ public final class CommandConditionKind implements ConditionKind {
 				new Preset("Night", "mmcheck time night"),
 				new Preset("Weather", "mmcheck weather clear"),
 				new Preset("Biome", "mmcheck biome minecraft:plains"),
-				new Preset("Entities", "execute if entity @e[type=minecraft:cow,distance=..30]"));
+				new Preset("Entities", "execute if entity @e[type=minecraft:cow,distance=..30]"),
+				new Preset("Item", "clear @s minecraft:diamond 0"),
+				new Preset("GameMode", "execute if entity @s[gamemode=creative]"),
+				new Preset("Team", "execute if entity @s[team=Red]"),
+				new Preset("Full HP", "execute if data entity @s {Health:20.0f}"),
+				new Preset("Holding", "execute if data entity @s {SelectedItem:{id:\"minecraft:torch\"}}"),
+				new Preset("Dragon", "execute if entity @e[type=minecraft:ender_dragon,limit=1]"));
 	}
 
 	@Override

@@ -57,4 +57,8 @@ public interface ConditionKind {
 	default List<Preset> editorPresets() {
 		return List.of();
 	}
+
+	default boolean editorTopAnchor() {
+		return false;
+	}
 }
