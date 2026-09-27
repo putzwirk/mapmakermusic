@@ -8,6 +8,7 @@ import com.putzwirk.mapmakermusic.block.MusicBlockItem;
 import com.putzwirk.mapmakermusic.block.MusicBlockTicker;
 import com.putzwirk.mapmakermusic.block.condition.BuiltinConditionKinds;
 import com.putzwirk.mapmakermusic.command.MusicCommand;
+import com.putzwirk.mapmakermusic.command.CheckCommand;
 import com.putzwirk.mapmakermusic.library.MusicLibrary;
 import com.putzwirk.mapmakermusic.network.FabricMusicRemote;
 import com.putzwirk.mapmakermusic.network.ConditionTestHandler;
@@ -75,6 +76,7 @@ public class MapMakerMusic implements ModInitializer {
 
 		MusicRemotes.setRemote(new FabricMusicRemote());
 		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> MusicCommand.register(dispatcher));
+		CommandRegistrationCallback.EVENT.register((dispatcher, registryAccess, environment) -> CheckCommand.register(dispatcher));
 		AreaWandHandler.setSelectionSender((player, pos) -> {
 			FriendlyByteBuf buf = PacketByteBufs.create();
 			buf.writeBoolean(pos != null);

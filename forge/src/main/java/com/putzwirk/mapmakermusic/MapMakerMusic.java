@@ -10,6 +10,7 @@ import com.putzwirk.mapmakermusic.block.MusicBlockTicker;
 import com.putzwirk.mapmakermusic.block.condition.BuiltinConditionKinds;
 import com.putzwirk.mapmakermusic.client.MapMakerMusicClient;
 import com.putzwirk.mapmakermusic.command.MusicCommand;
+import com.putzwirk.mapmakermusic.command.CheckCommand;
 import com.putzwirk.mapmakermusic.library.MusicLibrary;
 import com.putzwirk.mapmakermusic.network.ForgeMusicRemote;
 import com.putzwirk.mapmakermusic.network.MusicNetworking;
@@ -95,6 +96,7 @@ public class MapMakerMusic {
 	public void onRegisterCommands(RegisterCommandsEvent event) {
 		CommandDispatcher<CommandSourceStack> dispatcher = event.getDispatcher();
 		MusicCommand.register(dispatcher);
+		CheckCommand.register(dispatcher);
 	}
 
 	@SubscribeEvent
