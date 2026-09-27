@@ -82,7 +82,7 @@ public final class AreaWandHandler {
 		if (level.isClientSide) {
 			return false;
 		}
-		if (!player.getAbilities().instabuild) {
+		if (!player.hasPermissions(2)) {
 			return false;
 		}
 		return isWandInMainHand(player);
