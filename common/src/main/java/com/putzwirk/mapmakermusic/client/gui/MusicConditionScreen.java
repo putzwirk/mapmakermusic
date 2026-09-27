@@ -187,6 +187,7 @@ public class MusicConditionScreen extends Screen {
 		if (command) {
 			commandBox = box;
 			commandSuggestions = new CommandSuggestions(this.minecraft, this, box, this.font, true, true, 0, 7, false, Integer.MIN_VALUE);
+			commandSuggestions.setAllowSuggestions(true);
 		} else if (spec.suggest() != null && suggestionBox == null
 				&& (spec.type() == FieldSpec.FieldType.TEXT || spec.type() == FieldSpec.FieldType.ENTITY_ID || spec.type() == FieldSpec.FieldType.LONG_TEXT)) {
 			suggestionBox = box;
