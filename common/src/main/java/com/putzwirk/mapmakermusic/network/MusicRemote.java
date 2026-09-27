@@ -48,10 +48,6 @@ public interface MusicRemote {
 		@Override
 		public void sendTestResult(ServerPlayer player, String command, boolean pass) {
 		}
-
-		@Override
-		public void sendCommandSuggestions(ServerPlayer player, String command, int start, java.util.List<String> suggestions) {
-		}
 	};
 
 	void playMusic(ServerPlayer player, String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop, float startOffsetSeconds);
@@ -73,6 +69,4 @@ public interface MusicRemote {
 	void sendTrackChunk(ServerPlayer player, String name, int totalLength, int offset, byte[] data, boolean last);
 
 	void sendTestResult(ServerPlayer player, String command, boolean pass);
-
-	void sendCommandSuggestions(ServerPlayer player, String command, int start, java.util.List<String> suggestions);
 }

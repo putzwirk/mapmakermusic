@@ -20,8 +20,6 @@ public final class MusicNetworking {
 	public static final ResourceLocation TRACK_FINISHED = MapMakerMusic.id("track_finished");
 	public static final ResourceLocation TEST_CONDITION = MapMakerMusic.id("test_condition");
 	public static final ResourceLocation TEST_CONDITION_RESULT = MapMakerMusic.id("test_condition_result");
-	public static final ResourceLocation TEST_CONDITION_SUGGEST = MapMakerMusic.id("test_condition_suggest");
-	public static final ResourceLocation TEST_CONDITION_SUGGEST_RESULT = MapMakerMusic.id("test_condition_suggest_result");
 
 	private MusicNetworking() {
 	}

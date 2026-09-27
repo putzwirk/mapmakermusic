@@ -15,6 +15,7 @@ import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.CommandSuggestions;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.components.Tooltip;
 import net.minecraft.client.gui.screens.Screen;
@@ -47,9 +48,8 @@ public class MusicConditionScreen extends Screen {
 	private final Map<String, Button> actionButtons = new HashMap<>();
 	private List<String> suggestions = List.of();
 	private int suggestionIndex;
-	private List<String> serverSuggestions = List.of();
-	private int suggestStart = -1;
-	private String lastSuggestRequest;
+	private EditBox commandBox;
+	private CommandSuggestions commandSuggestions;
 	private String testStatus;
 	private int testStatusColor;
 	private int testStatusY = -1;
@@ -79,6 +79,8 @@ public class MusicConditionScreen extends Screen {
 		doubleBoxes.clear();
 		doubleKeys.clear();
 		actionButtons.clear();
+		commandBox = null;
+		commandSuggestions = null;
 		suggestionBox = null;
 		suggestParamKey = null;
 		suggestKey = null;
@@ -167,18 +169,25 @@ public class MusicConditionScreen extends Screen {
 	}
 
 	private void addTextBox(FieldSpec spec, int x, int y, int contentWidth) {
-		EditBox box = new EditBox(this.font, x, y, contentWidth, GuiLayout.BUTTON_HEIGHT, Component.literal(spec.label()));
+		boolean command = "command".equals(spec.suggest()) && spec.type() == FieldSpec.FieldType.LONG_TEXT;
+		int height = command ? 20 : GuiLayout.BUTTON_HEIGHT;
+		EditBox box = new EditBox(this.font, x, y, contentWidth, height, Component.literal(spec.label()));
 		box.setHint(Component.literal(spec.hint() == null ? "value" : spec.hint()));
-		box.setMaxLength(spec.type() == FieldSpec.FieldType.LONG_TEXT ? 512 : 128);
+		box.setMaxLength(command ? 32500 : 128);
 		box.setValue(condition.params().getString(spec.key()));
 		box.setResponder(text -> {
 			condition.params().putString(spec.key(), text);
-			if (box == suggestionBox) {
+			if (box == commandBox && commandSuggestions != null) {
+				commandSuggestions.updateCommandInfo();
+			} else if (box == suggestionBox) {
 				refreshSuggestions();
 			}
 		});
 		addRenderableWidget(box);
-		if (spec.suggest() != null && suggestionBox == null
+		if (command) {
+			commandBox = box;
+			commandSuggestions = new CommandSuggestions(this.minecraft, this, box, this.font, true, true, 0, 7, false, Integer.MIN_VALUE);
+		} else if (spec.suggest() != null && suggestionBox == null
 				&& (spec.type() == FieldSpec.FieldType.TEXT || spec.type() == FieldSpec.FieldType.ENTITY_ID || spec.type() == FieldSpec.FieldType.LONG_TEXT)) {
 			suggestionBox = box;
 			suggestParamKey = spec.key();
@@ -221,7 +230,7 @@ public class MusicConditionScreen extends Screen {
 
 	private int addPresetGrid(ConditionKind kind, int x, int y, int contentWidth) {
 		List<Preset> presets = kind.editorPresets();
-		if (presets.isEmpty() || presetBox == null) {
+		if (presets.isEmpty() || presetKey == null) {
 			return 0;
 		}
 		int cols = 3;
@@ -278,32 +287,15 @@ public class MusicConditionScreen extends Screen {
 		testStatusColor = pass ? 0x55FF55 : 0xFF5555;
 	}
 
-	public static void handleSuggestionResult(String echo, int start, List<String> texts) {
-		Minecraft client = Minecraft.getInstance();
-		if (client == null || !(client.screen instanceof MusicConditionScreen screen)) {
-			return;
-		}
-		screen.showSuggestions(echo, start, texts);
-	}
-
-	private void showSuggestions(String echo, int start, List<String> texts) {
-		if (suggestionBox == null || !"command".equals(suggestKey)) {
-			return;
-		}
-		if (!suggestionBox.getValue().equals(echo)) {
-			return;
-		}
-		serverSuggestions = List.copyOf(texts);
-		suggestStart = start;
-		refreshSuggestions();
-	}
-
 	private double dbl(String key) {
 		return condition.params().contains(key) ? condition.params().getDouble(key) : 0;
 	}
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+		if (commandSuggestions != null && commandSuggestions.mouseScrolled(delta)) {
+			return true;
+		}
 		if (delta != 0) {
 			for (int i = 0; i < doubleBoxes.size(); i++) {
 				EditBox box = doubleBoxes.get(i);
@@ -321,6 +313,10 @@ public class MusicConditionScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+		if (commandBox != null && commandBox.isFocused() && commandSuggestions != null
+				&& commandSuggestions.keyPressed(keyCode, scanCode, modifiers)) {
+			return true;
+		}
 		if (!suggestions.isEmpty() && suggestionBox != null && suggestionBox.isFocused()) {
 			if (keyCode == GLFW.GLFW_KEY_TAB || keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
 				acceptSuggestion();
@@ -349,6 +345,9 @@ public class MusicConditionScreen extends Screen {
 
 	@Override
 	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		if (commandSuggestions != null && commandSuggestions.mouseClicked(mouseX, mouseY, button)) {
+			return true;
+		}
 		if (button == 0 && !suggestions.isEmpty() && suggestionBox != null && suggestionBox.visible) {
 			for (int i = 0; i < suggestions.size(); i++) {
 				int rowTop = suggestionBox.getY() + suggestionBox.getHeight() + i * SUGGESTION_ROW;
@@ -370,16 +369,8 @@ public class MusicConditionScreen extends Screen {
 			return;
 		}
 		String pick = suggestions.get(Math.min(suggestionIndex, suggestions.size() - 1));
-		if (suggestStart >= 0) {
-			String current = suggestionBox.getValue();
-			int cut = Math.max(0, Math.min(suggestStart, current.length()));
-			String completed = current.substring(0, cut) + pick;
-			suggestionBox.setValue(completed);
-			condition.params().putString(suggestParamKey, completed);
-		} else {
-			suggestionBox.setValue(pick);
-			condition.params().putString(suggestParamKey, pick);
-		}
+		suggestionBox.setValue(pick);
+		condition.params().putString(suggestParamKey, pick);
 		suggestionBox.moveCursorToEnd();
 		refreshSuggestions();
 	}
@@ -390,15 +381,7 @@ public class MusicConditionScreen extends Screen {
 			return;
 		}
 		if ("command".equals(suggestKey)) {
-			String current = suggestionBox.getValue();
-			if (!current.equals(lastSuggestRequest)) {
-				lastSuggestRequest = current;
-				ConditionTestNet.requestSuggestions(current);
-			}
-			suggestions = serverSuggestions.size() > MAX_SUGGESTIONS ? serverSuggestions.subList(0, MAX_SUGGESTIONS) : serverSuggestions;
-			if (suggestionIndex >= suggestions.size()) {
-				suggestionIndex = 0;
-			}
+			suggestions = List.of();
 			return;
 		}
 		String current = suggestionBox.getValue().trim().toLowerCase(Locale.ROOT);
@@ -520,5 +503,8 @@ public class MusicConditionScreen extends Screen {
 
 		super.render(guiGraphics, mouseX, mouseY, delta);
 		renderSuggestions(guiGraphics);
+		if (commandSuggestions != null) {
+			commandSuggestions.render(guiGraphics, mouseX, mouseY);
+		}
 	}
 }
