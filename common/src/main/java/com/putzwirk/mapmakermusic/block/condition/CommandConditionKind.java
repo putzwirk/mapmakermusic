@@ -67,8 +67,8 @@ public final class CommandConditionKind implements ConditionKind {
 	@Override
 	public List<FieldSpec> editorFields() {
 		return List.of(
-				FieldSpec.longText(COMMAND_KEY, "Command", "command to test, without leading slash", "command"),
 				FieldSpec.presets(),
+				FieldSpec.longText(COMMAND_KEY, "Command", "command to test, without leading slash", "command"),
 				FieldSpec.action(TEST_ACTION, "Test now"));
 	}
 
@@ -84,21 +84,21 @@ public final class CommandConditionKind implements ConditionKind {
 
 	@Override
 	public List<String> editorNotes() {
-		return List.of("Click a preset, or type your own command");
+		return List.of();
 	}
 
 	@Override
 	public List<Preset> editorPresets() {
 		return List.of(
-				new Preset("Health", "data get entity @s Health"),
-				new Preset("Hunger", "data get entity @s foodLevel"),
-				new Preset("Name", "execute if entity @s[name=Steve] run xp query @s levels"),
-				new Preset("Score", "execute if score @s kills matches 10.. run xp query @s levels"),
+				new Preset("Health", "execute if data entity @s Health"),
+				new Preset("Hunger", "execute if data entity @s foodLevel"),
+				new Preset("Name", "execute if entity @s[name=Steve]"),
+				new Preset("Score", "execute if score @s kills matches 10.."),
 				new Preset("Day", "mmcheck time day"),
 				new Preset("Night", "mmcheck time night"),
 				new Preset("Weather", "mmcheck weather clear"),
 				new Preset("Biome", "mmcheck biome minecraft:plains"),
-				new Preset("Entities", "execute if entity @e[type=minecraft:cow,distance=..30] run xp query @s levels"));
+				new Preset("Entities", "execute if entity @e[type=minecraft:cow,distance=..30]"));
 	}
 
 	@Override
@@ -115,7 +115,7 @@ public final class CommandConditionKind implements ConditionKind {
 	}
 
 	public static String playerNameCommand(String name) {
-		return "execute if entity @s[name=" + name + "] run xp query @s levels";
+		return "execute if entity @s[name=" + name + "]";
 	}
 
 	public static boolean runNow(ServerPlayer player, String command) {		MinecraftServer server = player.getServer();

@@ -35,7 +35,7 @@ public class MusicConditionTest {
 
 	@Test
 	public void playerNameCommand() {
-		assertEquals("execute if entity @s[name=Steve] run xp query @s levels", CommandConditionKind.playerNameCommand("Steve"));
+		assertEquals("execute if entity @s[name=Steve]", CommandConditionKind.playerNameCommand("Steve"));
 		assertEquals("Run execute if entity @s[nam...", cmd(CommandConditionKind.playerNameCommand("Steve")).describe());
 	}
 

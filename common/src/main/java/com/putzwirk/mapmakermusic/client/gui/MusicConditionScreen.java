@@ -101,6 +101,12 @@ public class MusicConditionScreen extends Screen {
 		boolean hasAction = false;
 		if (kind != null) {
 			for (FieldSpec spec : kind.editorFields()) {
+				if (spec.type() == FieldSpec.FieldType.LONG_TEXT && spec.key() != null) {
+					presetKey = spec.key();
+					break;
+				}
+			}
+			for (FieldSpec spec : kind.editorFields()) {
 				if (!kind.fieldVisible(spec, condition)) {
 					continue;
 				}
@@ -231,12 +237,14 @@ public class MusicConditionScreen extends Screen {
 	}
 
 	private void applyPreset(Preset preset) {
-		if (presetBox == null || presetKey == null) {
+		if (presetKey == null) {
 			return;
 		}
-		presetBox.setValue(preset.command());
+		if (presetBox != null) {
+			presetBox.setValue(preset.command());
+			presetBox.moveCursorToEnd();
+		}
 		condition.params().putString(presetKey, preset.command());
-		presetBox.moveCursorToEnd();
 		testStatus = null;
 		refreshSuggestions();
 	}

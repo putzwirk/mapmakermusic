@@ -22,7 +22,7 @@ public final class ConditionTestHandler {
 		if (player == null || player.getServer() == null || command == null) {
 			return;
 		}
-		if (!player.hasPermissions(2)) {
+		if (!canTest(player)) {
 			LOGGER.warn("Rejected condition test from {} without permission", player.getScoreboardName());
 			MusicRemotes.getRemote().sendTestResult(player, command, false);
 			return;
@@ -34,7 +34,7 @@ public final class ConditionTestHandler {
 		if (player == null || player.getServer() == null || command == null) {
 			return;
 		}
-		if (!player.hasPermissions(2)) {
+		if (!canTest(player)) {
 			return;
 		}
 		MinecraftServer server = player.getServer();
@@ -55,8 +55,11 @@ public final class ConditionTestHandler {
 		});
 	}
 
-	private static void sendSuggestions(ServerPlayer player, String command, int start, List<String> texts) {
-		if (player.getServer() == null || player.getServer().getPlayerList().getPlayer(player.getUUID()) == null) {
+	private static boolean canTest(ServerPlayer player) {
+		return player.getAbilities().instabuild || player.hasPermissions(2);
+	}
+
+	private static void sendSuggestions(ServerPlayer player, String command, int start, List<String> texts) {		if (player.getServer() == null || player.getServer().getPlayerList().getPlayer(player.getUUID()) == null) {
 			return;
 		}
 		MusicRemotes.getRemote().sendCommandSuggestions(player, command, start, texts);

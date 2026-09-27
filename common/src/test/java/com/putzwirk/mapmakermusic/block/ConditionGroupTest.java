@@ -90,7 +90,7 @@ public class ConditionGroupTest {
 		root.setOp(ConditionGroup.Op.ANY);
 		root.getKids().add(cmd("mmcheck time day"));
 		ConditionGroup sub = new ConditionGroup();
-		MusicCondition score = cmd("execute if score @s kills matches 0..100 run xp query @s levels");
+		MusicCondition score = cmd("execute if score @s kills matches 0..100");
 		sub.getKids().add(score);
 		root.getKids().add(sub);
 

@@ -104,11 +104,12 @@ public class CommandConditionKindTest {
 		assertEquals(420, KIND.editorWidth());
 		assertEquals(300, KIND.editorHeight());
 		assertTrue(KIND.editorFields().stream().anyMatch(spec -> spec.type() == FieldSpec.FieldType.LONG_TEXT && "command".equals(spec.suggest())));
-		assertEquals(1, KIND.editorNotes().size());
-		assertEquals("Click a preset, or type your own command", KIND.editorNotes().get(0));
+		assertTrue(KIND.editorNotes().isEmpty());
 		assertEquals(9, KIND.editorPresets().size());
 		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Day") && preset.command().equals("mmcheck time day")));
-		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Health") && preset.command().equals("data get entity @s Health")));
+		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Health") && preset.command().equals("execute if data entity @s Health")));
+		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Name") && preset.command().equals("execute if entity @s[name=Steve]")));
+		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Score") && preset.command().equals("execute if score @s kills matches 10..")));
 		assertTrue(KIND.editorFields().stream().anyMatch(spec -> spec.type() == FieldSpec.FieldType.PRESETS));
 		ConditionKind plain = new ConditionKind() {
 			@Override
