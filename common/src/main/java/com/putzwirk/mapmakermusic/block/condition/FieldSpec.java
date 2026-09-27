@@ -1,12 +1,11 @@
 package com.putzwirk.mapmakermusic.block.condition;
 
-import java.util.List;
-
-public record FieldSpec(FieldType type, String label, String hint, List<String> options, String suggest) {
+public record FieldSpec(FieldType type, String key, String secondKey, String label, String secondLabel, String hint, String suggest) {
 
 	public enum FieldType {
 		TEXT,
 		LONG_TEXT,
+		NUMBER,
 		RANGE,
 		MODE_CYCLE,
 		BOUNDS,
@@ -14,35 +13,35 @@ public record FieldSpec(FieldType type, String label, String hint, List<String> 
 		ACTION
 	}
 
-	public static FieldSpec text(String label, String hint) {
-		return new FieldSpec(FieldType.TEXT, label, hint, List.of(), null);
+	public static FieldSpec text(String key, String label, String hint) {
+		return new FieldSpec(FieldType.TEXT, key, null, label, null, hint, null);
 	}
 
-	public static FieldSpec longText(String label, String hint) {
-		return new FieldSpec(FieldType.LONG_TEXT, label, hint, List.of(), null);
+	public static FieldSpec longText(String key, String label, String hint) {
+		return new FieldSpec(FieldType.LONG_TEXT, key, null, label, null, hint, null);
 	}
 
-	public static FieldSpec range(String minLabel, String maxLabel) {
-		return new FieldSpec(FieldType.RANGE, minLabel, maxLabel, List.of(), null);
+	public static FieldSpec number(String key, String label) {
+		return new FieldSpec(FieldType.NUMBER, key, null, label, null, null, null);
+	}
+
+	public static FieldSpec range(String minKey, String maxKey, String minLabel, String maxLabel) {
+		return new FieldSpec(FieldType.RANGE, minKey, maxKey, minLabel, maxLabel, null, null);
 	}
 
 	public static FieldSpec modeCycle() {
-		return new FieldSpec(FieldType.MODE_CYCLE, "", null, List.of(), null);
+		return new FieldSpec(FieldType.MODE_CYCLE, null, null, "", null, null, null);
 	}
 
 	public static FieldSpec bounds() {
-		return new FieldSpec(FieldType.BOUNDS, "", null, List.of(), null);
+		return new FieldSpec(FieldType.BOUNDS, null, null, "", null, null, null);
 	}
 
-	public static FieldSpec entityId(String hint, String suggest) {
-		return new FieldSpec(FieldType.ENTITY_ID, "", hint, List.of(), suggest);
+	public static FieldSpec entityId(String key, String hint, String suggest) {
+		return new FieldSpec(FieldType.ENTITY_ID, key, null, "", null, hint, suggest);
 	}
 
 	public static FieldSpec action(String actionId, String label) {
-		return new FieldSpec(FieldType.ACTION, label, null, List.of(actionId), null);
-	}
-
-	public String actionId() {
-		return type == FieldType.ACTION && !options.isEmpty() ? options.get(0) : null;
+		return new FieldSpec(FieldType.ACTION, actionId, null, label, null, null, null);
 	}
 }

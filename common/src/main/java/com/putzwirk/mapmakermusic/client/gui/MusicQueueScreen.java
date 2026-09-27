@@ -4,6 +4,8 @@ import com.putzwirk.mapmakermusic.block.ConditionGroup;
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.block.MusicCondition;
 import com.putzwirk.mapmakermusic.block.MusicQueue;
+import com.putzwirk.mapmakermusic.block.condition.ConditionKind;
+import com.putzwirk.mapmakermusic.block.condition.ConditionKindRegistry;
 import com.putzwirk.mapmakermusic.library.MusicLibrary;
 import java.util.ArrayList;
 import java.util.List;
@@ -165,11 +167,11 @@ public class MusicQueueScreen extends Screen {
 		this.catalogList.setLeftPos(leftPos + PAD);
 		this.catalogList.setRenderSelection(false);
 		this.catalogList.addCatalogEntry(this.catalogList.new Entry(null));
-		for (MusicCondition.Type type : MusicCondition.Type.values()) {
-			if (type == MusicCondition.Type.ENTITY_ALIVE && !block.isAreaGate()) {
+		for (ConditionKind kind : ConditionKindRegistry.all()) {
+			if (kind.needsAreaGate() && !block.isAreaGate()) {
 				continue;
 			}
-			this.catalogList.addCatalogEntry(this.catalogList.new Entry(type));
+			this.catalogList.addCatalogEntry(this.catalogList.new Entry(kind));
 		}
 		addRenderableWidget(catalogList);
 
@@ -308,8 +310,8 @@ public class MusicQueueScreen extends Screen {
 		return null;
 	}
 
-	private void addCondition(MusicCondition.Type type) {
-		viewed().getKids().add(type.newDefault());
+	private void addCondition(ConditionKind kind) {
+		viewed().getKids().add(kind.newDefault());
 		GuiIcons.click();
 		refreshActive();
 	}
@@ -602,35 +604,35 @@ public class MusicQueueScreen extends Screen {
 		}
 
 		class Entry extends ObjectSelectionList.Entry<Entry> {
-			private final MusicCondition.Type type;
+			private final ConditionKind kind;
 			private int rowLeft;
 			private int rowWidth;
 
-			Entry(MusicCondition.Type type) {
-				this.type = type;
+			Entry(ConditionKind kind) {
+				this.kind = kind;
 			}
 
 			@Override
 			public Component getNarration() {
-				return Component.literal(type == null ? "Add group" : type.displayName());
+				return Component.literal(kind == null ? "Add group" : kind.displayName());
 			}
 
 			@Override
 			public void render(GuiGraphics guiGraphics, int index, int top, int left, int width, int height, int mouseX, int mouseY, boolean isHovered, float partialTick) {
 				this.rowLeft = left;
 				this.rowWidth = width;
-				String name = type == null ? "Group" : type.displayName();
+				String name = kind == null ? "Group" : kind.displayName();
 				int bx = left + 2;
 				drawRowGlyph(guiGraphics, bx, top + 4, GuiIcons.ADD, inGlyph(mouseX, mouseY, bx, top + 4));
-				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(name, width - ROW_GLYPH - 8), left + 2 + ROW_GLYPH + 2, top + 7, type == null ? 0xFFE08A8A : 0xFFFFFF);
+				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(name, width - ROW_GLYPH - 8), left + 2 + ROW_GLYPH + 2, top + 7, kind == null ? 0xFFE08A8A : 0xFFFFFF);
 			}
 
 			@Override
 			public boolean mouseClicked(double mouseX, double mouseY, int button) {
-				if (type == null) {
+				if (kind == null) {
 					addGroup();
 				} else {
-					addCondition(type);
+					addCondition(kind);
 				}
 				return true;
 			}

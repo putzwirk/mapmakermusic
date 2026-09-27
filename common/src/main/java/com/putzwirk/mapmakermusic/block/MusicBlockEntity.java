@@ -1,5 +1,8 @@
 package com.putzwirk.mapmakermusic.block;
 
+import com.putzwirk.mapmakermusic.block.condition.ConditionKindRegistry;
+import com.putzwirk.mapmakermusic.block.condition.PlayerConditionKind;
+
 import java.util.ArrayList;
 import java.util.List;
 import net.minecraft.core.BlockPos;
@@ -403,15 +406,15 @@ public class MusicBlockEntity extends BlockEntity {
 					ConditionGroup root = queue.getRuleRoot();
 					boolean present = false;
 					for (Object kid : root.getKids()) {
-						if (kid instanceof MusicCondition leaf && leaf.getType() == MusicCondition.Type.PLAYER
-								&& selector.equalsIgnoreCase(leaf.getText())) {
+						if (kid instanceof MusicCondition leaf && PlayerConditionKind.ID.equals(leaf.getKindId())
+								&& selector.equalsIgnoreCase(leaf.params().getString(PlayerConditionKind.SELECTOR_KEY))) {
 							present = true;
 							break;
 						}
 					}
 					if (!present) {
-						MusicCondition player = MusicCondition.Type.PLAYER.newDefault();
-						player.setText(selector);
+						MusicCondition player = ConditionKindRegistry.get(PlayerConditionKind.ID).newDefault();
+						player.params().putString(PlayerConditionKind.SELECTOR_KEY, selector);
 						root.getKids().add(0, player);
 					}
 				}

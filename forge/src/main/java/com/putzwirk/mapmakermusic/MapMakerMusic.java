@@ -7,6 +7,7 @@ import com.putzwirk.mapmakermusic.block.MusicBlock;
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.block.MusicBlockItem;
 import com.putzwirk.mapmakermusic.block.MusicBlockTicker;
+import com.putzwirk.mapmakermusic.block.condition.BuiltinConditionKinds;
 import com.putzwirk.mapmakermusic.client.MapMakerMusicClient;
 import com.putzwirk.mapmakermusic.command.MusicCommand;
 import com.putzwirk.mapmakermusic.library.MusicLibrary;
@@ -65,6 +66,8 @@ public class MapMakerMusic {
 		ModBlocks.MUSIC_BLOCK = MUSIC_BLOCK_OBJ::get;
 		ModBlocks.MUSIC_BLOCK_ITEM = MUSIC_BLOCK_ITEM_OBJ::get;
 		ModBlocks.MUSIC_BLOCK_ENTITY_TYPE = MUSIC_BLOCK_ENTITY_TYPE_OBJ::get;
+
+		BuiltinConditionKinds.registerAll();
 
 		modEventBus.addListener(this::buildCreativeTabs);
 		modEventBus.addListener(this::setupClient);

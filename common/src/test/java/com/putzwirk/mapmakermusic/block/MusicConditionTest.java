@@ -2,214 +2,205 @@ package com.putzwirk.mapmakermusic.block;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.putzwirk.mapmakermusic.block.condition.BuiltinConditionKinds;
+import com.putzwirk.mapmakermusic.block.condition.ConditionKindRegistry;
+import com.putzwirk.mapmakermusic.block.condition.CoordinatesConditionKind;
+import com.putzwirk.mapmakermusic.block.condition.EntityAliveConditionKind;
+import com.putzwirk.mapmakermusic.block.condition.InBiomeConditionKind;
+import com.putzwirk.mapmakermusic.block.condition.PlayerConditionKind;
+import com.putzwirk.mapmakermusic.block.condition.PlayerHealthConditionKind;
+import com.putzwirk.mapmakermusic.block.condition.PlayerHungerConditionKind;
+import com.putzwirk.mapmakermusic.block.condition.ScoreboardConditionKind;
+import com.putzwirk.mapmakermusic.block.condition.TimeConditionKind;
+import com.putzwirk.mapmakermusic.block.condition.WeatherConditionKind;
 import java.util.List;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.resources.ResourceLocation;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
 public class MusicConditionTest {
 
+	@BeforeAll
+	public static void setup() {
+		BuiltinConditionKinds.registerAll();
+	}
+
+	private static MusicCondition def(ResourceLocation id) {
+		return ConditionKindRegistry.get(id).newDefault();
+	}
+
 	@Test
 	public void defaults() {
-		assertEquals("day", MusicCondition.Type.TIME.newDefault().getText());
-		assertEquals("clear", MusicCondition.Type.WEATHER.newDefault().getText());
-		assertEquals(20.0, MusicCondition.Type.PLAYER_HEALTH.newDefault().getMax());
-		assertEquals(20.0, MusicCondition.Type.PLAYER_HUNGER.newDefault().getMax());
-		assertEquals("minecraft:wither", MusicCondition.Type.ENTITY_ALIVE.newDefault().getText());
-		assertEquals("minecraft:plains", MusicCondition.Type.IN_BIOME.newDefault().getText());
-		assertTrue(Double.isNaN(MusicCondition.Type.COORDINATES.newDefault().getBound(0)));
+		assertEquals("day", def(TimeConditionKind.ID).params().getString(TimeConditionKind.MODE_KEY));
+		assertEquals("clear", def(WeatherConditionKind.ID).params().getString(WeatherConditionKind.MODE_KEY));
+		assertEquals(20.0, def(PlayerHealthConditionKind.ID).params().getDouble(PlayerHealthConditionKind.MAX_KEY));
+		assertEquals(20.0, def(PlayerHungerConditionKind.ID).params().getDouble(PlayerHungerConditionKind.MAX_KEY));
+		assertEquals("minecraft:wither", def(EntityAliveConditionKind.ID).params().getString(EntityAliveConditionKind.ENTITY_KEY));
+		assertEquals("minecraft:plains", def(InBiomeConditionKind.ID).params().getString(InBiomeConditionKind.BIOME_KEY));
+		assertTrue(Double.isNaN(CoordinatesConditionKind.bound(def(CoordinatesConditionKind.ID).params(), 0)));
 	}
 
 	@Test
 	public void timeModesCycle() {
-		MusicCondition condition = MusicCondition.Type.TIME.newDefault();
-		assertEquals(List.of("day", "night", "range"), MusicCondition.Type.TIME.modes());
-		condition.getType().cycleMode(condition);
-		assertEquals("night", condition.getText());
-		condition.getType().cycleMode(condition);
-		assertEquals("range", condition.getText());
-		condition.getType().cycleMode(condition);
-		assertEquals("day", condition.getText());
+		MusicCondition condition = def(TimeConditionKind.ID);
+		assertEquals(List.of("day", "night", "range"), condition.kind().modes());
+		condition.kind().cycleMode(condition);
+		assertEquals("night", condition.params().getString(TimeConditionKind.MODE_KEY));
+		condition.kind().cycleMode(condition);
+		assertEquals("range", condition.params().getString(TimeConditionKind.MODE_KEY));
+		condition.kind().cycleMode(condition);
+		assertEquals("day", condition.params().getString(TimeConditionKind.MODE_KEY));
 	}
 
 	@Test
 	public void entityCountTagDescribe() {
-		MusicCondition both = MusicCondition.Type.ENTITY_ALIVE.newDefault();
-		both.setText("minecraft:villager");
-		both.setTag("boss");
-		both.setCountOp("exactly");
-		both.setMin(0);
+		MusicCondition both = def(EntityAliveConditionKind.ID);
+		both.params().putString(EntityAliveConditionKind.ENTITY_KEY, "minecraft:villager");
+		both.params().putString(EntityAliveConditionKind.TAG_KEY, "boss");
+		both.params().putString(EntityAliveConditionKind.OP_KEY, "exactly");
+		both.params().putDouble(EntityAliveConditionKind.THRESHOLD_KEY, 0);
 		assertEquals("Villager #boss == 0", both.describe());
 
-		MusicCondition tagOnly = MusicCondition.Type.ENTITY_ALIVE.newDefault();
-		tagOnly.setText("");
-		tagOnly.setTag("boss");
-		tagOnly.setCountOp("at least");
-		tagOnly.setMin(1);
+		MusicCondition tagOnly = def(EntityAliveConditionKind.ID);
+		tagOnly.params().putString(EntityAliveConditionKind.ENTITY_KEY, "");
+		tagOnly.params().putString(EntityAliveConditionKind.TAG_KEY, "boss");
+		tagOnly.params().putString(EntityAliveConditionKind.OP_KEY, "at least");
+		tagOnly.params().putDouble(EntityAliveConditionKind.THRESHOLD_KEY, 1);
 		assertEquals("#boss >= 1", tagOnly.describe());
 	}
 
 	@Test
 	public void entityCountTagRoundtrips() {
-		MusicCondition condition = MusicCondition.Type.ENTITY_ALIVE.newDefault();
-		condition.setText("minecraft:villager");
-		condition.setTag("boss");
-		condition.setCountOp("at most");
-		condition.setMin(3);
+		MusicCondition condition = def(EntityAliveConditionKind.ID);
+		condition.params().putString(EntityAliveConditionKind.ENTITY_KEY, "minecraft:villager");
+		condition.params().putString(EntityAliveConditionKind.TAG_KEY, "boss");
+		condition.params().putString(EntityAliveConditionKind.OP_KEY, "at most");
+		condition.params().putDouble(EntityAliveConditionKind.THRESHOLD_KEY, 3);
 		MusicCondition loaded = MusicCondition.load(condition.save());
-		assertEquals("boss", loaded.getTag());
-		assertEquals("at most", loaded.getType().modeOf(loaded));
+		assertEquals(EntityAliveConditionKind.ID, loaded.getKindId());
+		assertEquals("boss", loaded.params().getString(EntityAliveConditionKind.TAG_KEY));
+		assertEquals("at most", loaded.kind().modeOf(loaded));
 		assertEquals("Villager #boss <= 3", loaded.describe());
-		assertEquals("boss", condition.copy().getTag());
-	}
-
-	@Test
-	public void legacyLoadHasEmptyTag() {
-		CompoundTag tag = new CompoundTag();
-		tag.putString("Type", "ENTITY_ALIVE");
-		tag.putString("Text", "minecraft:wither");
-		tag.putDouble("Min", 1);
-		tag.putDouble("Max", 100);
-		MusicCondition loaded = MusicCondition.load(tag);
-		assertEquals("", loaded.getTag());
-		assertEquals("Wither >= 1", loaded.describe());
+		assertEquals("boss", condition.copy().params().getString(EntityAliveConditionKind.TAG_KEY));
 	}
 
 	@Test
 	public void entityCountModeCycles() {
-		MusicCondition condition = MusicCondition.Type.ENTITY_ALIVE.newDefault();
-		assertEquals(List.of("at least", "at most", "exactly"), MusicCondition.Type.ENTITY_ALIVE.modes());
-		assertEquals("at least", condition.getType().modeOf(condition));
+		MusicCondition condition = def(EntityAliveConditionKind.ID);
+		assertEquals(List.of("at least", "at most", "exactly"), condition.kind().modes());
+		assertEquals("at least", condition.kind().modeOf(condition));
 		assertEquals("Wither >= 1", condition.describe());
-		condition.getType().cycleMode(condition);
-		assertEquals("at most", condition.getType().modeOf(condition));
+		condition.kind().cycleMode(condition);
+		assertEquals("at most", condition.kind().modeOf(condition));
 		assertEquals("Wither <= 1", condition.describe());
-		condition.getType().cycleMode(condition);
-		assertEquals("exactly", condition.getType().modeOf(condition));
+		condition.kind().cycleMode(condition);
+		assertEquals("exactly", condition.kind().modeOf(condition));
 		assertEquals("Wither == 1", condition.describe());
-		condition.getType().cycleMode(condition);
-		assertEquals("at least", condition.getType().modeOf(condition));
+		condition.kind().cycleMode(condition);
+		assertEquals("at least", condition.kind().modeOf(condition));
 	}
 
 	@Test
-	public void modelessTypesHaveNoMode() {
-		assertTrue(MusicCondition.Type.COORDINATES.modes().isEmpty());
-		assertEquals(null, MusicCondition.Type.COORDINATES.modeOf(MusicCondition.Type.COORDINATES.newDefault()));
+	public void modelessKindsHaveNoMode() {
+		MusicCondition condition = def(CoordinatesConditionKind.ID);
+		assertTrue(condition.kind().modes().isEmpty());
+		assertNull(condition.kind().modeOf(condition));
 	}
 
 	@ParameterizedTest
-	@CsvSource({"TIME, Daytime", "WEATHER, Clear"})
-	public void describeDefaults(String type, String expected) {
-		MusicCondition condition = MusicCondition.Type.valueOf(type).newDefault();
-		assertEquals(expected, condition.describe());
+	@CsvSource({"mapmakermusic:time, Daytime", "mapmakermusic:weather, Clear"})
+	public void describeDefaults(String id, String expected) {
+		assertEquals(expected, def(new ResourceLocation(id)).describe());
 	}
 
 	@Test
 	public void longIdsDescribePretty() {
-		MusicCondition biome = MusicCondition.Type.IN_BIOME.newDefault();
-		biome.setText("minecraft:old_growth_birch_forest");
+		MusicCondition biome = def(InBiomeConditionKind.ID);
+		biome.params().putString(InBiomeConditionKind.BIOME_KEY, "minecraft:old_growth_birch_forest");
 		assertEquals("Biome Old growth birch forest", biome.describe());
 
-		MusicCondition entity = MusicCondition.Type.ENTITY_ALIVE.newDefault();
-		entity.setText("minecraft:iron_golem");
+		MusicCondition entity = def(EntityAliveConditionKind.ID);
+		entity.params().putString(EntityAliveConditionKind.ENTITY_KEY, "minecraft:iron_golem");
 		assertEquals("Iron golem >= 1", entity.describe());
-
-		assertEquals("", MusicCondition.pretty(null));
-		assertEquals("Wither", MusicCondition.pretty("wither"));
 	}
 
 	@Test
 	public void playerDescribe() {
-		MusicCondition condition = MusicCondition.Type.PLAYER.newDefault();
-		assertEquals("@a", condition.getText());
+		MusicCondition condition = def(PlayerConditionKind.ID);
+		assertEquals("@a", condition.params().getString(PlayerConditionKind.SELECTOR_KEY));
 		assertEquals("Any player", condition.describe());
-		condition.setText("Steve");
+		condition.params().putString(PlayerConditionKind.SELECTOR_KEY, "Steve");
 		assertEquals("Player Steve", condition.describe());
 	}
 
 	@Test
 	public void scoreDescribe() {
-		MusicCondition condition = MusicCondition.Type.SCOREBOARD.newDefault();
-		condition.setText("kills");
-		condition.setMin(5);
-		condition.setMax(10);
+		MusicCondition condition = def(ScoreboardConditionKind.ID);
+		condition.params().putString(ScoreboardConditionKind.OBJECTIVE_KEY, "kills");
+		condition.params().putDouble(ScoreboardConditionKind.MIN_KEY, 5);
+		condition.params().putDouble(ScoreboardConditionKind.MAX_KEY, 10);
 		assertEquals("Score kills 5..10", condition.describe());
 	}
 
 	@Test
 	public void coordinatesDescribe() {
-		MusicCondition condition = MusicCondition.Type.COORDINATES.newDefault();
+		MusicCondition condition = def(CoordinatesConditionKind.ID);
 		assertEquals("Anywhere", condition.describe());
-		condition.setBound(0, 10);
+		condition.params().putDouble(CoordinatesConditionKind.BOUND_KEYS[0], 10);
 		assertEquals("At X 10", condition.describe());
-		condition.setBound(1, 100);
-		condition.setBound(4, 5);
-		condition.setBound(5, 5);
+		condition.params().putDouble(CoordinatesConditionKind.BOUND_KEYS[1], 100);
+		condition.params().putDouble(CoordinatesConditionKind.BOUND_KEYS[4], 5);
+		condition.params().putDouble(CoordinatesConditionKind.BOUND_KEYS[5], 5);
 		assertEquals("At X 10..100, Z 5", condition.describe());
 	}
 
 	@Test
 	public void coordinatesRoundtrip() {
-		MusicCondition condition = MusicCondition.Type.COORDINATES.newDefault();
-		condition.setBound(0, 10);
-		condition.setBound(3, 64);
+		MusicCondition condition = def(CoordinatesConditionKind.ID);
+		condition.params().putDouble(CoordinatesConditionKind.BOUND_KEYS[0], 10);
+		condition.params().putDouble(CoordinatesConditionKind.BOUND_KEYS[3], 64);
 		MusicCondition loaded = MusicCondition.load(condition.save());
-		assertEquals(MusicCondition.Type.COORDINATES, loaded.getType());
-		assertEquals(10.0, loaded.getBound(0));
-		assertTrue(Double.isNaN(loaded.getBound(1)));
-		assertEquals(64.0, loaded.getBound(3));
+		assertEquals(CoordinatesConditionKind.ID, loaded.getKindId());
+		assertEquals(10.0, CoordinatesConditionKind.bound(loaded.params(), 0));
+		assertTrue(Double.isNaN(CoordinatesConditionKind.bound(loaded.params(), 1)));
+		assertEquals(64.0, CoordinatesConditionKind.bound(loaded.params(), 3));
 		assertEquals("At X 10, Y 64", loaded.describe());
 	}
 
 	@Test
-	public void legacyAxisMigrates() {
-		CompoundTag tag = new CompoundTag();
-		tag.putString("Type", "POS_X");
-		tag.putDouble("Min", 10);
-		tag.putDouble("Max", 100);
-		MusicCondition loaded = MusicCondition.load(tag);
-		assertEquals(MusicCondition.Type.COORDINATES, loaded.getType());
-		assertEquals("At X 10..100", loaded.describe());
-	}
-
-	@Test
 	public void saveLoadRoundtrip() {
-		MusicCondition condition = MusicCondition.Type.SCOREBOARD.newDefault();
-		condition.setText("kills");
-		condition.setMin(3);
-		condition.setMax(7);
+		MusicCondition condition = def(ScoreboardConditionKind.ID);
+		condition.params().putString(ScoreboardConditionKind.OBJECTIVE_KEY, "kills");
+		condition.params().putDouble(ScoreboardConditionKind.MIN_KEY, 3);
+		condition.params().putDouble(ScoreboardConditionKind.MAX_KEY, 7);
 		MusicCondition loaded = MusicCondition.load(condition.save());
-		assertEquals(MusicCondition.Type.SCOREBOARD, loaded.getType());
-		assertEquals("kills", loaded.getText());
-		assertEquals(3.0, loaded.getMin());
-		assertEquals(7.0, loaded.getMax());
+		assertEquals(ScoreboardConditionKind.ID, loaded.getKindId());
+		assertEquals("kills", loaded.params().getString(ScoreboardConditionKind.OBJECTIVE_KEY));
+		assertEquals(3.0, loaded.params().getDouble(ScoreboardConditionKind.MIN_KEY));
+		assertEquals(7.0, loaded.params().getDouble(ScoreboardConditionKind.MAX_KEY));
 	}
 
 	@Test
-	public void loadUnknownTypeFallsBackToTime() {
-		CompoundTag tag = new CompoundTag();
-		tag.putString("Type", "NOPE");
-		assertEquals(MusicCondition.Type.TIME, MusicCondition.load(tag).getType());
-	}
-
-	@ParameterizedTest
-	@CsvSource({"0, TIME", "1, WEATHER", "2, SCOREBOARD", "3, PLAYER_HEALTH", "4, ENTITY_ALIVE", "5, IN_BIOME", "6, COORDINATES", "99, TIME"})
-	public void legacyOrdinalsMigrate(int ordinal, String expected) {
-		CompoundTag tag = new CompoundTag();
-		tag.putInt("Type", ordinal);
-		tag.putString("Text", "x");
-		assertEquals(MusicCondition.Type.valueOf(expected), MusicCondition.load(tag).getType());
+	public void unknownKindDescribesAndRoundtrips() {
+		MusicCondition condition = new MusicCondition(new ResourceLocation("mapmakermusic", "nope"));
+		assertNull(condition.kind());
+		assertEquals("Unknown condition", condition.describe());
+		MusicCondition loaded = MusicCondition.load(condition.save());
+		assertEquals(new ResourceLocation("mapmakermusic", "nope"), loaded.getKindId());
+		assertEquals("Unknown condition", loaded.describe());
 	}
 
 	@Test
 	public void copyIsIndependent() {
-		MusicCondition condition = MusicCondition.Type.COORDINATES.newDefault();
+		MusicCondition condition = def(CoordinatesConditionKind.ID);
 		MusicCondition copy = condition.copy();
-		copy.setBound(2, 50);
-		assertTrue(Double.isNaN(condition.getBound(2)));
+		copy.params().putDouble(CoordinatesConditionKind.BOUND_KEYS[2], 50);
+		assertTrue(Double.isNaN(CoordinatesConditionKind.bound(condition.params(), 2)));
 		assertFalse(copy == condition);
 		assertEquals("At Y 50", copy.describe());
 	}

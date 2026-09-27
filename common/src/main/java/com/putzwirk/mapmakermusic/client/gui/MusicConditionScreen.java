@@ -2,8 +2,9 @@ package com.putzwirk.mapmakermusic.client.gui;
 
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.block.MusicCondition;
-import com.putzwirk.mapmakermusic.client.gui.GuiIcons;
-import com.putzwirk.mapmakermusic.client.gui.MusicBlockScreen;
+import com.putzwirk.mapmakermusic.block.condition.ConditionKind;
+import com.putzwirk.mapmakermusic.block.condition.CoordinatesConditionKind;
+import com.putzwirk.mapmakermusic.block.condition.FieldSpec;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -31,18 +32,17 @@ public class MusicConditionScreen extends Screen {
 	private final MusicCondition original;
 	private final MusicCondition condition;
 
-	private Button modeBtn;
-	private EditBox textEdit;
-	private EditBox minEdit;
-	private EditBox maxEdit;
-	private EditBox tagEdit;
+	private EditBox suggestionBox;
+	private String suggestParamKey;
+	private String suggestKey;
+	private final List<EditBox> doubleBoxes = new ArrayList<>();
+	private final List<String> doubleKeys = new ArrayList<>();
 	private final EditBox[] coordEdits = new EditBox[6];
-	private static final String[] COORD_HINTS = {"X1", "X2", "Y1", "Y2", "Z1", "Z2"};
 	private List<String> suggestions = List.of();
 	private int suggestionIndex;
 
 	public MusicConditionScreen(Screen parent, MusicBlockEntity block, int queueIndex, MusicCondition condition) {
-		super(Component.literal(condition.getType().displayName()));
+		super(Component.literal(kindOf(condition) == null ? "Unknown" : kindOf(condition).displayName()));
 		this.parent = parent;
 		this.block = block;
 		this.queueIndex = queueIndex;
@@ -50,9 +50,21 @@ public class MusicConditionScreen extends Screen {
 		this.condition = condition.copy();
 	}
 
+	private static ConditionKind kindOf(MusicCondition condition) {
+		return condition.kind();
+	}
+
 	@Override
 	protected void init() {
 		super.init();
+		doubleBoxes.clear();
+		doubleKeys.clear();
+		suggestionBox = null;
+		suggestParamKey = null;
+		suggestKey = null;
+		for (int i = 0; i < 6; i++) {
+			coordEdits[i] = null;
+		}
 
 		int leftPos = (this.width - BG_WIDTH) / 2;
 		int topPos = (this.height - BG_HEIGHT) / 2;
@@ -65,82 +77,166 @@ public class MusicConditionScreen extends Screen {
 			this.minecraft.setScreen(parent);
 		}).tooltip(Tooltip.create(Component.literal("Back"))).bounds(x, topPos + GuiLayout.BACK_TOP, GuiLayout.BACK_SIZE, GuiLayout.BACK_SIZE).build());
 
-		this.modeBtn = Button.builder(modeLabel(), b -> {
-			condition.getType().cycleMode(condition);
-			this.rebuildWidgets();
-		}).bounds(x, topPos + 30, contentWidth, GuiLayout.BUTTON_HEIGHT).build();
-		addRenderableWidget(modeBtn);
-
-		this.textEdit = new EditBox(this.font, x, topPos + 30 + GuiLayout.SECTION_SPACING, contentWidth, GuiLayout.BUTTON_HEIGHT, Component.literal("Value"));
-		String hint = condition.getType().textHint();
-		this.textEdit.setHint(Component.literal(hint == null ? "value" : hint));
-		this.textEdit.setMaxLength(128);
-		this.textEdit.setValue(condition.getText());
-		this.textEdit.setResponder(text -> {
-			condition.setText(text);
-			refreshSuggestions();
-		});
-		addRenderableWidget(textEdit);
-
-		this.minEdit = new EditBox(this.font, x, topPos + 30 + 2 * GuiLayout.SECTION_SPACING, condition.getType() == MusicCondition.Type.ENTITY_ALIVE ? contentWidth : fieldWidth, GuiLayout.BUTTON_HEIGHT, Component.literal("Min"));
-		this.minEdit.setValue(format(condition.getMin()));
-		this.minEdit.setResponder(text -> condition.setMin(parse(text, condition.getMin())));
-		this.minEdit.setTooltip(Tooltip.create(Component.literal("Scroll to adjust")));
-		addRenderableWidget(minEdit);
-
-		this.maxEdit = new EditBox(this.font, x + fieldWidth + GuiLayout.WIDGET_SPACING, topPos + 30 + 2 * GuiLayout.SECTION_SPACING, fieldWidth, GuiLayout.BUTTON_HEIGHT, Component.literal("Max"));
-		this.maxEdit.setValue(format(condition.getMax()));
-		this.maxEdit.setResponder(text -> condition.setMax(parse(text, condition.getMax())));
-		this.maxEdit.setTooltip(Tooltip.create(Component.literal("Scroll to adjust")));
-		addRenderableWidget(maxEdit);
-
-		this.tagEdit = new EditBox(this.font, x, topPos + 30 + 3 * GuiLayout.SECTION_SPACING, contentWidth, GuiLayout.BUTTON_HEIGHT, Component.literal("Tag"));
-		this.tagEdit.setHint(Component.literal("scoreboard tag, optional"));
-		this.tagEdit.setMaxLength(128);
-		this.tagEdit.setValue(condition.getTag());
-		this.tagEdit.setResponder(condition::setTag);
-		addRenderableWidget(tagEdit);
-
-		for (int i = 0; i < 6; i++) {
-			final int bound = i;
-			EditBox coord = new EditBox(this.font, x + (i % 2) * (fieldWidth + GuiLayout.WIDGET_SPACING), topPos + 30 + (i / 2) * GuiLayout.SECTION_SPACING, fieldWidth, GuiLayout.BUTTON_HEIGHT, Component.literal(COORD_HINTS[i]));
-			coord.setHint(Component.literal(COORD_HINTS[i]));
-			coord.setValue(formatBound(condition.getBound(bound)));
-			coord.setResponder(text -> condition.setBound(bound, parseBound(text, condition.getBound(bound))));
-			coord.setTooltip(Tooltip.create(Component.literal("Empty ignores this bound. Scroll to adjust")));
-			this.coordEdits[i] = coord;
-			addRenderableWidget(coord);
+		ConditionKind kind = condition.kind();
+		int row = 0;
+		if (kind != null) {
+			for (FieldSpec spec : kind.editorFields()) {
+				if (!kind.fieldVisible(spec, condition)) {
+					continue;
+				}
+				row += addField(kind, spec, x, topPos + 30 + row * GuiLayout.SECTION_SPACING, contentWidth, fieldWidth);
+			}
 		}
 
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> saveAndClose())
 				.bounds(x, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, contentWidth, GuiLayout.BUTTON_HEIGHT).build());
+	}
 
-		updateVisibility();
+	private int addField(ConditionKind kind, FieldSpec spec, int x, int y, int contentWidth, int fieldWidth) {
+		return switch (spec.type()) {
+			case MODE_CYCLE -> {
+				addModeButton(kind, x, y, contentWidth);
+				yield 1;
+			}
+			case TEXT, ENTITY_ID -> {
+				addTextBox(spec, x, y, contentWidth, false);
+				yield 1;
+			}
+			case LONG_TEXT -> {
+				addTextBox(spec, x, y, contentWidth, true);
+				yield 2;
+			}
+			case NUMBER -> {
+				addNumberBox(spec, x, y, contentWidth);
+				yield 1;
+			}
+			case RANGE -> {
+				addRangeBoxes(spec, x, y, fieldWidth);
+				yield 1;
+			}
+			case BOUNDS -> {
+				addBoundBoxes(x, y, fieldWidth);
+				yield 3;
+			}
+			case ACTION -> {
+				addActionButton(kind, spec, x, y, contentWidth);
+				yield 1;
+			}
+		};
+	}
+
+	private void addModeButton(ConditionKind kind, int x, int y, int contentWidth) {
+		addRenderableWidget(Button.builder(Component.literal("Mode: " + title(kind.modeOf(condition))), b -> {
+			kind.cycleMode(condition);
+			this.rebuildWidgets();
+		}).bounds(x, y, contentWidth, GuiLayout.BUTTON_HEIGHT).build());
+	}
+
+	private void addTextBox(FieldSpec spec, int x, int y, int contentWidth, boolean tall) {
+		int height = tall ? 2 * GuiLayout.SECTION_SPACING - 4 : GuiLayout.BUTTON_HEIGHT;
+		EditBox box = new EditBox(this.font, x, y, contentWidth, height, Component.literal(spec.label()));
+		box.setHint(Component.literal(spec.hint() == null ? "value" : spec.hint()));
+		box.setMaxLength(tall ? 512 : 128);
+		box.setValue(condition.params().getString(spec.key()));
+		box.setResponder(text -> {
+			condition.params().putString(spec.key(), text);
+			if (box == suggestionBox) {
+				refreshSuggestions();
+			}
+		});
+		addRenderableWidget(box);
+		if (spec.type() == FieldSpec.FieldType.ENTITY_ID && suggestionBox == null) {
+			suggestionBox = box;
+			suggestParamKey = spec.key();
+			suggestKey = spec.suggest();
+		}
+	}
+
+	private void addNumberBox(FieldSpec spec, int x, int y, int contentWidth) {
+		EditBox box = new EditBox(this.font, x, y, contentWidth, GuiLayout.BUTTON_HEIGHT, Component.literal(spec.label()));
+		box.setHint(Component.literal(spec.label()));
+		box.setValue(format(dbl(spec.key())));
+		box.setResponder(text -> condition.params().putDouble(spec.key(), parse(text, dbl(spec.key()))));
+		box.setTooltip(Tooltip.create(Component.literal("Scroll to adjust")));
+		addRenderableWidget(box);
+		doubleBoxes.add(box);
+		doubleKeys.add(spec.key());
+	}
+
+	private void addRangeBoxes(FieldSpec spec, int x, int y, int fieldWidth) {
+		EditBox minBox = new EditBox(this.font, x, y, fieldWidth, GuiLayout.BUTTON_HEIGHT, Component.literal(spec.label()));
+		minBox.setValue(format(dbl(spec.key())));
+		minBox.setResponder(text -> condition.params().putDouble(spec.key(), parse(text, dbl(spec.key()))));
+		minBox.setTooltip(Tooltip.create(Component.literal("Scroll to adjust")));
+		addRenderableWidget(minBox);
+		doubleBoxes.add(minBox);
+		doubleKeys.add(spec.key());
+
+		EditBox maxBox = new EditBox(this.font, x + fieldWidth + GuiLayout.WIDGET_SPACING, y, fieldWidth, GuiLayout.BUTTON_HEIGHT, Component.literal(spec.secondLabel()));
+		maxBox.setValue(format(dbl(spec.secondKey())));
+		maxBox.setResponder(text -> condition.params().putDouble(spec.secondKey(), parse(text, dbl(spec.secondKey()))));
+		maxBox.setTooltip(Tooltip.create(Component.literal("Scroll to adjust")));
+		addRenderableWidget(maxBox);
+		doubleBoxes.add(maxBox);
+		doubleKeys.add(spec.secondKey());
+	}
+
+	private void addBoundBoxes(int x, int y, int fieldWidth) {
+		for (int i = 0; i < 6; i++) {
+			final int bound = i;
+			EditBox coord = new EditBox(this.font, x + (i % 2) * (fieldWidth + GuiLayout.WIDGET_SPACING), y + (i / 2) * GuiLayout.SECTION_SPACING, fieldWidth, GuiLayout.BUTTON_HEIGHT,
+					Component.literal(CoordinatesConditionKind.BOUND_HINTS[i]));
+			coord.setHint(Component.literal(CoordinatesConditionKind.BOUND_HINTS[i]));
+			coord.setValue(formatBound(CoordinatesConditionKind.bound(condition.params(), bound)));
+			coord.setResponder(text -> {
+				double fallback = CoordinatesConditionKind.bound(condition.params(), bound);
+				double value = parseBound(text, fallback);
+				if (Double.isNaN(value)) {
+					condition.params().remove(CoordinatesConditionKind.BOUND_KEYS[bound]);
+				} else {
+					condition.params().putDouble(CoordinatesConditionKind.BOUND_KEYS[bound], value);
+				}
+			});
+			coord.setTooltip(Tooltip.create(Component.literal("Empty ignores this bound. Scroll to adjust")));
+			this.coordEdits[i] = coord;
+			addRenderableWidget(coord);
+		}
+	}
+
+	private void addActionButton(ConditionKind kind, FieldSpec spec, int x, int y, int contentWidth) {
+		addRenderableWidget(Button.builder(Component.literal(spec.label()), b -> {
+			String result = kind.runAction(spec.key(), condition, this.minecraft);
+			b.setMessage(Component.literal(result == null ? spec.label() : spec.label() + ": " + result));
+		}).bounds(x, y, contentWidth, GuiLayout.BUTTON_HEIGHT).build());
+	}
+
+	private double dbl(String key) {
+		return condition.params().contains(key) ? condition.params().getDouble(key) : 0;
 	}
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
-		if (delta != 0 && minEdit.visible) {
-			if (minEdit.isMouseOver(mouseX, mouseY)) {
-				condition.setMin(condition.getMin() + (delta > 0 ? 1 : -1));
-				minEdit.setValue(format(condition.getMin()));
-				return true;
+		if (delta != 0) {
+			for (int i = 0; i < doubleBoxes.size(); i++) {
+				EditBox box = doubleBoxes.get(i);
+				if (box.visible && box.isMouseOver(mouseX, mouseY)) {
+					String key = doubleKeys.get(i);
+					double value = dbl(key) + (delta > 0 ? 1 : -1);
+					condition.params().putDouble(key, value);
+					box.setValue(format(value));
+					return true;
+				}
 			}
-			if (maxEdit.isMouseOver(mouseX, mouseY)) {
-				condition.setMax(condition.getMax() + (delta > 0 ? 1 : -1));
-				maxEdit.setValue(format(condition.getMax()));
-				return true;
-			}
-		}
-		if (delta != 0 && coordEdits[0].visible) {
 			for (int i = 0; i < 6; i++) {
-				if (coordEdits[i].isMouseOver(mouseX, mouseY)) {
-					double current = condition.getBound(i);
+				EditBox coord = coordEdits[i];
+				if (coord != null && coord.visible && coord.isMouseOver(mouseX, mouseY)) {
+					double current = CoordinatesConditionKind.bound(condition.params(), i);
 					if (Double.isNaN(current)) {
 						current = 0;
 					}
-					condition.setBound(i, current + (delta > 0 ? 1 : -1));
-					coordEdits[i].setValue(formatBound(condition.getBound(i)));
+					double value = current + (delta > 0 ? 1 : -1);
+					condition.params().putDouble(CoordinatesConditionKind.BOUND_KEYS[i], value);
+					coord.setValue(formatBound(value));
 					return true;
 				}
 			}
@@ -150,7 +246,7 @@ public class MusicConditionScreen extends Screen {
 
 	@Override
 	public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-		if (!suggestions.isEmpty() && textEdit != null && textEdit.isFocused()) {
+		if (!suggestions.isEmpty() && suggestionBox != null && suggestionBox.isFocused()) {
 			if (keyCode == GLFW.GLFW_KEY_TAB || keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
 				acceptSuggestion();
 				return true;
@@ -178,10 +274,10 @@ public class MusicConditionScreen extends Screen {
 
 	@Override
 	public boolean mouseClicked(double mouseX, double mouseY, int button) {
-		if (button == 0 && !suggestions.isEmpty() && textEdit != null && textEdit.visible) {
+		if (button == 0 && !suggestions.isEmpty() && suggestionBox != null && suggestionBox.visible) {
 			for (int i = 0; i < suggestions.size(); i++) {
-				int rowTop = textEdit.getY() + textEdit.getHeight() + i * SUGGESTION_ROW;
-				if (mouseX >= textEdit.getX() && mouseX < textEdit.getX() + textEdit.getWidth()
+				int rowTop = suggestionBox.getY() + suggestionBox.getHeight() + i * SUGGESTION_ROW;
+				if (mouseX >= suggestionBox.getX() && mouseX < suggestionBox.getX() + suggestionBox.getWidth()
 						&& mouseY >= rowTop && mouseY < rowTop + SUGGESTION_ROW) {
 					suggestionIndex = i;
 					acceptSuggestion();
@@ -195,22 +291,22 @@ public class MusicConditionScreen extends Screen {
 	}
 
 	private void acceptSuggestion() {
-		if (suggestions.isEmpty() || textEdit == null) {
+		if (suggestions.isEmpty() || suggestionBox == null || suggestParamKey == null) {
 			return;
 		}
 		String pick = suggestions.get(Math.min(suggestionIndex, suggestions.size() - 1));
-		textEdit.setValue(pick);
-		condition.setText(pick);
-		textEdit.moveCursorToEnd();
+		suggestionBox.setValue(pick);
+		condition.params().putString(suggestParamKey, pick);
+		suggestionBox.moveCursorToEnd();
 		refreshSuggestions();
 	}
 
 	private void refreshSuggestions() {
-		if (textEdit == null || !textEdit.visible || !textEdit.isFocused()) {
+		if (suggestionBox == null || !suggestionBox.visible || !suggestionBox.isFocused()) {
 			suggestions = List.of();
 			return;
 		}
-		String current = textEdit.getValue().trim().toLowerCase(Locale.ROOT);
+		String current = suggestionBox.getValue().trim().toLowerCase(Locale.ROOT);
 		List<String> matches = new ArrayList<>();
 		for (String option : completeOptions()) {
 			String lower = option.toLowerCase(Locale.ROOT);
@@ -221,7 +317,7 @@ public class MusicConditionScreen extends Screen {
 			}
 		}
 		matches.sort(String::compareToIgnoreCase);
-		if (matches.size() == 1 && matches.get(0).equalsIgnoreCase(textEdit.getValue().trim())) {
+		if (matches.size() == 1 && matches.get(0).equalsIgnoreCase(suggestionBox.getValue().trim())) {
 			matches = List.of();
 		}
 		suggestions = matches.size() > MAX_SUGGESTIONS ? matches.subList(0, MAX_SUGGESTIONS) : matches;
@@ -231,10 +327,11 @@ public class MusicConditionScreen extends Screen {
 	}
 
 	private List<String> completeOptions() {
-		return switch (condition.getType()) {
-			case PLAYER -> playerOptions();
-			case IN_BIOME -> biomeOptions();
-			case ENTITY_ALIVE -> entityOptions();
+		String key = suggestKey == null ? "" : suggestKey;
+		return switch (key) {
+			case "player" -> playerOptions();
+			case "biome" -> biomeOptions();
+			case "entity" -> entityOptions();
 			default -> List.of();
 		};
 	}
@@ -263,12 +360,12 @@ public class MusicConditionScreen extends Screen {
 	}
 
 	private void renderSuggestions(GuiGraphics guiGraphics) {
-		if (suggestions.isEmpty() || textEdit == null || !textEdit.visible) {
+		if (suggestions.isEmpty() || suggestionBox == null || !suggestionBox.visible) {
 			return;
 		}
-		int x = textEdit.getX();
-		int y = textEdit.getY() + textEdit.getHeight();
-		int width = textEdit.getWidth();
+		int x = suggestionBox.getX();
+		int y = suggestionBox.getY() + suggestionBox.getHeight();
+		int width = suggestionBox.getWidth();
 		guiGraphics.fill(x, y, x + width, y + suggestions.size() * SUGGESTION_ROW + 2, 0xF0000000);
 		for (int i = 0; i < suggestions.size(); i++) {
 			int rowTop = y + i * SUGGESTION_ROW;
@@ -279,26 +376,6 @@ public class MusicConditionScreen extends Screen {
 			guiGraphics.drawString(this.font, shown, x + 3, rowTop + 1, 0xFFFFFF, false);
 		}
 		guiGraphics.renderOutline(x, y, width, suggestions.size() * SUGGESTION_ROW + 2, 0xFF6A6A6A);
-	}
-
-	private void updateVisibility() {
-		MusicCondition.Type type = condition.getType();
-		modeBtn.visible = !type.modes().isEmpty();
-		textEdit.visible = type.textHint() != null;
-		boolean range = type.hasRange() && (type != MusicCondition.Type.TIME || condition.getText().equalsIgnoreCase("range"));
-		boolean count = type == MusicCondition.Type.ENTITY_ALIVE;
-		minEdit.setHint(Component.literal(count ? "count" : "Min"));
-		minEdit.visible = range || count;
-		maxEdit.visible = range;
-		tagEdit.visible = count;
-		boolean coords = type == MusicCondition.Type.COORDINATES;
-		for (EditBox coord : coordEdits) {
-			coord.visible = coords;
-		}
-	}
-
-	private Component modeLabel() {
-		return Component.literal("Mode: " + title(condition.getType().modeOf(condition)));
 	}
 
 	private static String title(String value) {

@@ -5,11 +5,21 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
+import com.putzwirk.mapmakermusic.block.condition.BuiltinConditionKinds;
+import com.putzwirk.mapmakermusic.block.condition.ConditionKindRegistry;
+import com.putzwirk.mapmakermusic.block.condition.CoordinatesConditionKind;
+import com.putzwirk.mapmakermusic.block.condition.PlayerConditionKind;
 import net.minecraft.core.BlockPos;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 public class MusicQueueTest {
+
+	@BeforeAll
+	public static void setup() {
+		BuiltinConditionKinds.registerAll();
+	}
 
 	@Test
 	public void stopItemHelpers() {
@@ -48,9 +58,9 @@ public class MusicQueueTest {
 		queue.getTracks().add(new MusicQueue.PlaylistItem("STOP"));
 		queue.setLoop(false);
 		queue.getRuleRoot().setOp(ConditionGroup.Op.ANY);
-		MusicCondition condition = MusicCondition.Type.COORDINATES.newDefault();
-		condition.setBound(0, 10);
-		condition.setBound(1, 100);
+		MusicCondition condition = ConditionKindRegistry.get(CoordinatesConditionKind.ID).newDefault();
+		condition.params().putDouble(CoordinatesConditionKind.BOUND_KEYS[0], 10);
+		condition.params().putDouble(CoordinatesConditionKind.BOUND_KEYS[1], 100);
 		queue.getRuleRoot().getKids().add(condition);
 
 		MusicQueue loaded = MusicQueue.load(queue.save());
@@ -77,7 +87,7 @@ public class MusicQueueTest {
 		assertEquals("@a", loaded.getListenerSelector());
 		assertEquals(1, loaded.getQueues().get(0).getRuleRoot().countLeaves());
 		MusicCondition migrated = (MusicCondition) loaded.getQueues().get(0).getRuleRoot().getKids().get(0);
-		assertEquals(MusicCondition.Type.PLAYER, migrated.getType());
+		assertEquals(PlayerConditionKind.ID, migrated.getKindId());
 		assertEquals("Player Steve", migrated.describe());
 		MusicBlockEntity reloud = new MusicBlockEntity(null, BlockPos.ZERO, null);
 		reloud.load(loaded.getUpdateTag());

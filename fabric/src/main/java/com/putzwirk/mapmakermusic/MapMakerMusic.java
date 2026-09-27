@@ -6,6 +6,7 @@ import com.putzwirk.mapmakermusic.block.MusicBlock;
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.block.MusicBlockItem;
 import com.putzwirk.mapmakermusic.block.MusicBlockTicker;
+import com.putzwirk.mapmakermusic.block.condition.BuiltinConditionKinds;
 import com.putzwirk.mapmakermusic.command.MusicCommand;
 import com.putzwirk.mapmakermusic.library.MusicLibrary;
 import com.putzwirk.mapmakermusic.network.FabricMusicRemote;
@@ -58,6 +59,8 @@ public class MapMakerMusic implements ModInitializer {
 		ModBlocks.MUSIC_BLOCK = () -> MUSIC_BLOCK_OBJ;
 		ModBlocks.MUSIC_BLOCK_ITEM = () -> MUSIC_BLOCK_ITEM_OBJ;
 		ModBlocks.MUSIC_BLOCK_ENTITY_TYPE = () -> MUSIC_BLOCK_ENTITY_TYPE_OBJ;
+
+		BuiltinConditionKinds.registerAll();
 
 		ItemGroupEvents.modifyEntriesEvent(CreativeModeTabs.FUNCTIONAL_BLOCKS).register(content -> {
 			content.accept(MUSIC_BLOCK_OBJ);
