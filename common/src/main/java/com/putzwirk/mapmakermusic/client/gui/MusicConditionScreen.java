@@ -29,7 +29,6 @@ public class MusicConditionScreen extends Screen {
 	private static final int MAX_SUGGESTIONS = 8;
 	private static final int SUGGESTION_ROW = 11;
 	private static final int NOTE_ROW = 14;
-	private static final int COMMAND_DROPDOWN_RESERVE_ROWS = 5;
 
 	private final Screen parent;
 	private final MusicBlockEntity block;
@@ -145,13 +144,9 @@ public class MusicConditionScreen extends Screen {
 				addModeButton(kind, x, y, contentWidth);
 				yield 1;
 			}
-			case TEXT, ENTITY_ID -> {
+			case TEXT, ENTITY_ID, LONG_TEXT -> {
 				addTextBox(spec, x, y, contentWidth);
 				yield 1;
-			}
-			case LONG_TEXT -> {
-				addTextBox(spec, x, y, contentWidth);
-				yield "command".equals(spec.suggest()) ? 1 + COMMAND_DROPDOWN_RESERVE_ROWS : 1;
 			}
 			case NUMBER -> {
 				addNumberBox(spec, x, y, contentWidth);
