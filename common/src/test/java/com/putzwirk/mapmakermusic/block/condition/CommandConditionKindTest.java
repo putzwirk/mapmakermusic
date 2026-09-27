@@ -108,8 +108,39 @@ public class CommandConditionKindTest {
 		assertTrue(KIND.editorNotes().contains("scoreboard players get @s kills"));
 		assertTrue(KIND.editorNotes().contains("data get entity @s FallDistance"));
 		assertTrue(KIND.editorNotes().contains("execute if score @s kills matches 10.. run xp query @s levels"));
-		assertEquals(248, new TimeConditionKind().editorWidth());
-		assertEquals(150, new TimeConditionKind().editorHeight());
-		assertTrue(new TimeConditionKind().editorNotes().isEmpty());
+		ConditionKind plain = new ConditionKind() {
+			@Override
+			public net.minecraft.resources.ResourceLocation id() {
+				return new net.minecraft.resources.ResourceLocation("mapmakermusic", "plain");
+			}
+
+			@Override
+			public String displayName() {
+				return "plain";
+			}
+
+			@Override
+			public boolean evaluate(com.putzwirk.mapmakermusic.block.MusicCondition condition, ConditionContext ctx) {
+				return false;
+			}
+
+			@Override
+			public String describe(com.putzwirk.mapmakermusic.block.MusicCondition condition) {
+				return "plain";
+			}
+
+			@Override
+			public com.putzwirk.mapmakermusic.block.MusicCondition newDefault() {
+				return new com.putzwirk.mapmakermusic.block.MusicCondition(id());
+			}
+
+			@Override
+			public java.util.List<FieldSpec> editorFields() {
+				return java.util.List.of();
+			}
+		};
+		assertEquals(248, plain.editorWidth());
+		assertEquals(150, plain.editorHeight());
+		assertTrue(plain.editorNotes().isEmpty());
 	}
 }

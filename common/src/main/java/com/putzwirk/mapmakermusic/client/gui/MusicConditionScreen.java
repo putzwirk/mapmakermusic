@@ -4,7 +4,6 @@ import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.block.MusicCondition;
 import com.putzwirk.mapmakermusic.block.condition.CommandConditionKind;
 import com.putzwirk.mapmakermusic.block.condition.ConditionKind;
-import com.putzwirk.mapmakermusic.block.condition.CoordinatesConditionKind;
 import com.putzwirk.mapmakermusic.block.condition.FieldSpec;
 import com.putzwirk.mapmakermusic.network.ConditionTestNet;
 import java.util.ArrayList;
@@ -43,7 +42,6 @@ public class MusicConditionScreen extends Screen {
 	private final List<EditBox> doubleBoxes = new ArrayList<>();
 	private final List<String> doubleKeys = new ArrayList<>();
 	private final Map<String, Button> actionButtons = new HashMap<>();
-	private final EditBox[] coordEdits = new EditBox[6];
 	private List<String> suggestions = List.of();
 	private int suggestionIndex;
 	private List<String> serverSuggestions = List.of();
@@ -81,9 +79,6 @@ public class MusicConditionScreen extends Screen {
 		suggestionBox = null;
 		suggestParamKey = null;
 		suggestKey = null;
-		for (int i = 0; i < 6; i++) {
-			coordEdits[i] = null;
-		}
 
 		int leftPos = (this.width - bgWidth) / 2;
 		int topPos = (this.height - bgHeight) / 2;
@@ -140,13 +135,12 @@ public class MusicConditionScreen extends Screen {
 				addRangeBoxes(spec, x, y, fieldWidth);
 				yield 1;
 			}
-			case BOUNDS -> {
-				addBoundBoxes(x, y, fieldWidth);
-				yield 3;
-			}
 			case ACTION -> {
 				addActionButton(kind, spec, x, y, contentWidth);
 				yield 1;
+			}
+			default -> {
+				yield 0;
 			}
 		};
 	}
@@ -205,28 +199,6 @@ public class MusicConditionScreen extends Screen {
 		addRenderableWidget(maxBox);
 		doubleBoxes.add(maxBox);
 		doubleKeys.add(spec.secondKey());
-	}
-
-	private void addBoundBoxes(int x, int y, int fieldWidth) {
-		for (int i = 0; i < 6; i++) {
-			final int bound = i;
-			EditBox coord = new EditBox(this.font, x + (i % 2) * (fieldWidth + GuiLayout.WIDGET_SPACING), y + (i / 2) * GuiLayout.SECTION_SPACING, fieldWidth, GuiLayout.BUTTON_HEIGHT,
-					Component.literal(CoordinatesConditionKind.BOUND_HINTS[i]));
-			coord.setHint(Component.literal(CoordinatesConditionKind.BOUND_HINTS[i]));
-			coord.setValue(formatBound(CoordinatesConditionKind.bound(condition.params(), bound)));
-			coord.setResponder(text -> {
-				double fallback = CoordinatesConditionKind.bound(condition.params(), bound);
-				double value = parseBound(text, fallback);
-				if (Double.isNaN(value)) {
-					condition.params().remove(CoordinatesConditionKind.BOUND_KEYS[bound]);
-				} else {
-					condition.params().putDouble(CoordinatesConditionKind.BOUND_KEYS[bound], value);
-				}
-			});
-			coord.setTooltip(Tooltip.create(Component.literal("Empty ignores this bound. Scroll to adjust")));
-			this.coordEdits[i] = coord;
-			addRenderableWidget(coord);
-		}
 	}
 
 	private void addActionButton(ConditionKind kind, FieldSpec spec, int x, int y, int contentWidth) {
@@ -293,19 +265,6 @@ public class MusicConditionScreen extends Screen {
 					double value = dbl(key) + (delta > 0 ? 1 : -1);
 					condition.params().putDouble(key, value);
 					box.setValue(format(value));
-					return true;
-				}
-			}
-			for (int i = 0; i < 6; i++) {
-				EditBox coord = coordEdits[i];
-				if (coord != null && coord.visible && coord.isMouseOver(mouseX, mouseY)) {
-					double current = CoordinatesConditionKind.bound(condition.params(), i);
-					if (Double.isNaN(current)) {
-						current = 0;
-					}
-					double value = current + (delta > 0 ? 1 : -1);
-					condition.params().putDouble(CoordinatesConditionKind.BOUND_KEYS[i], value);
-					coord.setValue(formatBound(value));
 					return true;
 				}
 			}
@@ -487,23 +446,12 @@ public class MusicConditionScreen extends Screen {
 		return String.valueOf(value);
 	}
 
-	private static String formatBound(double value) {
-		return Double.isNaN(value) ? "" : format(value);
-	}
-
 	private static double parse(String text, double fallback) {
 		try {
 			return Double.parseDouble(text.trim());
 		} catch (NumberFormatException e) {
 			return fallback;
 		}
-	}
-
-	private static double parseBound(String text, double fallback) {
-		if (text == null || text.trim().isEmpty()) {
-			return Double.NaN;
-		}
-		return parse(text, fallback);
 	}
 
 	@Override

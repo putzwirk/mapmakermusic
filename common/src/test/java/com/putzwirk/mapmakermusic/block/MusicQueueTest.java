@@ -6,9 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.List;
 import com.putzwirk.mapmakermusic.block.condition.BuiltinConditionKinds;
+import com.putzwirk.mapmakermusic.block.condition.CommandConditionKind;
 import com.putzwirk.mapmakermusic.block.condition.ConditionKindRegistry;
-import com.putzwirk.mapmakermusic.block.condition.CoordinatesConditionKind;
-import com.putzwirk.mapmakermusic.block.condition.PlayerConditionKind;
 import net.minecraft.core.BlockPos;
 
 import org.junit.jupiter.api.BeforeAll;
@@ -58,9 +57,8 @@ public class MusicQueueTest {
 		queue.getTracks().add(new MusicQueue.PlaylistItem("STOP"));
 		queue.setLoop(false);
 		queue.getRuleRoot().setOp(ConditionGroup.Op.ANY);
-		MusicCondition condition = ConditionKindRegistry.get(CoordinatesConditionKind.ID).newDefault();
-		condition.params().putDouble(CoordinatesConditionKind.BOUND_KEYS[0], 10);
-		condition.params().putDouble(CoordinatesConditionKind.BOUND_KEYS[1], 100);
+		MusicCondition condition = ConditionKindRegistry.get(CommandConditionKind.ID).newDefault();
+		condition.params().putString(CommandConditionKind.COMMAND_KEY, "mmcheck time range 10 100");
 		queue.getRuleRoot().getKids().add(condition);
 
 		MusicQueue loaded = MusicQueue.load(queue.save());
@@ -70,7 +68,7 @@ public class MusicQueueTest {
 		assertTrue(loaded.getTracks().get(1).isStop());
 		assertFalse(loaded.isLoop());
 		assertEquals(1, loaded.getRuleRoot().countLeaves());
-		assertEquals("At X 10..100", ((MusicCondition) loaded.getRuleRoot().getKids().get(0)).describe());
+		assertEquals("Run mmcheck time range 10 10...", ((MusicCondition) loaded.getRuleRoot().getKids().get(0)).describe());
 	}
 
 	@Test
@@ -87,8 +85,8 @@ public class MusicQueueTest {
 		assertEquals("@a", loaded.getListenerSelector());
 		assertEquals(1, loaded.getQueues().get(0).getRuleRoot().countLeaves());
 		MusicCondition migrated = (MusicCondition) loaded.getQueues().get(0).getRuleRoot().getKids().get(0);
-		assertEquals(PlayerConditionKind.ID, migrated.getKindId());
-		assertEquals("Player Steve", migrated.describe());
+		assertEquals(CommandConditionKind.ID, migrated.getKindId());
+		assertEquals("Run execute if entity @s[nam...", migrated.describe());
 		MusicBlockEntity reloud = new MusicBlockEntity(null, BlockPos.ZERO, null);
 		reloud.load(loaded.getUpdateTag());
 		assertEquals(1, reloud.getQueues().get(0).getRuleRoot().countLeaves());

@@ -6,13 +6,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 import com.putzwirk.mapmakermusic.block.condition.BuiltinConditionKinds;
+import com.putzwirk.mapmakermusic.block.condition.CommandConditionKind;
 import com.putzwirk.mapmakermusic.block.condition.ConditionKindRegistry;
-import com.putzwirk.mapmakermusic.block.condition.ScoreboardConditionKind;
-import com.putzwirk.mapmakermusic.block.condition.TimeConditionKind;
-import com.putzwirk.mapmakermusic.block.condition.WeatherConditionKind;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
-import net.minecraft.resources.ResourceLocation;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -23,34 +20,32 @@ public class ConditionGroupTest {
 		BuiltinConditionKinds.registerAll();
 	}
 
-	private static MusicCondition def(ResourceLocation id) {
-		return ConditionKindRegistry.get(id).newDefault();
+	private static MusicCondition cmd(String text) {
+		MusicCondition condition = ConditionKindRegistry.get(CommandConditionKind.ID).newDefault();
+		condition.params().putString(CommandConditionKind.COMMAND_KEY, text);
+		return condition;
 	}
 
 	@Test
 	public void nestedDescribe() {
 		ConditionGroup root = new ConditionGroup();
 		root.setOp(ConditionGroup.Op.ANY);
-		MusicCondition clear = def(WeatherConditionKind.ID);
+		MusicCondition clear = cmd("mmcheck weather clear");
 		root.getKids().add(clear);
 
 		ConditionGroup rain = new ConditionGroup();
 		rain.setOp(ConditionGroup.Op.ALL);
-		MusicCondition raining = def(WeatherConditionKind.ID);
-		raining.params().putString(WeatherConditionKind.MODE_KEY, "rain");
+		MusicCondition raining = cmd("mmcheck weather rain");
 		rain.getKids().add(raining);
 
 		ConditionGroup time = new ConditionGroup();
 		time.setOp(ConditionGroup.Op.ALL);
-		MusicCondition after = def(TimeConditionKind.ID);
-		after.params().putString(TimeConditionKind.MODE_KEY, "range");
-		after.params().putDouble(TimeConditionKind.MIN_KEY, 100);
-		after.params().putDouble(TimeConditionKind.MAX_KEY, 500);
+		MusicCondition after = cmd("mmcheck time range 100 500");
 		time.getKids().add(after);
 		rain.getKids().add(time);
 		root.getKids().add(rain);
 
-		assertEquals("When Clear or (Raining and Time 100..500)", root.describeRules());
+		assertEquals("When Run mmcheck weather clear or (Run mmcheck weather rain and Run mmcheck time range 100 5...)", root.describeRules());
 		assertEquals(3, root.countLeaves());
 	}
 
@@ -64,18 +59,18 @@ public class ConditionGroupTest {
 		ConditionGroup root = new ConditionGroup();
 		root.setOp(ConditionGroup.Op.ANY);
 		root.getKids().add(new ConditionGroup());
-		root.getKids().add(def(TimeConditionKind.ID));
-		assertEquals("When Daytime", root.describeRules());
+		root.getKids().add(cmd("mmcheck time day"));
+		assertEquals("When Run mmcheck time day", root.describeRules());
 	}
 
 	@Test
 	public void childrenAndCounts() {
 		ConditionGroup root = new ConditionGroup();
-		root.getKids().add(def(TimeConditionKind.ID));
+		root.getKids().add(cmd("mmcheck time day"));
 		ConditionGroup sub = new ConditionGroup();
-		sub.getKids().add(def(WeatherConditionKind.ID));
+		sub.getKids().add(cmd("mmcheck weather clear"));
 		root.getKids().add(sub);
-		assertEquals("Daytime and Clear", root.describeChildren());
+		assertEquals("Run mmcheck time day and Run mmcheck weather clear", root.describeChildren());
 		assertEquals("2 rules", root.ruleCount());
 		assertEquals("1 rule", sub.ruleCount());
 		assertEquals("", new ConditionGroup().describeChildren());
@@ -93,23 +88,22 @@ public class ConditionGroupTest {
 	public void saveLoadRoundtrip() {
 		ConditionGroup root = new ConditionGroup();
 		root.setOp(ConditionGroup.Op.ANY);
-		root.getKids().add(def(TimeConditionKind.ID));
+		root.getKids().add(cmd("mmcheck time day"));
 		ConditionGroup sub = new ConditionGroup();
-		MusicCondition score = def(ScoreboardConditionKind.ID);
-		score.params().putString(ScoreboardConditionKind.OBJECTIVE_KEY, "kills");
+		MusicCondition score = cmd("execute if score @s kills matches 0..100 run xp query @s levels");
 		sub.getKids().add(score);
 		root.getKids().add(sub);
 
 		ConditionGroup loaded = ConditionGroup.load(root.save());
 		assertEquals(ConditionGroup.Op.ANY, loaded.getOp());
 		assertEquals(2, loaded.countLeaves());
-		assertEquals("When Daytime or Score kills 0..100", loaded.describeRules());
+		assertEquals("When Run mmcheck time day or Run execute if score @s kill...", loaded.describeRules());
 	}
 
 	@Test
 	public void legacyQueueMigrates() {
 		MusicQueue queue = new MusicQueue();
-		queue.getRuleRoot().getKids().add(def(WeatherConditionKind.ID));
+		queue.getRuleRoot().getKids().add(cmd("mmcheck weather clear"));
 		queue.getRuleRoot().setOp(ConditionGroup.Op.ANY);
 		MusicQueue loaded = MusicQueue.load(queue.save());
 		assertEquals(ConditionGroup.Op.ANY, loaded.getRuleRoot().getOp());
@@ -119,20 +113,19 @@ public class ConditionGroupTest {
 	@Test
 	public void replaceByIdentity() {
 		ConditionGroup root = new ConditionGroup();
-		MusicCondition original = def(TimeConditionKind.ID);
+		MusicCondition original = cmd("mmcheck time day");
 		root.getKids().add(original);
-		MusicCondition edited = def(TimeConditionKind.ID);
-		edited.params().putString(TimeConditionKind.MODE_KEY, "night");
+		MusicCondition edited = cmd("mmcheck time night");
 		assertTrue(root.replaceByIdentity(original, edited));
-		assertEquals("Night", ((MusicCondition) root.getKids().get(0)).describe());
+		assertEquals("Run mmcheck time night", ((MusicCondition) root.getKids().get(0)).describe());
 	}
 
 	@Test
 	public void collectRowsDepths() {
 		ConditionGroup root = new ConditionGroup();
-		root.getKids().add(def(TimeConditionKind.ID));
+		root.getKids().add(cmd("mmcheck time day"));
 		ConditionGroup sub = new ConditionGroup();
-		sub.getKids().add(def(WeatherConditionKind.ID));
+		sub.getKids().add(cmd("mmcheck weather clear"));
 		root.getKids().add(sub);
 
 		List<ConditionGroup.TreeRow> rows = new ArrayList<>();
@@ -161,7 +154,7 @@ public class ConditionGroupTest {
 			current = group;
 		}
 		CompoundTag leaf = new CompoundTag();
-		leaf.put("Leaf", def(TimeConditionKind.ID).save());
+		leaf.put("Leaf", cmd("mmcheck time day").save());
 		ListTag bottom = new ListTag();
 		bottom.add(leaf);
 		current.put("Kids", bottom);
@@ -201,12 +194,12 @@ public class ConditionGroupTest {
 		deepKid.put("Group", deep);
 		kids.add(deepKid);
 		CompoundTag leafKid = new CompoundTag();
-		leafKid.put("Leaf", def(WeatherConditionKind.ID).save());
+		leafKid.put("Leaf", cmd("mmcheck weather clear").save());
 		kids.add(leafKid);
 		root.put("Kids", kids);
 
 		ConditionGroup loaded = ConditionGroup.load(root);
 		assertEquals(1, loaded.countLeaves());
-		assertEquals("When Clear", loaded.describeRules());
+		assertEquals("When Run mmcheck weather clear", loaded.describeRules());
 	}
 }

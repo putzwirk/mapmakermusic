@@ -111,8 +111,11 @@ public final class CommandConditionKind implements ConditionKind {
 		return "testing...";
 	}
 
-	public static boolean runNow(ServerPlayer player, String command) {
-		MinecraftServer server = player.getServer();
+	public static String playerNameCommand(String name) {
+		return "execute if entity @s[name=" + name + "] run xp query @s levels";
+	}
+
+	public static boolean runNow(ServerPlayer player, String command) {		MinecraftServer server = player.getServer();
 		if (server == null) {
 			return false;
 		}

@@ -8,7 +8,6 @@ public record FieldSpec(FieldType type, String key, String secondKey, String lab
 		NUMBER,
 		RANGE,
 		MODE_CYCLE,
-		BOUNDS,
 		ENTITY_ID,
 		ACTION
 	}
@@ -31,10 +30,6 @@ public record FieldSpec(FieldType type, String key, String secondKey, String lab
 
 	public static FieldSpec modeCycle() {
 		return new FieldSpec(FieldType.MODE_CYCLE, null, null, "", null, null, null);
-	}
-
-	public static FieldSpec bounds() {
-		return new FieldSpec(FieldType.BOUNDS, null, null, "", null, null, null);
 	}
 
 	public static FieldSpec entityId(String key, String hint, String suggest) {

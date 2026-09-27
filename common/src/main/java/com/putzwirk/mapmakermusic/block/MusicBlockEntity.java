@@ -1,7 +1,7 @@
 package com.putzwirk.mapmakermusic.block;
 
+import com.putzwirk.mapmakermusic.block.condition.CommandConditionKind;
 import com.putzwirk.mapmakermusic.block.condition.ConditionKindRegistry;
-import com.putzwirk.mapmakermusic.block.condition.PlayerConditionKind;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -405,16 +405,17 @@ public class MusicBlockEntity extends BlockEntity {
 				for (MusicQueue queue : this.queues) {
 					ConditionGroup root = queue.getRuleRoot();
 					boolean present = false;
+					String wanted = CommandConditionKind.playerNameCommand(selector);
 					for (Object kid : root.getKids()) {
-						if (kid instanceof MusicCondition leaf && PlayerConditionKind.ID.equals(leaf.getKindId())
-								&& selector.equalsIgnoreCase(leaf.params().getString(PlayerConditionKind.SELECTOR_KEY))) {
+						if (kid instanceof MusicCondition leaf && CommandConditionKind.ID.equals(leaf.getKindId())
+								&& wanted.equals(leaf.params().getString(CommandConditionKind.COMMAND_KEY))) {
 							present = true;
 							break;
 						}
 					}
 					if (!present) {
-						MusicCondition player = ConditionKindRegistry.get(PlayerConditionKind.ID).newDefault();
-						player.params().putString(PlayerConditionKind.SELECTOR_KEY, selector);
+						MusicCondition player = ConditionKindRegistry.get(CommandConditionKind.ID).newDefault();
+						player.params().putString(CommandConditionKind.COMMAND_KEY, wanted);
 						root.getKids().add(0, player);
 					}
 				}
