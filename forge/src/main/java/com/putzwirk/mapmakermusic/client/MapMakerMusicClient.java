@@ -5,8 +5,10 @@ import com.putzwirk.mapmakermusic.block.ModBlocks;
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.client.audio.MusicPlayer;
 import com.putzwirk.mapmakermusic.client.gui.MusicBlockScreen;
+import com.putzwirk.mapmakermusic.client.gui.MusicConditionScreen;
 import com.putzwirk.mapmakermusic.client.render.AreaBoxRenderer;
 import com.putzwirk.mapmakermusic.library.MusicLibrary;
+import com.putzwirk.mapmakermusic.network.ConditionTestNet;
 import com.putzwirk.mapmakermusic.network.MusicNetworking;
 import com.putzwirk.mapmakermusic.network.UpdateMusicBlockPacket;
 import java.io.ByteArrayOutputStream;
@@ -41,6 +43,7 @@ public final class MapMakerMusicClient {
 		MinecraftForge.EVENT_BUS.register(new MapMakerMusicClient());
 
 		MusicBlockScreen.setPacketSender((pos, data) -> MusicNetworking.sendToServer(new MusicNetworking.ForgeUpdateMusicBlockPacket(pos, data)));
+		ConditionTestNet.setSender(command -> MusicNetworking.sendToServer(new MusicNetworking.TestPacket(command)));
 	}
 
 	public static void onPlayMusic(String name, int volume, float pitch, boolean fadeIn, boolean fadeOut, Vec3 position, float maxDistance, boolean restart, boolean loop, float startOffsetSeconds) {
@@ -82,6 +85,10 @@ public final class MapMakerMusicClient {
 
 	public static void onLibrarySync(Map<String, Long> tracks) {
 		MusicLibrary.setServerTracks(tracks);
+	}
+
+	public static void onTestResult(String command, boolean pass) {
+		Minecraft.getInstance().execute(() -> MusicConditionScreen.handleTestResult(command, pass));
 	}
 
 	public static void onTrackData(String name, int totalLength, byte[] data, boolean last) {

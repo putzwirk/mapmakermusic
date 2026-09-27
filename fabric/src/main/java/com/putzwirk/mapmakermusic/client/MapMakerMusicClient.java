@@ -7,8 +7,10 @@ import com.putzwirk.mapmakermusic.block.ModBlocks;
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.client.audio.MusicPlayer;
 import com.putzwirk.mapmakermusic.client.gui.MusicBlockScreen;
+import com.putzwirk.mapmakermusic.client.gui.MusicConditionScreen;
 import com.putzwirk.mapmakermusic.client.render.AreaBoxRenderer;
 import com.putzwirk.mapmakermusic.library.MusicLibrary;
+import com.putzwirk.mapmakermusic.network.ConditionTestNet;
 import com.putzwirk.mapmakermusic.network.MusicNetworking;
 
 import io.netty.buffer.Unpooled;
@@ -63,6 +65,12 @@ public class MapMakerMusicClient implements ClientModInitializer {
 			buf.writeBlockPos(pos);
 			buf.writeNbt(data);
 			ClientPlayNetworking.send(MusicNetworking.UPDATE_MUSIC_BLOCK, buf);
+		});
+
+		ConditionTestNet.setSender(command -> {
+			FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
+			buf.writeUtf(command);
+			ClientPlayNetworking.send(MusicNetworking.TEST_CONDITION, buf);
 		});
 
 		ClientPlayNetworking.registerGlobalReceiver(MusicNetworking.PLAY_MUSIC, (client, handler, buf, responseSender) -> {
@@ -150,6 +158,12 @@ public class MapMakerMusicClient implements ClientModInitializer {
 			boolean hasPos = buf.readBoolean();
 			net.minecraft.core.BlockPos pos = hasPos ? buf.readBlockPos() : null;
 			client.execute(() -> AreaBoxRenderer.setWandSelection(pos));
+		});
+
+		ClientPlayNetworking.registerGlobalReceiver(MusicNetworking.TEST_CONDITION_RESULT, (client, handler, buf, responseSender) -> {
+			String command = buf.readUtf();
+			boolean pass = buf.readBoolean();
+			client.execute(() -> MusicConditionScreen.handleTestResult(command, pass));
 		});
 
 		WorldRenderEvents.AFTER_TRANSLUCENT.register(context -> {

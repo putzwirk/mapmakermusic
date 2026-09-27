@@ -18,7 +18,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import java.util.function.Supplier;
 
 public final class MusicNetworking {
-	private static final String PROTOCOL_VERSION = "12";
+	private static final String PROTOCOL_VERSION = "13";
 	public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
 			MapMakerMusic.id("main"),
 			() -> PROTOCOL_VERSION,
@@ -43,6 +43,8 @@ public final class MusicNetworking {
 		CHANNEL.registerMessage(id++, TrackDataPacket.class, TrackDataPacket::encode, TrackDataPacket::new, TrackDataPacket::handle);
 		CHANNEL.registerMessage(id++, TrackRequestPacket.class, TrackRequestPacket::encode, TrackRequestPacket::new, TrackRequestPacket::handle);
 		CHANNEL.registerMessage(id++, TrackFinishedPacket.class, TrackFinishedPacket::encode, TrackFinishedPacket::new, TrackFinishedPacket::handle);
+		CHANNEL.registerMessage(id++, TestPacket.class, TestPacket::encode, TestPacket::new, TestPacket::handle);
+		CHANNEL.registerMessage(id++, TestResultPacket.class, TestResultPacket::encode, TestResultPacket::new, TestResultPacket::handle);
 	}
 
 	public static void sendToPlayer(ServerPlayer player, Object message) {
@@ -438,6 +440,58 @@ public final class MusicNetworking {
 				}
 			});
 			context.setPacketHandled(true);
+		}
+	}
+
+	public static class TestPacket {
+		public final String command;
+
+		public TestPacket(String command) {
+			this.command = command;
+		}
+
+		public TestPacket(FriendlyByteBuf buf) {
+			this.command = buf.readUtf();
+		}
+
+		public void encode(FriendlyByteBuf buf) {
+			buf.writeUtf(this.command);
+		}
+
+		public static void handle(TestPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
+			NetworkEvent.Context context = contextSupplier.get();
+			context.enqueueWork(() -> {
+				ServerPlayer player = context.getSender();
+				if (player != null) {
+					ConditionTestHandler.handleTest(player, msg.command);
+				}
+			});
+			context.setPacketHandled(true);
+		}
+	}
+
+	public static class TestResultPacket {
+		public final String command;
+		public final boolean pass;
+
+		public TestResultPacket(String command, boolean pass) {
+			this.command = command;
+			this.pass = pass;
+		}
+
+		public TestResultPacket(FriendlyByteBuf buf) {
+			this.command = buf.readUtf();
+			this.pass = buf.readBoolean();
+		}
+
+		public void encode(FriendlyByteBuf buf) {
+			buf.writeUtf(this.command);
+			buf.writeBoolean(this.pass);
+		}
+
+		public static void handle(TestResultPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
+			NetworkEvent.Context context = contextSupplier.get();
+			runOnMainThread(context, () -> MapMakerMusicClient.onTestResult(msg.command, msg.pass));
 		}
 	}
 }

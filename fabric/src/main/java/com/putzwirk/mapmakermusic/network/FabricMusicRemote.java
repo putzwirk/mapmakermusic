@@ -101,4 +101,12 @@ public final class FabricMusicRemote implements MusicRemote {
 		buf.writeBoolean(last);
 		ServerPlayNetworking.send(player, MusicNetworking.TRACK_DATA, buf);
 	}
+
+	@Override
+	public void sendTestResult(ServerPlayer player, String command, boolean pass) {
+		FriendlyByteBuf buf = PacketByteBufs.create();
+		buf.writeUtf(command);
+		buf.writeBoolean(pass);
+		ServerPlayNetworking.send(player, MusicNetworking.TEST_CONDITION_RESULT, buf);
+	}
 }

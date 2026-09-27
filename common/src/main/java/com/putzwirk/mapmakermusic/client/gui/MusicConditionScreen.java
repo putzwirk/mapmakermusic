@@ -2,12 +2,15 @@ package com.putzwirk.mapmakermusic.client.gui;
 
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.block.MusicCondition;
+import com.putzwirk.mapmakermusic.block.condition.CommandConditionKind;
 import com.putzwirk.mapmakermusic.block.condition.ConditionKind;
 import com.putzwirk.mapmakermusic.block.condition.CoordinatesConditionKind;
 import com.putzwirk.mapmakermusic.block.condition.FieldSpec;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -37,6 +40,7 @@ public class MusicConditionScreen extends Screen {
 	private String suggestKey;
 	private final List<EditBox> doubleBoxes = new ArrayList<>();
 	private final List<String> doubleKeys = new ArrayList<>();
+	private final Map<String, Button> actionButtons = new HashMap<>();
 	private final EditBox[] coordEdits = new EditBox[6];
 	private List<String> suggestions = List.of();
 	private int suggestionIndex;
@@ -59,6 +63,7 @@ public class MusicConditionScreen extends Screen {
 		super.init();
 		doubleBoxes.clear();
 		doubleKeys.clear();
+		actionButtons.clear();
 		suggestionBox = null;
 		suggestParamKey = null;
 		suggestKey = null;
@@ -204,10 +209,32 @@ public class MusicConditionScreen extends Screen {
 	}
 
 	private void addActionButton(ConditionKind kind, FieldSpec spec, int x, int y, int contentWidth) {
-		addRenderableWidget(Button.builder(Component.literal(spec.label()), b -> {
+		Button button = Button.builder(Component.literal(spec.label()), b -> {
 			String result = kind.runAction(spec.key(), condition, this.minecraft);
 			b.setMessage(Component.literal(result == null ? spec.label() : spec.label() + ": " + result));
-		}).bounds(x, y, contentWidth, GuiLayout.BUTTON_HEIGHT).build());
+		}).bounds(x, y, contentWidth, GuiLayout.BUTTON_HEIGHT).build();
+		addRenderableWidget(button);
+		actionButtons.put(spec.key(), button);
+	}
+
+	public static void handleTestResult(String command, boolean pass) {
+		Minecraft client = Minecraft.getInstance();
+		if (client == null || !(client.screen instanceof MusicConditionScreen screen)) {
+			return;
+		}
+		screen.showTestResult(command, pass);
+	}
+
+	private void showTestResult(String command, boolean pass) {
+		Button button = actionButtons.get(CommandConditionKind.TEST_ACTION);
+		if (button == null) {
+			return;
+		}
+		String current = condition.params().getString(CommandConditionKind.COMMAND_KEY).trim();
+		if (!current.equals(command)) {
+			return;
+		}
+		button.setMessage(Component.literal("Test now: " + (pass ? "PASS" : "FAIL")));
 	}
 
 	private double dbl(String key) {

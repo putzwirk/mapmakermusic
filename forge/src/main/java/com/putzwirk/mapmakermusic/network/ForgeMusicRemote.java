@@ -51,4 +51,9 @@ public final class ForgeMusicRemote implements MusicRemote {
 	public void sendTrackChunk(ServerPlayer player, String name, int totalLength, int offset, byte[] data, boolean last) {
 		MusicNetworking.sendToPlayer(player, new MusicNetworking.TrackDataPacket(name, totalLength, offset, data, last));
 	}
+
+	@Override
+	public void sendTestResult(ServerPlayer player, String command, boolean pass) {
+		MusicNetworking.sendToPlayer(player, new MusicNetworking.TestResultPacket(command, pass));
+	}
 }

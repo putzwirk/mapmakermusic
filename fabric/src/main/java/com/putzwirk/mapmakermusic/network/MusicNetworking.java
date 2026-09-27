@@ -18,6 +18,8 @@ public final class MusicNetworking {
 	public static final ResourceLocation TRACK_REQUEST = MapMakerMusic.id("track_request");
 	public static final ResourceLocation TRACK_DATA = MapMakerMusic.id("track_data");
 	public static final ResourceLocation TRACK_FINISHED = MapMakerMusic.id("track_finished");
+	public static final ResourceLocation TEST_CONDITION = MapMakerMusic.id("test_condition");
+	public static final ResourceLocation TEST_CONDITION_RESULT = MapMakerMusic.id("test_condition_result");
 
 	private MusicNetworking() {
 	}

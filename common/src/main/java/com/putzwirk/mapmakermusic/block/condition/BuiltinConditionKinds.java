@@ -15,5 +15,6 @@ public final class BuiltinConditionKinds {
 		ConditionKindRegistry.register(new EntityAliveConditionKind());
 		ConditionKindRegistry.register(new InBiomeConditionKind());
 		ConditionKindRegistry.register(new CoordinatesConditionKind());
+		ConditionKindRegistry.register(new CommandConditionKind());
 	}
 }

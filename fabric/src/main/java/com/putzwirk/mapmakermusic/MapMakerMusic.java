@@ -10,6 +10,7 @@ import com.putzwirk.mapmakermusic.block.condition.BuiltinConditionKinds;
 import com.putzwirk.mapmakermusic.command.MusicCommand;
 import com.putzwirk.mapmakermusic.library.MusicLibrary;
 import com.putzwirk.mapmakermusic.network.FabricMusicRemote;
+import com.putzwirk.mapmakermusic.network.ConditionTestHandler;
 import com.putzwirk.mapmakermusic.network.MusicBlockServerHandler;
 import com.putzwirk.mapmakermusic.network.MusicNetworking;
 import com.putzwirk.mapmakermusic.network.MusicRemotes;
@@ -112,6 +113,10 @@ public class MapMakerMusic implements ModInitializer {
 		ServerPlayNetworking.registerGlobalReceiver(MusicNetworking.TRACK_FINISHED, (server, player, handler, buf, responseSender) -> {
 			String trackKey = buf.readUtf();
 			server.execute(() -> MusicBlockTicker.onTrackFinished(player, trackKey));
+		});
+		ServerPlayNetworking.registerGlobalReceiver(MusicNetworking.TEST_CONDITION, (server, player, handler, buf, responseSender) -> {
+			String command = buf.readUtf();
+			server.execute(() -> ConditionTestHandler.handleTest(player, command));
 		});
 		LOGGER.info("MapMakerMusic initialized");
 	}
