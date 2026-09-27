@@ -2,6 +2,7 @@ package com.putzwirk.mapmakermusic.block.condition;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.mojang.brigadier.CommandDispatcher;
@@ -96,7 +97,7 @@ public class CommandConditionKindTest {
 	public void editorHasCommandBoxAndTestButton() {
 		assertTrue(KIND.editorFields().stream().anyMatch(spec -> spec.type() == FieldSpec.FieldType.LONG_TEXT));
 		assertTrue(KIND.editorFields().stream().anyMatch(spec -> spec.type() == FieldSpec.FieldType.ACTION));
-		assertEquals("empty", KIND.runAction(CommandConditionKind.TEST_ACTION, KIND.newDefault(), null));
+		assertNull(KIND.runAction(CommandConditionKind.TEST_ACTION, KIND.newDefault(), null));
 	}
 
 	@Test
@@ -112,6 +113,9 @@ public class CommandConditionKindTest {
 		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Score") && preset.command().equals("execute if score @s kills matches 10..")));
 		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Item") && preset.command().equals("clear @s minecraft:diamond 0")));
 		assertTrue(KIND.editorFields().stream().anyMatch(spec -> spec.type() == FieldSpec.FieldType.PRESETS));
+		assertEquals(FieldSpec.FieldType.LONG_TEXT, KIND.editorFields().get(0).type());
+		assertEquals(FieldSpec.FieldType.ACTION, KIND.editorFields().get(1).type());
+		assertEquals(FieldSpec.FieldType.PRESETS, KIND.editorFields().get(2).type());
 		ConditionKind plain = new ConditionKind() {
 			@Override
 			public net.minecraft.resources.ResourceLocation id() {

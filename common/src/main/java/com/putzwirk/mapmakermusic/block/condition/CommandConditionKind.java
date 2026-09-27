@@ -68,8 +68,8 @@ public final class CommandConditionKind implements ConditionKind {
 	public List<FieldSpec> editorFields() {
 		return List.of(
 				FieldSpec.longText(COMMAND_KEY, "Command", "command to test, without leading slash", "command"),
-				FieldSpec.presets(),
-				FieldSpec.action(TEST_ACTION, "Test now"));
+				FieldSpec.action(TEST_ACTION, "Test"),
+				FieldSpec.presets());
 	}
 
 	@Override
@@ -80,11 +80,6 @@ public final class CommandConditionKind implements ConditionKind {
 	@Override
 	public int editorHeight() {
 		return 280;
-	}
-
-	@Override
-	public boolean editorTopAnchor() {
-		return true;
 	}
 
 	@Override
@@ -117,10 +112,10 @@ public final class CommandConditionKind implements ConditionKind {
 		}
 		String command = ConditionParams.str(condition.params(), COMMAND_KEY, "").trim();
 		if (command.isEmpty()) {
-			return "empty";
+			return null;
 		}
 		ConditionTestNet.requestTest(command);
-		return "testing...";
+		return null;
 	}
 
 	public static String playerNameCommand(String name) {

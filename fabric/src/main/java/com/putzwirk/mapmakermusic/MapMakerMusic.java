@@ -120,6 +120,10 @@ public class MapMakerMusic implements ModInitializer {
 			String command = buf.readUtf();
 			server.execute(() -> ConditionTestHandler.handleTest(player, command));
 		});
+		ServerPlayNetworking.registerGlobalReceiver(MusicNetworking.TEST_CONDITION_SUGGEST, (server, player, handler, buf, responseSender) -> {
+			String command = buf.readUtf();
+			server.execute(() -> ConditionTestHandler.handleSuggestions(player, command));
+		});
 		LOGGER.info("MapMakerMusic initialized");
 	}
 
