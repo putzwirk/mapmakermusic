@@ -50,7 +50,7 @@ public interface MusicRemote {
 		}
 
 		@Override
-		public void sendCommandSuggestions(ServerPlayer player, String command, int start, java.util.List<String> suggestions) {
+		public void sendCommandSuggestions(ServerPlayer player, String command, int start, int headLen, java.util.List<String> suggestions) {
 		}
 	};
 
@@ -74,5 +74,5 @@ public interface MusicRemote {
 
 	void sendTestResult(ServerPlayer player, String command, boolean pass);
 
-	void sendCommandSuggestions(ServerPlayer player, String command, int start, java.util.List<String> suggestions);
+	void sendCommandSuggestions(ServerPlayer player, String command, int start, int headLen, java.util.List<String> suggestions);
 }

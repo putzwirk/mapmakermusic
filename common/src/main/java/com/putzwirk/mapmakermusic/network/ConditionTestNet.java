@@ -1,5 +1,6 @@
 package com.putzwirk.mapmakermusic.network;
 
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public final class ConditionTestNet {
@@ -7,7 +8,7 @@ public final class ConditionTestNet {
 	private static Consumer<String> sender = command -> {
 	};
 
-	private static Consumer<String> suggestionSender = command -> {
+	private static BiConsumer<String, Integer> suggestionSender = (command, cursor) -> {
 	};
 
 	private ConditionTestNet() {
@@ -22,12 +23,12 @@ public final class ConditionTestNet {
 		sender.accept(command);
 	}
 
-	public static void setSuggestionSender(Consumer<String> sender) {
-		ConditionTestNet.suggestionSender = sender == null ? command -> {
+	public static void setSuggestionSender(BiConsumer<String, Integer> sender) {
+		ConditionTestNet.suggestionSender = sender == null ? (command, cursor) -> {
 		} : sender;
 	}
 
-	public static void requestSuggestions(String command) {
-		suggestionSender.accept(command);
+	public static void requestSuggestions(String command, int cursor) {
+		suggestionSender.accept(command, cursor);
 	}
 }

@@ -58,7 +58,7 @@ public final class ForgeMusicRemote implements MusicRemote {
 	}
 
 	@Override
-	public void sendCommandSuggestions(ServerPlayer player, String command, int start, java.util.List<String> suggestions) {
-		MusicNetworking.sendToPlayer(player, new MusicNetworking.TestSuggestResultPacket(command, start, suggestions));
+	public void sendCommandSuggestions(ServerPlayer player, String command, int start, int headLen, java.util.List<String> suggestions) {
+		MusicNetworking.sendToPlayer(player, new MusicNetworking.TestSuggestResultPacket(command, start, headLen, suggestions));
 	}
 }

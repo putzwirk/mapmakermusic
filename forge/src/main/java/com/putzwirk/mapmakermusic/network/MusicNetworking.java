@@ -499,17 +499,21 @@ public final class MusicNetworking {
 
 	public static class TestSuggestPacket {
 		public final String command;
+		public final int cursor;
 
-		public TestSuggestPacket(String command) {
+		public TestSuggestPacket(String command, int cursor) {
 			this.command = command;
+			this.cursor = cursor;
 		}
 
 		public TestSuggestPacket(FriendlyByteBuf buf) {
 			this.command = buf.readUtf();
+			this.cursor = buf.readInt();
 		}
 
 		public void encode(FriendlyByteBuf buf) {
 			buf.writeUtf(this.command);
+			buf.writeInt(this.cursor);
 		}
 
 		public static void handle(TestSuggestPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
@@ -517,7 +521,7 @@ public final class MusicNetworking {
 			context.enqueueWork(() -> {
 				ServerPlayer player = context.getSender();
 				if (player != null) {
-					ConditionTestHandler.handleSuggestions(player, msg.command);
+					ConditionTestHandler.handleSuggestions(player, msg.command, msg.cursor);
 				}
 			});
 			context.setPacketHandled(true);
@@ -527,17 +531,20 @@ public final class MusicNetworking {
 	public static class TestSuggestResultPacket {
 		public final String command;
 		public final int start;
+		public final int headLen;
 		public final java.util.List<String> suggestions;
 
-		public TestSuggestResultPacket(String command, int start, java.util.List<String> suggestions) {
+		public TestSuggestResultPacket(String command, int start, int headLen, java.util.List<String> suggestions) {
 			this.command = command;
 			this.start = start;
+			this.headLen = headLen;
 			this.suggestions = suggestions;
 		}
 
 		public TestSuggestResultPacket(FriendlyByteBuf buf) {
 			this.command = buf.readUtf();
 			this.start = buf.readInt();
+			this.headLen = buf.readInt();
 			int count = buf.readInt();
 			java.util.List<String> list = new java.util.ArrayList<>(count);
 			for (int i = 0; i < count; i++) {
@@ -549,6 +556,7 @@ public final class MusicNetworking {
 		public void encode(FriendlyByteBuf buf) {
 			buf.writeUtf(this.command);
 			buf.writeInt(this.start);
+			buf.writeInt(this.headLen);
 			buf.writeInt(this.suggestions.size());
 			for (String suggestion : this.suggestions) {
 				buf.writeUtf(suggestion);
@@ -557,7 +565,7 @@ public final class MusicNetworking {
 
 		public static void handle(TestSuggestResultPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
 			NetworkEvent.Context context = contextSupplier.get();
-			runOnMainThread(context, () -> MapMakerMusicClient.onSuggestionResult(msg.command, msg.start, msg.suggestions));
+			runOnMainThread(context, () -> MapMakerMusicClient.onSuggestionResult(msg.command, msg.start, msg.headLen, msg.suggestions));
 		}
 	}
 }

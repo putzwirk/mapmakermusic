@@ -72,9 +72,10 @@ public class MapMakerMusicClient implements ClientModInitializer {
 			buf.writeUtf(command);
 			ClientPlayNetworking.send(MusicNetworking.TEST_CONDITION, buf);
 		});
-		ConditionTestNet.setSuggestionSender(command -> {
+		ConditionTestNet.setSuggestionSender((command, cursor) -> {
 			FriendlyByteBuf buf = new FriendlyByteBuf(Unpooled.buffer());
 			buf.writeUtf(command);
+			buf.writeInt(cursor);
 			ClientPlayNetworking.send(MusicNetworking.TEST_CONDITION_SUGGEST, buf);
 		});
 
@@ -174,12 +175,13 @@ public class MapMakerMusicClient implements ClientModInitializer {
 		ClientPlayNetworking.registerGlobalReceiver(MusicNetworking.TEST_CONDITION_SUGGEST_RESULT, (client, handler, buf, responseSender) -> {
 			String echo = buf.readUtf();
 			int start = buf.readInt();
+			int headLen = buf.readInt();
 			int count = buf.readInt();
 			java.util.List<String> texts = new java.util.ArrayList<>(count);
 			for (int i = 0; i < count; i++) {
 				texts.add(buf.readUtf());
 			}
-			client.execute(() -> MusicConditionScreen.handleSuggestionResult(echo, start, texts));
+			client.execute(() -> MusicConditionScreen.handleSuggestionResult(echo, start, headLen, texts));
 		});
 
 		WorldRenderEvents.AFTER_TRANSLUCENT.register(context -> {

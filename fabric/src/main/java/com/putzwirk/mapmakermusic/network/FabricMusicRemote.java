@@ -111,10 +111,11 @@ public final class FabricMusicRemote implements MusicRemote {
 	}
 
 	@Override
-	public void sendCommandSuggestions(ServerPlayer player, String command, int start, java.util.List<String> suggestions) {
+	public void sendCommandSuggestions(ServerPlayer player, String command, int start, int headLen, java.util.List<String> suggestions) {
 		FriendlyByteBuf buf = PacketByteBufs.create();
 		buf.writeUtf(command);
 		buf.writeInt(start);
+		buf.writeInt(headLen);
 		buf.writeInt(suggestions.size());
 		for (String suggestion : suggestions) {
 			buf.writeUtf(suggestion);

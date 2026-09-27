@@ -51,7 +51,9 @@ public class MusicConditionScreen extends Screen {
 	private int suggestionIndex;
 	private List<String> serverSuggestions = List.of();
 	private int suggestStart = -1;
+	private int suggestHeadLen;
 	private String lastSuggestRequest;
+	private int lastSuggestCursor = -1;
 	private String testStatus;
 	private int testStatusColor;
 	private int testStatusY = -1;
@@ -94,7 +96,9 @@ public class MusicConditionScreen extends Screen {
 		actionButtons.clear();
 		serverSuggestions = List.of();
 		suggestStart = -1;
+		suggestHeadLen = 0;
 		lastSuggestRequest = null;
+		lastSuggestCursor = -1;
 		suggestionBox = null;
 		suggestParamKey = null;
 		suggestKey = null;
@@ -409,17 +413,26 @@ public class MusicConditionScreen extends Screen {
 		}
 		String pick = suggestions.get(Math.min(suggestionIndex, suggestions.size() - 1));
 		if (suggestStart >= 0) {
-			String current = suggestionBox.getValue();
-			int cut = Math.max(0, Math.min(suggestStart, current.length()));
-			String completed = current.substring(0, cut) + pick;
+			String completed = applyCompletion(suggestionBox.getValue(), suggestStart, suggestHeadLen, pick);
 			suggestionBox.setValue(completed);
 			condition.params().putString(suggestParamKey, completed);
+			suggestionBox.moveCursorTo(suggestStart + pick.length());
 		} else {
 			suggestionBox.setValue(pick);
 			condition.params().putString(suggestParamKey, pick);
+			suggestionBox.moveCursorToEnd();
 		}
-		suggestionBox.moveCursorToEnd();
 		refreshSuggestions();
+	}
+
+	static String applyCompletion(String text, int start, int headLen, String pick) {
+		int safeStart = Math.max(0, Math.min(start, text.length()));
+		int safeHead = Math.max(safeStart, Math.min(headLen, text.length()));
+		int wordEnd = safeHead;
+		while (wordEnd < text.length() && !Character.isWhitespace(text.charAt(wordEnd))) {
+			wordEnd++;
+		}
+		return text.substring(0, safeStart) + pick + text.substring(wordEnd);
 	}
 
 	private void refreshSuggestions() {
@@ -429,9 +442,11 @@ public class MusicConditionScreen extends Screen {
 		}
 		if ("command".equals(suggestKey)) {
 			String current = suggestionBox.getValue();
-			if (!current.equals(lastSuggestRequest)) {
+			int cursor = suggestionBox.getCursorPosition();
+			if (!current.equals(lastSuggestRequest) || cursor != lastSuggestCursor) {
 				lastSuggestRequest = current;
-				ConditionTestNet.requestSuggestions(current);
+				lastSuggestCursor = cursor;
+				ConditionTestNet.requestSuggestions(current, cursor);
 			}
 			suggestions = serverSuggestions.size() > MAX_COMMAND_SUGGESTIONS ? serverSuggestions.subList(0, MAX_COMMAND_SUGGESTIONS) : serverSuggestions;
 			if (suggestionIndex >= suggestions.size()) {
@@ -492,15 +507,15 @@ public class MusicConditionScreen extends Screen {
 		return BuiltInRegistries.ENTITY_TYPE.keySet().stream().map(Object::toString).sorted().toList();
 	}
 
-	public static void handleSuggestionResult(String echo, int start, List<String> texts) {
+	public static void handleSuggestionResult(String echo, int start, int headLen, List<String> texts) {
 		Minecraft client = Minecraft.getInstance();
 		if (client == null || !(client.screen instanceof MusicConditionScreen screen)) {
 			return;
 		}
-		screen.showSuggestions(echo, start, texts);
+		screen.showSuggestions(echo, start, headLen, texts);
 	}
 
-	private void showSuggestions(String echo, int start, List<String> texts) {
+	private void showSuggestions(String echo, int start, int headLen, List<String> texts) {
 		if (suggestionBox == null || !"command".equals(suggestKey)) {
 			return;
 		}
@@ -509,6 +524,7 @@ public class MusicConditionScreen extends Screen {
 		}
 		serverSuggestions = List.copyOf(texts);
 		suggestStart = start;
+		suggestHeadLen = headLen;
 		refreshSuggestions();
 	}
 

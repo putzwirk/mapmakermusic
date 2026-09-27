@@ -30,7 +30,7 @@ public final class ConditionTestHandler {
 		MusicRemotes.getRemote().sendTestResult(player, command, CommandConditionKind.runNow(player, command));
 	}
 
-	public static void handleSuggestions(ServerPlayer player, String command) {
+	public static void handleSuggestions(ServerPlayer player, String command, int cursor) {
 		if (player == null || player.getServer() == null || command == null) {
 			return;
 		}
@@ -40,28 +40,30 @@ public final class ConditionTestHandler {
 		MinecraftServer server = player.getServer();
 		CommandSourceStack source = player.createCommandSourceStack().withSuppressedOutput().withPermission(2);
 		CommandDispatcher<CommandSourceStack> dispatcher = server.getCommands().getDispatcher();
-		String input = command.startsWith("/") ? command.substring(1) : command;
+		int cut = Math.max(0, Math.min(cursor, command.length()));
+		String head = command.substring(0, cut);
+		String input = head.startsWith("/") ? head.substring(1) : head;
 		ParseResults<CommandSourceStack> parse;
 		try {
 			parse = dispatcher.parse(input, source);
 		} catch (RuntimeException e) {
-			sendSuggestions(player, command, 0, List.of());
+			sendSuggestions(player, command, 0, cut, List.of());
 			return;
 		}
 		dispatcher.getCompletionSuggestions(parse).thenAccept(suggestions -> {
 			int start = suggestions.getRange().getStart();
 			List<String> texts = suggestions.getList().stream().map(Suggestion::getText).limit(8).toList();
-			server.execute(() -> sendSuggestions(player, command, start, texts));
+			server.execute(() -> sendSuggestions(player, command, start, cut, texts));
 		});
 	}
 
 	private static boolean canTest(ServerPlayer player) {
 		return player.getAbilities().instabuild || player.hasPermissions(2);
 	}
-
-	private static void sendSuggestions(ServerPlayer player, String command, int start, List<String> texts) {		if (player.getServer() == null || player.getServer().getPlayerList().getPlayer(player.getUUID()) == null) {
+	private static void sendSuggestions(ServerPlayer player, String command, int start, int headLen, List<String> texts) {
+		if (player.getServer() == null || player.getServer().getPlayerList().getPlayer(player.getUUID()) == null) {
 			return;
 		}
-		MusicRemotes.getRemote().sendCommandSuggestions(player, command, start, texts);
+		MusicRemotes.getRemote().sendCommandSuggestions(player, command, start, headLen, texts);
 	}
 }
