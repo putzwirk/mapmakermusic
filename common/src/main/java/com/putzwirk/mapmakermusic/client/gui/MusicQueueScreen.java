@@ -4,7 +4,7 @@ import com.putzwirk.mapmakermusic.block.ConditionGroup;
 import com.putzwirk.mapmakermusic.block.MusicBlockEntity;
 import com.putzwirk.mapmakermusic.block.MusicCondition;
 import com.putzwirk.mapmakermusic.block.MusicQueue;
-import com.putzwirk.mapmakermusic.block.condition.ConditionKind;
+import com.putzwirk.mapmakermusic.block.condition.CommandConditionKind;
 import com.putzwirk.mapmakermusic.block.condition.ConditionKindRegistry;
 import com.putzwirk.mapmakermusic.library.MusicLibrary;
 import java.util.ArrayList;
@@ -43,8 +43,7 @@ public class MusicQueueScreen extends Screen {
 
 	private LibraryList libraryList;
 	private PlaylistList playlistList;
-	private CatalogList catalogList;
-	private ActiveList activeList;
+	private TreeList treeList;
 
 	public MusicQueueScreen(Screen parent, MusicBlockEntity block, int queueIndex) {
 		super(Component.literal("Queue"));
@@ -154,32 +153,17 @@ public class MusicQueueScreen extends Screen {
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> backToParent())
 				.bounds(leftPos + PAD, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, colWidth * 2 + GAP, GuiLayout.BUTTON_HEIGHT).build());
 
-		this.catalogList = null;
-		this.activeList = null;
+		this.treeList = null;
 	}
 
 	private void initConditionsTab(int leftPos, int topPos) {
 		int listWidth = colWidth * 2 + GAP;
-		int catWidth = (listWidth - GAP) * 2 / 5;
-		int actWidth = listWidth - GAP - catWidth;
 
-		this.catalogList = new CatalogList(this.minecraft, catWidth, 146, topPos + LIST_TOP, topPos + LIST_TOP + 146, ROW_HEIGHT);
-		this.catalogList.setLeftPos(leftPos + PAD);
-		this.catalogList.setRenderSelection(false);
-		this.catalogList.addCatalogEntry(this.catalogList.new Entry(null));
-		for (ConditionKind kind : ConditionKindRegistry.all()) {
-			if (kind.needsAreaGate() && !block.isAreaGate()) {
-				continue;
-			}
-			this.catalogList.addCatalogEntry(this.catalogList.new Entry(kind));
-		}
-		addRenderableWidget(catalogList);
-
-		this.activeList = new ActiveList(this.minecraft, actWidth, 146, topPos + LIST_TOP, topPos + LIST_TOP + 146, ROW_HEIGHT);
-		this.activeList.setLeftPos(leftPos + PAD + catWidth + GAP);
-		this.activeList.setRenderSelection(false);
-		refreshActive();
-		addRenderableWidget(activeList);
+		this.treeList = new TreeList(this.minecraft, listWidth, 146, topPos + LIST_TOP, topPos + LIST_TOP + 146, ROW_HEIGHT);
+		this.treeList.setLeftPos(leftPos + PAD);
+		this.treeList.setRenderSelection(false);
+		refreshTree();
+		addRenderableWidget(treeList);
 
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> backToParent())
 				.bounds(leftPos + PAD, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, listWidth, GuiLayout.BUTTON_HEIGHT).build());
@@ -286,22 +270,16 @@ public class MusicQueueScreen extends Screen {
 		playlistList.setScrollAmount(scroll);
 	}
 
-	private ConditionGroup viewedGroup;
-
-	private ConditionGroup viewed() {
-		if (viewedGroup == null) {
-			viewedGroup = queue().getRuleRoot();
-		}
-		return viewedGroup;
+	private record TreeEntry(Object node, ConditionGroup parent, int indexInParent, int depth, List<ConditionGroup.Op> ancestorOps) {
 	}
 
-	private static ConditionGroup findParent(ConditionGroup root, ConditionGroup target) {
+	private static ConditionGroup findParentOf(ConditionGroup root, Object target) {
 		for (Object kid : root.getKids()) {
 			if (kid == target) {
 				return root;
 			}
 			if (kid instanceof ConditionGroup group) {
-				ConditionGroup found = findParent(group, target);
+				ConditionGroup found = findParentOf(group, target);
 				if (found != null) {
 					return found;
 				}
@@ -310,77 +288,67 @@ public class MusicQueueScreen extends Screen {
 		return null;
 	}
 
-	private void addCondition(ConditionKind kind) {
-		viewed().getKids().add(kind.newDefault());
+	private void addCommandCondition(ConditionGroup parent) {
+		MusicCondition condition = ConditionKindRegistry.get(CommandConditionKind.ID).newDefault();
+		parent.getKids().add(condition);
 		GuiIcons.click();
-		refreshActive();
+		refreshTree();
+		openConditionEditor(condition);
 	}
 
-	private void addGroup() {
-		ConditionGroup group = new ConditionGroup();
-		viewed().getKids().add(group);
-		viewedGroup = group;
+	private void addInnerGroup(ConditionGroup parent) {
+		parent.getKids().add(new ConditionGroup());
 		GuiIcons.click();
-		refreshActive();
+		refreshTree();
 	}
 
-	private void removeNode(int index) {
-		ConditionGroup parent = viewed();
+	private void removeKid(ConditionGroup parent, int index) {
 		if (index >= 0 && index < parent.getKids().size()) {
 			parent.getKids().remove(index);
 			GuiIcons.click();
-			refreshActive();
+			refreshTree();
 		}
 	}
 
-	private void moveNode(int index, int delta) {
-		ConditionGroup parent = viewed();
+	private void moveKid(ConditionGroup parent, int index, int delta) {
 		int target = index + delta;
 		if (index >= 0 && index < parent.getKids().size() && target >= 0 && target < parent.getKids().size()) {
 			Object node = parent.getKids().remove(index);
 			parent.getKids().add(target, node);
 			GuiIcons.click();
-			refreshActive();
+			refreshTree();
 		}
 	}
 
-	private void refreshActive() {
-		double scroll = activeList != null ? activeList.getScrollAmount() : 0;
-		activeList.clearActiveEntries();
-		activeList.addActiveEntry(activeList.new Entry(Kind.HEADER));
-		if (viewed() != queue().getRuleRoot()) {
-			activeList.addActiveEntry(activeList.new Entry(Kind.BACK));
+	private void refreshTree() {
+		double scroll = treeList != null ? treeList.getScrollAmount() : 0;
+		treeList.clearTreeEntries();
+		List<TreeEntry> rows = new ArrayList<>();
+		collectTreeEntries(queue().getRuleRoot(), null, 0, List.of(), rows);
+		for (TreeEntry row : rows) {
+			treeList.addTreeEntry(treeList.new Entry(row));
 		}
-		List<Object> kids = viewed().getKids();
+		treeList.setScrollAmount(scroll);
+	}
+
+	private static void collectTreeEntries(ConditionGroup group, ConditionGroup parent, int depth, List<ConditionGroup.Op> ancestorOps, List<TreeEntry> rows) {
+		int index = parent == null ? -1 : parent.getKids().indexOf(group);
+		rows.add(new TreeEntry(group, parent, index, depth, List.copyOf(ancestorOps)));
+		List<ConditionGroup.Op> childOps = new ArrayList<>(ancestorOps);
+		childOps.add(group.getOp());
+		List<Object> kids = group.getKids();
 		for (int i = 0; i < kids.size(); i++) {
-			activeList.addActiveEntry(activeList.new Entry(Kind.NODE, kids.get(i), i));
-		}
-		activeList.setScrollAmount(scroll);
-	}
-
-	private String breadcrumb() {
-		ConditionGroup root = queue().getRuleRoot();
-		if (viewed() == root) {
-			return "";
-		}
-		List<String> parts = new ArrayList<>();
-		parts.add("Rules");
-		appendPath(root, viewed(), parts);
-		return String.join(" > ", parts);
-	}
-
-	private static boolean appendPath(ConditionGroup current, ConditionGroup target, List<String> parts) {
-		for (Object kid : current.getKids()) {
-			if (kid == target) {
-				parts.add(target.getOp().name());
-				return true;
-			}
-			if (kid instanceof ConditionGroup group && appendPath(group, target, parts)) {
-				parts.add(0, group.getOp().name());
-				return true;
+			Object kid = kids.get(i);
+			if (kid instanceof ConditionGroup sub) {
+				collectTreeEntries(sub, group, depth + 1, childOps, rows);
+			} else {
+				rows.add(new TreeEntry(kid, group, i, depth + 1, List.copyOf(childOps)));
 			}
 		}
-		return current == target;
+	}
+
+	private static int opColor(ConditionGroup.Op op) {
+		return op == ConditionGroup.Op.ALL ? 0xFF6B9EFF : 0xFFFFB35C;
 	}
 
 	@Override
@@ -399,7 +367,7 @@ public class MusicQueueScreen extends Screen {
 			int divX = leftPos + PAD + colWidth + GAP / 2;
 			guiGraphics.fill(divX, topPos + LIST_TOP, divX + 1, topPos + LIST_TOP + LIST_HEIGHT, 0xFF6A6A6A);
 		} else {
-			guiGraphics.drawString(this.font, breadcrumb(), leftPos + PAD, topPos + 52, 0x9A9A9A, false);
+			guiGraphics.drawString(this.font, queue().getRuleRoot().ruleCount(), leftPos + PAD, topPos + 52, 0x9A9A9A, false);
 		}
 
 		super.render(guiGraphics, mouseX, mouseY, delta);
@@ -594,124 +562,66 @@ public class MusicQueueScreen extends Screen {
 		}
 	}
 
-	private class CatalogList extends RowList<CatalogList.Entry> {
-		CatalogList(Minecraft minecraft, int width, int height, int top, int bottom, int itemHeight) {
+	private class TreeList extends RowList<TreeList.Entry> {
+		TreeList(Minecraft minecraft, int width, int height, int top, int bottom, int itemHeight) {
 			super(minecraft, width, height, top, bottom, itemHeight);
 		}
 
-		public void addCatalogEntry(Entry entry) {
+		public void addTreeEntry(Entry entry) {
 			super.addEntry(entry);
 		}
 
-		class Entry extends ObjectSelectionList.Entry<Entry> {
-			private final ConditionKind kind;
-			private int rowLeft;
-			private int rowWidth;
-
-			Entry(ConditionKind kind) {
-				this.kind = kind;
-			}
-
-			@Override
-			public Component getNarration() {
-				return Component.literal(kind == null ? "Add group" : kind.displayName());
-			}
-
-			@Override
-			public void render(GuiGraphics guiGraphics, int index, int top, int left, int width, int height, int mouseX, int mouseY, boolean isHovered, float partialTick) {
-				this.rowLeft = left;
-				this.rowWidth = width;
-				String name = kind == null ? "Group" : kind.displayName();
-				int bx = left + 2;
-				drawRowGlyph(guiGraphics, bx, top + 4, GuiIcons.ADD, inGlyph(mouseX, mouseY, bx, top + 4));
-				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(name, width - ROW_GLYPH - 8), left + 2 + ROW_GLYPH + 2, top + 7, kind == null ? 0xFFE08A8A : 0xFFFFFF);
-			}
-
-			@Override
-			public boolean mouseClicked(double mouseX, double mouseY, int button) {
-				if (kind == null) {
-					addGroup();
-				} else {
-					addCondition(kind);
-				}
-				return true;
-			}
-		}
-	}
-
-	private enum Kind {
-		HEADER,
-		BACK,
-		NODE
-	}
-
-	private class ActiveList extends RowList<ActiveList.Entry> {
-		ActiveList(Minecraft minecraft, int width, int height, int top, int bottom, int itemHeight) {
-			super(minecraft, width, height, top, bottom, itemHeight);
-		}
-
-		public void addActiveEntry(Entry entry) {
-			super.addEntry(entry);
-		}
-
-		public void clearActiveEntries() {
+		public void clearTreeEntries() {
 			super.clearEntries();
 		}
 
 		class Entry extends ObjectSelectionList.Entry<Entry> {
-			private final Kind kind;
-			private final Object node;
-			private final int index;
+			private static final int INDENT = 12;
+			private static final int PILL_HEIGHT = 14;
+			private final TreeEntry row;
 			private int rowLeft;
 			private int rowWidth;
 			private int rowTop;
-			private int opX;
-			private int opWidth;
+			private int pillX;
+			private int pillWidth;
+			private int filterX;
+			private int filterWidth;
+			private int innerX;
+			private int innerWidth;
 
-			Entry(Kind kind) {
-				this(kind, null, -1);
-			}
-
-			Entry(Kind kind, Object node, int index) {
-				this.kind = kind;
-				this.node = node;
-				this.index = index;
+			Entry(TreeEntry row) {
+				this.row = row;
 			}
 
 			@Override
 			public Component getNarration() {
-				return Component.literal(label());
+				if (row.node() instanceof ConditionGroup group) {
+					return Component.literal(group.getOp().name() + " group");
+				}
+				return Component.literal(((MusicCondition) row.node()).describe());
 			}
 
 			private boolean isGroup() {
-				return node instanceof ConditionGroup;
+				return row.node() instanceof ConditionGroup;
 			}
 
 			private ConditionGroup group() {
-				return (ConditionGroup) node;
+				return (ConditionGroup) row.node();
 			}
 
-			private String headerText() {
-				ConditionGroup current = viewed();
-				if (current == queue().getRuleRoot()) {
-					return "Match " + current.getOp().name() + " (" + current.ruleCount() + ")";
+			private int contentX(int left) {
+				return left + 4 + row.depth() * INDENT;
+			}
+
+			private void drawGuides(GuiGraphics guiGraphics, int left, int top, int height) {
+				for (int i = 0; i < row.depth(); i++) {
+					int gx = left + 4 + i * INDENT;
+					guiGraphics.fill(gx, top + 1, gx + 1, top + height - 1, opColor(row.ancestorOps().get(i)));
 				}
-				return current.getOp().name() + " (" + current.ruleCount() + ")";
 			}
 
-			private String label() {
-				return switch (kind) {
-					case HEADER -> headerText();
-					case BACK -> ".. Back";
-					case NODE -> isGroup()
-							? group().getOp().name() + ": " + groupDescribe() + " >"
-							: ((MusicCondition) node).describe();
-				};
-			}
-
-			private String groupDescribe() {
-				String inner = group().describeChildren();
-				return inner.isEmpty() ? "(empty)" : inner;
+			private boolean inRect(double mouseX, double mouseY, int x, int w) {
+				return mouseX >= x && mouseX < x + w && mouseY >= rowTop + 4 && mouseY < rowTop + 4 + PILL_HEIGHT;
 			}
 
 			@Override
@@ -719,27 +629,58 @@ public class MusicQueueScreen extends Screen {
 				this.rowLeft = left;
 				this.rowWidth = width;
 				this.rowTop = top;
+				this.pillWidth = 0;
+				this.filterWidth = 0;
+				this.innerWidth = 0;
+				drawGuides(guiGraphics, left, top, height);
+				int cx = contentX(left);
+				if (isGroup()) {
+					ConditionGroup group = group();
+					int color = opColor(group.getOp());
+					if (row.depth() > 0) {
+						int sx = left + 4 + (row.depth() - 1) * INDENT;
+						guiGraphics.fill(sx, top + height / 2, cx + 2, top + height / 2 + 1, color);
+					}
+					String opName = group.getOp().name();
+					this.pillX = cx + 2;
+					this.pillWidth = MusicQueueScreen.this.font.width(opName) + 10;
+					guiGraphics.fill(pillX, top + 4, pillX + pillWidth, top + 4 + PILL_HEIGHT, 0xFF141414);
+					guiGraphics.renderOutline(pillX, top + 4, pillWidth, PILL_HEIGHT, color);
+					guiGraphics.drawCenteredString(MusicQueueScreen.this.font, opName, pillX + pillWidth / 2, top + 7, color);
+					int nx = pillX + pillWidth + 4;
+					String count = "(" + group.ruleCount() + ")";
+					guiGraphics.drawString(MusicQueueScreen.this.font, count, nx, top + 7, 0x9A9A9A, false);
+					nx += MusicQueueScreen.this.font.width(count) + 8;
+					this.filterX = nx;
+					this.filterWidth = MusicQueueScreen.this.font.width("+ Filter");
+					guiGraphics.drawString(MusicQueueScreen.this.font, "+ Filter", filterX, top + 7,
+							inRect(mouseX, mouseY, filterX, filterWidth) ? 0xFFFFFF : 0xFF7FB2FF, false);
+					nx += filterWidth + 8;
+					this.innerX = nx;
+					this.innerWidth = MusicQueueScreen.this.font.width("+ Group");
+					guiGraphics.drawString(MusicQueueScreen.this.font, "+ Group", innerX, top + 7,
+							inRect(mouseX, mouseY, innerX, innerWidth) ? 0xFFFFFF : 0xFF7FB2FF, false);
+					if (row.parent() != null) {
+						int x4 = left + width - ROW_GLYPH;
+						drawRowGlyph(guiGraphics, x4, top + 4, GuiIcons.REMOVE, inGlyph(mouseX, mouseY, x4, top + 4));
+					}
+					return;
+				}
+				int stubColor = row.ancestorOps().isEmpty() ? 0xFF6A6A6A : opColor(row.ancestorOps().get(row.ancestorOps().size() - 1));
+				if (row.depth() > 0) {
+					int sx = left + 4 + (row.depth() - 1) * INDENT;
+					guiGraphics.fill(sx, top + height / 2, cx + 2, top + height / 2 + 1, stubColor);
+				}
+				guiGraphics.drawString(MusicQueueScreen.this.font,
+						clipped(((MusicCondition) row.node()).describe(), width - (cx + 2 - left) - GuiIcons.SPIN_W - ROW_GLYPH - 8),
+						cx + 2, top + 7, 0xFFFFFF);
 				int x4 = left + width - ROW_GLYPH;
 				int colX = x4 - GuiIcons.SPIN_W - 2;
 				int upY = top + 4;
 				int downY = top + 11;
-				if (kind == Kind.HEADER) {
-					String header = headerText();
-					this.opX = left + 2;
-					this.opWidth = MusicQueueScreen.this.font.width(header);
-					guiGraphics.drawString(MusicQueueScreen.this.font, clipped(header, width - 4), opX, top + 7, 0xFFE08A8A);
-					return;
-				}
-				if (kind == Kind.BACK) {
-					this.opWidth = 0;
-					guiGraphics.drawString(MusicQueueScreen.this.font, ".. Back", left + 2, top + 7, 0x9A9A9A);
-					return;
-				}
-				this.opWidth = 0;
-				int color = isGroup() ? 0xFFE08A8A : 0xFFFFFF;
-				guiGraphics.drawString(MusicQueueScreen.this.font, clipped(label(), width - GuiIcons.SPIN_W - ROW_GLYPH - 8), left + 2, top + 7, color);
-				boolean canUp = this.index > 0;
-				boolean canDown = this.index < viewed().getKids().size() - 1;
+				int size = row.parent().getKids().size();
+				boolean canUp = row.indexInParent() > 0;
+				boolean canDown = row.indexInParent() < size - 1;
 				drawSpinButton(guiGraphics, colX, upY, GuiIcons.UP, canUp && inSpin(mouseX, mouseY, colX, upY), canUp, 0);
 				drawSpinButton(guiGraphics, colX, downY, GuiIcons.DOWN, canDown && inSpin(mouseX, mouseY, colX, downY), canDown, 0);
 				drawRowGlyph(guiGraphics, x4, top + 4, GuiIcons.REMOVE, inGlyph(mouseX, mouseY, x4, top + 4));
@@ -747,42 +688,49 @@ public class MusicQueueScreen extends Screen {
 
 			@Override
 			public boolean mouseClicked(double mouseX, double mouseY, int button) {
-				if (kind == Kind.HEADER) {
-					if (mouseX >= opX && mouseX < opX + opWidth) {
-						viewed().toggleOp();
+				if (isGroup()) {
+					ConditionGroup group = group();
+					if (pillWidth > 0 && inRect(mouseX, mouseY, pillX, pillWidth)) {
+						group.toggleOp();
 						GuiIcons.click();
-						refreshActive();
+						refreshTree();
+						return true;
 					}
-					return true;
-				}
-				if (kind == Kind.BACK) {
-					ConditionGroup parent = findParent(queue().getRuleRoot(), viewed());
-					viewedGroup = parent != null ? parent : queue().getRuleRoot();
-					refreshActive();
+					if (filterWidth > 0 && inRect(mouseX, mouseY, filterX, filterWidth)) {
+						addCommandCondition(group);
+						return true;
+					}
+					if (innerWidth > 0 && inRect(mouseX, mouseY, innerX, innerWidth)) {
+						addInnerGroup(group);
+						return true;
+					}
+					if (row.parent() != null) {
+						int x4 = rowLeft + rowWidth - ROW_GLYPH;
+						if (inGlyph(mouseX, mouseY, x4, rowTop + 4)) {
+							removeKid(row.parent(), row.indexInParent());
+							return true;
+						}
+					}
 					return true;
 				}
 				int x4 = rowLeft + rowWidth - ROW_GLYPH;
 				int colX = x4 - GuiIcons.SPIN_W - 2;
 				int upY = rowTop + 4;
 				int downY = rowTop + 11;
-				if (index > 0 && GuiIcons.inSpin(mouseX, mouseY, colX, upY)) {
-					moveNode(index, -1);
+				int size = row.parent().getKids().size();
+				if (row.indexInParent() > 0 && GuiIcons.inSpin(mouseX, mouseY, colX, upY)) {
+					moveKid(row.parent(), row.indexInParent(), -1);
 					return true;
 				}
-				if (index < viewed().getKids().size() - 1 && GuiIcons.inSpin(mouseX, mouseY, colX, downY)) {
-					moveNode(index, 1);
+				if (row.indexInParent() < size - 1 && GuiIcons.inSpin(mouseX, mouseY, colX, downY)) {
+					moveKid(row.parent(), row.indexInParent(), 1);
 					return true;
 				}
 				if (inGlyph(mouseX, mouseY, x4, rowTop + 4)) {
-					removeNode(index);
+					removeKid(row.parent(), row.indexInParent());
 					return true;
 				}
-				if (isGroup()) {
-					viewedGroup = group();
-					refreshActive();
-				} else {
-					openConditionEditor((MusicCondition) node);
-				}
+				openConditionEditor((MusicCondition) row.node());
 				return true;
 			}
 		}
