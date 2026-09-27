@@ -274,7 +274,7 @@ public class MusicConditionScreen extends Screen {
 		}
 		if (presetBox != null) {
 			presetBox.setValue(preset.command());
-			presetBox.moveCursorToEnd();
+			presetBox.moveCursorToStart();
 		}
 		condition.params().putString(presetKey, preset.command());
 		testStatus = null;
@@ -287,7 +287,7 @@ public class MusicConditionScreen extends Screen {
 	}
 
 	private int addTextWithAction(ConditionKind kind, FieldSpec text, FieldSpec action, int x, int y, int contentWidth) {
-		int buttonWidth = 120;
+		int buttonWidth = 70;
 		int textWidth = contentWidth - buttonWidth - GuiLayout.WIDGET_SPACING;
 		addTextBox(text, x, y, textWidth);
 		addActionButton(kind, action, x + textWidth + GuiLayout.WIDGET_SPACING, y, buttonWidth);
