@@ -107,9 +107,7 @@ public final class CommandConditionKind implements ConditionKind {
 				new Preset("Item", "clear @s minecraft:diamond 0"),
 				new Preset("GameMode", "execute if entity @s[gamemode=creative]"),
 				new Preset("Team", "execute if entity @s[team=Red]"),
-				new Preset("Full HP", "execute if data entity @s {Health:20.0f}"),
-				new Preset("Holding", "execute if data entity @s {SelectedItem:{id:\"minecraft:torch\"}}"),
-				new Preset("Dragon", "execute if entity @e[type=minecraft:ender_dragon,limit=1]"));
+				new Preset("Holding", "execute if data entity @s {SelectedItem:{id:\"minecraft:torch\"}}"));
 	}
 
 	@Override

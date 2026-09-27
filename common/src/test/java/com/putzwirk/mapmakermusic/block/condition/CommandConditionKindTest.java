@@ -105,14 +105,12 @@ public class CommandConditionKindTest {
 		assertEquals(360, KIND.editorHeight());
 		assertTrue(KIND.editorFields().stream().anyMatch(spec -> spec.type() == FieldSpec.FieldType.LONG_TEXT && "command".equals(spec.suggest())));
 		assertTrue(KIND.editorNotes().isEmpty());
-		assertEquals(15, KIND.editorPresets().size());
+		assertEquals(13, KIND.editorPresets().size());
 		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Day") && preset.command().equals("mmcheck time day")));
 		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Health") && preset.command().equals("execute if data entity @s Health")));
 		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Name") && preset.command().equals("execute if entity @s[name=Steve]")));
 		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Score") && preset.command().equals("execute if score @s kills matches 10..")));
 		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Item") && preset.command().equals("clear @s minecraft:diamond 0")));
-		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Full HP") && preset.command().equals("execute if data entity @s {Health:20.0f}")));
-		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Dragon") && preset.command().equals("execute if entity @e[type=minecraft:ender_dragon,limit=1]")));
 		assertTrue(KIND.editorFields().stream().anyMatch(spec -> spec.type() == FieldSpec.FieldType.PRESETS));
 		ConditionKind plain = new ConditionKind() {
 			@Override
