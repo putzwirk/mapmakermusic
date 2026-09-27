@@ -15,7 +15,7 @@ public class MusicBlockServerHandler {
 
 	public static void handleUpdate(ServerPlayer player, UpdateMusicBlockPacket packet) {
 		if (player == null || player.level() == null || packet.data == null) return;
-		if (!player.getAbilities().instabuild && !player.hasPermissions(2)) {
+		if (!player.hasPermissions(2)) {
 			LOGGER.warn("Rejected music block edit from {} without permission", player.getScoreboardName());
 			return;
 		}

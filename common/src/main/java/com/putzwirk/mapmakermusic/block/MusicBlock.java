@@ -1,7 +1,9 @@
 package com.putzwirk.mapmakermusic.block;
 
 import com.putzwirk.mapmakermusic.network.MusicRemotes;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -35,6 +37,10 @@ public class MusicBlock extends Block implements EntityBlock {
 	}
 
 	public static void openConfigScreen(ServerPlayer player, MusicBlockEntity blockEntity) {
+		if (!player.hasPermissions(2)) {
+			player.displayClientMessage(Component.literal("Only operators can configure music boxes").withStyle(ChatFormatting.RED), true);
+			return;
+		}
 		MusicRemotes.getRemote().openMusicScreen(player, blockEntity.getBlockPos(), blockEntity.getUpdateTag());
 	}
 
