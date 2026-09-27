@@ -102,10 +102,12 @@ public class CommandConditionKindTest {
 	@Test
 	public void editorIsWideWithCommandAutocompleteAndExamples() {
 		assertEquals(420, KIND.editorWidth());
-		assertEquals(240, KIND.editorHeight());
+		assertEquals(300, KIND.editorHeight());
 		assertTrue(KIND.editorFields().stream().anyMatch(spec -> spec.type() == FieldSpec.FieldType.LONG_TEXT && "command".equals(spec.suggest())));
-		assertEquals(4, KIND.editorNotes().size());
+		assertEquals("Example usage:", KIND.editorNotes().get(0));
 		assertTrue(KIND.editorNotes().contains("scoreboard players get @s kills"));
+		assertTrue(KIND.editorNotes().contains("data get entity @s FallDistance"));
+		assertTrue(KIND.editorNotes().contains("execute if score @s kills matches 10.. run xp query @s levels"));
 		assertEquals(248, new TimeConditionKind().editorWidth());
 		assertEquals(150, new TimeConditionKind().editorHeight());
 		assertTrue(new TimeConditionKind().editorNotes().isEmpty());

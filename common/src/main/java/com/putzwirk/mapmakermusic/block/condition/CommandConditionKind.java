@@ -78,16 +78,24 @@ public final class CommandConditionKind implements ConditionKind {
 
 	@Override
 	public int editorHeight() {
-		return 240;
+		return 300;
 	}
 
 	@Override
 	public List<String> editorNotes() {
 		return List.of(
+				"Example usage:",
 				"scoreboard players get @s kills",
+				"scoreboard players get @s deaths",
 				"clear @s minecraft:diamond 0",
+				"clear @s minecraft:apple 0",
 				"data get entity @s Health",
-				"xp query @s levels");
+				"data get entity @s Air",
+				"data get entity @s FallDistance",
+				"xp query @s levels",
+				"xp query @s points",
+				"execute if score @s kills matches 10.. run xp query @s levels",
+				"execute if entity @s[gamemode=creative] run xp query @s levels");
 	}
 
 	@Override
