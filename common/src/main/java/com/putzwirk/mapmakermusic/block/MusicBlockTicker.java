@@ -631,12 +631,18 @@ public class MusicBlockTicker {
 			if (matchMemo(level, new BoxKey(key.dimension(), otherPos), other, player) == null) {
 				continue;
 			}
-			long otherVolume = areaVolume(other);
-			if (otherVolume < myVolume || (otherVolume == myVolume && otherPos < key.pos())) {
+			if (isBlockedBy(musicBe.getPriority(), myVolume, key.pos(), other.getPriority(), areaVolume(other), otherPos)) {
 				return true;
 			}
 		}
 		return false;
+	}
+
+	static boolean isBlockedBy(int myPriority, long myVolume, long myPos, int otherPriority, long otherVolume, long otherPos) {
+		if (otherPriority < myPriority) {
+			return false;
+		}
+		return otherVolume < myVolume || (otherVolume == myVolume && otherPos < myPos);
 	}
 
 	private static Set<Long> chainBoxesIn(String dimension) {
