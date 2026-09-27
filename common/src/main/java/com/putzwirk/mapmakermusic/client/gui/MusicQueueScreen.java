@@ -159,11 +159,18 @@ public class MusicQueueScreen extends Screen {
 	private void initConditionsTab(int leftPos, int topPos) {
 		int listWidth = colWidth * 2 + GAP;
 
-		this.treeList = new TreeList(this.minecraft, listWidth, 146, topPos + LIST_TOP, topPos + LIST_TOP + 146, ROW_HEIGHT);
+		this.treeList = new TreeList(this.minecraft, listWidth, 118, topPos + LIST_TOP, topPos + LIST_TOP + 118, ROW_HEIGHT);
 		this.treeList.setLeftPos(leftPos + PAD);
 		this.treeList.setRenderSelection(false);
 		refreshTree();
 		addRenderableWidget(treeList);
+
+		int buttonsTop = topPos + LIST_TOP + 118 + 4;
+		int halfButton = (listWidth - GAP) / 2;
+		addRenderableWidget(Button.builder(Component.literal("+ Filter"), b -> addCommandCondition(queue().getRuleRoot()))
+				.bounds(leftPos + PAD, buttonsTop, halfButton, GuiLayout.BUTTON_HEIGHT).build());
+		addRenderableWidget(Button.builder(Component.literal("+ Group"), b -> addInnerGroup(queue().getRuleRoot()))
+				.bounds(leftPos + PAD + halfButton + GAP, buttonsTop, halfButton, GuiLayout.BUTTON_HEIGHT).build());
 
 		addRenderableWidget(Button.builder(Component.literal("Done"), b -> backToParent())
 				.bounds(leftPos + PAD, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, listWidth, GuiLayout.BUTTON_HEIGHT).build());
@@ -620,8 +627,12 @@ public class MusicQueueScreen extends Screen {
 				}
 			}
 
-			private boolean inRect(double mouseX, double mouseY, int x, int w) {
-				return mouseX >= x && mouseX < x + w && mouseY >= rowTop + 4 && mouseY < rowTop + 4 + PILL_HEIGHT;
+			private boolean inBand(double mouseX, double mouseY, int x, int w) {
+				return mouseX >= x && mouseX < x + w && mouseY >= rowTop && mouseY < rowTop + ROW_HEIGHT;
+			}
+
+			private int removeX(int left, int width) {
+				return left + width - ROW_GLYPH - 8;
 			}
 
 			@Override
@@ -654,15 +665,15 @@ public class MusicQueueScreen extends Screen {
 					this.filterX = nx;
 					this.filterWidth = MusicQueueScreen.this.font.width("+ Filter");
 					guiGraphics.drawString(MusicQueueScreen.this.font, "+ Filter", filterX, top + 7,
-							inRect(mouseX, mouseY, filterX, filterWidth) ? 0xFFFFFF : 0xFF7FB2FF, false);
+							inBand(mouseX, mouseY, filterX, filterWidth) ? 0xFFFFFF : 0xFF7FB2FF, false);
 					nx += filterWidth + 8;
 					this.innerX = nx;
 					this.innerWidth = MusicQueueScreen.this.font.width("+ Group");
 					guiGraphics.drawString(MusicQueueScreen.this.font, "+ Group", innerX, top + 7,
-							inRect(mouseX, mouseY, innerX, innerWidth) ? 0xFFFFFF : 0xFF7FB2FF, false);
+							inBand(mouseX, mouseY, innerX, innerWidth) ? 0xFFFFFF : 0xFF7FB2FF, false);
 					if (row.parent() != null) {
-						int x4 = left + width - ROW_GLYPH;
-						drawRowGlyph(guiGraphics, x4, top + 4, GuiIcons.REMOVE, inGlyph(mouseX, mouseY, x4, top + 4));
+						int x4 = removeX(left, width);
+						drawRowGlyph(guiGraphics, x4, top + 4, GuiIcons.REMOVE, inBand(mouseX, mouseY, x4, ROW_GLYPH));
 					}
 					return;
 				}
@@ -672,9 +683,9 @@ public class MusicQueueScreen extends Screen {
 					guiGraphics.fill(sx, top + height / 2, cx + 2, top + height / 2 + 1, stubColor);
 				}
 				guiGraphics.drawString(MusicQueueScreen.this.font,
-						clipped(((MusicCondition) row.node()).describe(), width - (cx + 2 - left) - GuiIcons.SPIN_W - ROW_GLYPH - 8),
+						clipped(((MusicCondition) row.node()).describe(), width - (cx + 2 - left) - GuiIcons.SPIN_W - ROW_GLYPH - 16),
 						cx + 2, top + 7, 0xFFFFFF);
-				int x4 = left + width - ROW_GLYPH;
+				int x4 = removeX(left, width);
 				int colX = x4 - GuiIcons.SPIN_W - 2;
 				int upY = top + 4;
 				int downY = top + 11;
@@ -690,43 +701,43 @@ public class MusicQueueScreen extends Screen {
 			public boolean mouseClicked(double mouseX, double mouseY, int button) {
 				if (isGroup()) {
 					ConditionGroup group = group();
-					if (pillWidth > 0 && inRect(mouseX, mouseY, pillX, pillWidth)) {
+					if (pillWidth > 0 && inBand(mouseX, mouseY, pillX, pillWidth)) {
 						group.toggleOp();
 						GuiIcons.click();
 						refreshTree();
 						return true;
 					}
-					if (filterWidth > 0 && inRect(mouseX, mouseY, filterX, filterWidth)) {
+					if (filterWidth > 0 && inBand(mouseX, mouseY, filterX, filterWidth)) {
 						addCommandCondition(group);
 						return true;
 					}
-					if (innerWidth > 0 && inRect(mouseX, mouseY, innerX, innerWidth)) {
+					if (innerWidth > 0 && inBand(mouseX, mouseY, innerX, innerWidth)) {
 						addInnerGroup(group);
 						return true;
 					}
 					if (row.parent() != null) {
-						int x4 = rowLeft + rowWidth - ROW_GLYPH;
-						if (inGlyph(mouseX, mouseY, x4, rowTop + 4)) {
+						int x4 = removeX(rowLeft, rowWidth);
+						if (inBand(mouseX, mouseY, x4, ROW_GLYPH)) {
 							removeKid(row.parent(), row.indexInParent());
 							return true;
 						}
 					}
 					return true;
 				}
-				int x4 = rowLeft + rowWidth - ROW_GLYPH;
+				int x4 = removeX(rowLeft, rowWidth);
 				int colX = x4 - GuiIcons.SPIN_W - 2;
-				int upY = rowTop + 4;
-				int downY = rowTop + 11;
 				int size = row.parent().getKids().size();
-				if (row.indexInParent() > 0 && GuiIcons.inSpin(mouseX, mouseY, colX, upY)) {
+				if (row.indexInParent() > 0 && mouseX >= colX && mouseX < colX + GuiIcons.SPIN_W
+						&& mouseY >= rowTop && mouseY < rowTop + ROW_HEIGHT / 2) {
 					moveKid(row.parent(), row.indexInParent(), -1);
 					return true;
 				}
-				if (row.indexInParent() < size - 1 && GuiIcons.inSpin(mouseX, mouseY, colX, downY)) {
+				if (row.indexInParent() < size - 1 && mouseX >= colX && mouseX < colX + GuiIcons.SPIN_W
+						&& mouseY >= rowTop + ROW_HEIGHT / 2 && mouseY < rowTop + ROW_HEIGHT) {
 					moveKid(row.parent(), row.indexInParent(), 1);
 					return true;
 				}
-				if (inGlyph(mouseX, mouseY, x4, rowTop + 4)) {
+				if (inBand(mouseX, mouseY, x4, ROW_GLYPH)) {
 					removeKid(row.parent(), row.indexInParent());
 					return true;
 				}
