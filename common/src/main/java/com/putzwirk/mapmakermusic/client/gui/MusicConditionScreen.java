@@ -54,7 +54,7 @@ public class MusicConditionScreen extends Screen {
 	private int suggestHeadLen;
 	private String lastSuggestRequest;
 	private int lastSuggestCursor = -1;
-	private String testStatus;
+	private Component testStatus;
 	private int testStatusColor;
 	private int testStatusY = -1;
 	private boolean showPresetsCaption;
@@ -64,7 +64,7 @@ public class MusicConditionScreen extends Screen {
 	private int notesY;
 
 	public MusicConditionScreen(Screen parent, MusicBlockEntity block, int queueIndex, MusicCondition condition) {
-		super(Component.literal(titleOf(condition)));
+		super(Component.translatable(condition.kind() == null ? "mapmakermusic.gui.condition_unknown" : "mapmakermusic.gui.condition"));
 		this.parent = parent;
 		this.block = block;
 		this.queueIndex = queueIndex;
@@ -73,11 +73,6 @@ public class MusicConditionScreen extends Screen {
 		ConditionKind kind = condition.kind();
 		this.bgWidth = kind == null ? 248 : kind.editorWidth();
 		this.bgHeight = kind == null ? 150 : kind.editorHeight();
-	}
-
-	private static String titleOf(MusicCondition condition) {
-		ConditionKind kind = condition.kind();
-		return kind == null ? "Unknown" : kind.displayName();
 	}
 
 	private int panelTop() {
@@ -114,7 +109,7 @@ public class MusicConditionScreen extends Screen {
 		addRenderableWidget(Button.builder(Component.literal(GuiIcons.BACK), b -> {
 			MusicBlockScreen.sendUpdate(block);
 			this.minecraft.setScreen(parent);
-		}).tooltip(Tooltip.create(Component.literal("Back"))).bounds(x, topPos + GuiLayout.BACK_TOP, GuiLayout.BACK_SIZE, GuiLayout.BACK_SIZE).build());
+		}).tooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.back"))).bounds(x, topPos + GuiLayout.BACK_TOP, GuiLayout.BACK_SIZE, GuiLayout.BACK_SIZE).build());
 
 		ConditionKind kind = condition.kind();
 		int row = 0;
@@ -154,7 +149,7 @@ public class MusicConditionScreen extends Screen {
 		notes = kind == null ? List.of() : kind.editorNotes();
 		notesY = below;
 
-		addRenderableWidget(Button.builder(Component.literal("Done"), b -> saveAndClose())
+		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.done"), b -> saveAndClose())
 				.bounds(x, topPos + bgHeight - GuiLayout.BOTTOM_OFFSET, contentWidth, GuiLayout.BUTTON_HEIGHT).build());
 	}
 
@@ -199,8 +194,8 @@ public class MusicConditionScreen extends Screen {
 	private void addTextBox(FieldSpec spec, int x, int y, int contentWidth) {
 		boolean command = "command".equals(spec.suggest()) && spec.type() == FieldSpec.FieldType.LONG_TEXT;
 		int height = command ? 20 : GuiLayout.BUTTON_HEIGHT;
-		EditBox box = new EditBox(this.font, x, y, contentWidth, height, Component.literal(spec.label()));
-		box.setHint(Component.literal(spec.hint() == null ? "value" : spec.hint()));
+		EditBox box = new EditBox(this.font, x, y, contentWidth, height, Component.translatable(spec.label()));
+		box.setHint(Component.translatable(spec.hint() == null ? "mapmakermusic.gui.value_hint" : spec.hint()));
 		box.setMaxLength(command ? 32500 : 128);
 		box.setValue(condition.params().getString(spec.key()));
 		box.setResponder(text -> {
@@ -223,29 +218,29 @@ public class MusicConditionScreen extends Screen {
 	}
 
 	private void addNumberBox(FieldSpec spec, int x, int y, int contentWidth) {
-		EditBox box = new EditBox(this.font, x, y, contentWidth, GuiLayout.BUTTON_HEIGHT, Component.literal(spec.label()));
-		box.setHint(Component.literal(spec.label()));
+		EditBox box = new EditBox(this.font, x, y, contentWidth, GuiLayout.BUTTON_HEIGHT, Component.translatable(spec.label()));
+		box.setHint(Component.translatable(spec.label()));
 		box.setValue(format(dbl(spec.key())));
 		box.setResponder(text -> condition.params().putDouble(spec.key(), parse(text, dbl(spec.key()))));
-		box.setTooltip(Tooltip.create(Component.literal("Scroll to adjust")));
+		box.setTooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.scroll_hint")));
 		addRenderableWidget(box);
 		doubleBoxes.add(box);
 		doubleKeys.add(spec.key());
 	}
 
 	private void addRangeBoxes(FieldSpec spec, int x, int y, int fieldWidth) {
-		EditBox minBox = new EditBox(this.font, x, y, fieldWidth, GuiLayout.BUTTON_HEIGHT, Component.literal(spec.label()));
+		EditBox minBox = new EditBox(this.font, x, y, fieldWidth, GuiLayout.BUTTON_HEIGHT, Component.translatable(spec.label()));
 		minBox.setValue(format(dbl(spec.key())));
 		minBox.setResponder(text -> condition.params().putDouble(spec.key(), parse(text, dbl(spec.key()))));
-		minBox.setTooltip(Tooltip.create(Component.literal("Scroll to adjust")));
+		minBox.setTooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.scroll_hint")));
 		addRenderableWidget(minBox);
 		doubleBoxes.add(minBox);
 		doubleKeys.add(spec.key());
 
-		EditBox maxBox = new EditBox(this.font, x + fieldWidth + GuiLayout.WIDGET_SPACING, y, fieldWidth, GuiLayout.BUTTON_HEIGHT, Component.literal(spec.secondLabel()));
+		EditBox maxBox = new EditBox(this.font, x + fieldWidth + GuiLayout.WIDGET_SPACING, y, fieldWidth, GuiLayout.BUTTON_HEIGHT, Component.translatable(spec.secondLabel()));
 		maxBox.setValue(format(dbl(spec.secondKey())));
 		maxBox.setResponder(text -> condition.params().putDouble(spec.secondKey(), parse(text, dbl(spec.secondKey()))));
-		maxBox.setTooltip(Tooltip.create(Component.literal("Scroll to adjust")));
+		maxBox.setTooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.scroll_hint")));
 		addRenderableWidget(maxBox);
 		doubleBoxes.add(maxBox);
 		doubleKeys.add(spec.secondKey());
@@ -266,8 +261,8 @@ public class MusicConditionScreen extends Screen {
 			Preset preset = presets.get(i);
 			int bx = x + (i % cols) * (buttonWidth + GuiLayout.WIDGET_SPACING);
 			int by = gridTop + (i / cols) * GuiLayout.SECTION_SPACING;
-			addRenderableWidget(Button.builder(Component.literal(preset.label()), b -> applyPreset(preset))
-					.tooltip(Tooltip.create(Component.literal(preset.hint())))
+			addRenderableWidget(Button.builder(Component.translatable(preset.label()), b -> applyPreset(preset))
+					.tooltip(Tooltip.create(Component.translatable(preset.hint())))
 					.bounds(bx, by, buttonWidth, GuiLayout.BUTTON_HEIGHT).build());
 		}
 		return 3 + (presets.size() + cols - 1) / cols;
@@ -300,7 +295,7 @@ public class MusicConditionScreen extends Screen {
 	}
 
 	private void addActionButton(ConditionKind kind, FieldSpec spec, int x, int y, int width) {
-		Button button = Button.builder(Component.literal(spec.label()), b -> kind.runAction(spec.key(), condition, this.minecraft))
+		Button button = Button.builder(Component.translatable(spec.label()), b -> kind.runAction(spec.key(), condition, this.minecraft))
 				.bounds(x, y, width, GuiLayout.BUTTON_HEIGHT).build();
 		addRenderableWidget(button);
 		actionButtons.put(spec.key(), button);
@@ -323,7 +318,7 @@ public class MusicConditionScreen extends Screen {
 		if (!current.equals(command)) {
 			return;
 		}
-		testStatus = pass ? "PASS" : "FAIL";
+		testStatus = Component.translatable(pass ? "mapmakermusic.gui.test_pass" : "mapmakermusic.gui.test_fail");
 		testStatusColor = pass ? 0x55FF55 : 0xFF5555;
 	}
 
@@ -606,7 +601,7 @@ public class MusicConditionScreen extends Screen {
 			guiGraphics.drawString(this.font, testStatus, labelX, testStatusY + 5, testStatusColor, false);
 		}
 		if (showPresetsCaption) {
-			guiGraphics.drawCenteredString(this.font, "Presets", presetsCaptionX, presetsCaptionY + 5, 0xE0E0E0);
+			guiGraphics.drawCenteredString(this.font, Component.translatable("mapmakermusic.gui.presets"), presetsCaptionX, presetsCaptionY + 5, 0xE0E0E0);
 		}
 		for (int i = 0; i < notes.size(); i++) {
 			String shown = this.font.plainSubstrByWidth(notes.get(i), bgWidth - 2 * GuiLayout.SCREEN_PADDING, false);

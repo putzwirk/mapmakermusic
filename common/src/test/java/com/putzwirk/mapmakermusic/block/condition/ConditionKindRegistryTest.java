@@ -23,10 +23,6 @@ public class ConditionKindRegistryTest {
 			return new ResourceLocation("mapmakermusic", path);
 		}
 
-		@Override
-		public String displayName() {
-			return path;
-		}
 
 		@Override
 		public boolean evaluate(MusicCondition condition, ConditionContext ctx) {
@@ -75,10 +71,6 @@ public class ConditionKindRegistryTest {
 	public void reregisteringSameIdOverwrites() {
 		StubKind original = new StubKind("stub_dup");
 		StubKind replacement = new StubKind("stub_dup") {
-			@Override
-			public String displayName() {
-				return "replacement";
-			}
 		};
 		ConditionKindRegistry.register(original);
 		ConditionKindRegistry.register(replacement);

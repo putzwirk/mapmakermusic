@@ -46,7 +46,7 @@ public class MusicQueueScreen extends Screen {
 	private TreeList treeList;
 
 	public MusicQueueScreen(Screen parent, MusicBlockEntity block, int queueIndex) {
-		super(Component.literal("Queue"));
+		super(Component.translatable("mapmakermusic.gui.queue"));
 		this.parent = parent;
 		this.block = block;
 		this.queueIndex = queueIndex;
@@ -66,16 +66,16 @@ public class MusicQueueScreen extends Screen {
 		int topPos = (this.height - BG_HEIGHT) / 2;
 
 		addRenderableWidget(Button.builder(Component.literal(GuiIcons.BACK), b -> backToParent())
-				.tooltip(Tooltip.create(Component.literal("Back"))).bounds(leftPos + PAD, topPos + GuiLayout.BACK_TOP, GuiLayout.BACK_SIZE, GuiLayout.BACK_SIZE).build());
+				.tooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.back"))).bounds(leftPos + PAD, topPos + GuiLayout.BACK_TOP, GuiLayout.BACK_SIZE, GuiLayout.BACK_SIZE).build());
 
-		Button tracksTab = Button.builder(Component.literal("Tracks"), b -> {
+		Button tracksTab = Button.builder(Component.translatable("mapmakermusic.gui.tracks"), b -> {
 			this.conditionsTab = false;
 			this.rebuildWidgets();
 		}).bounds(leftPos + PAD, topPos + 30, colWidth, GuiLayout.BUTTON_HEIGHT).build();
 		tracksTab.active = conditionsTab;
 		addRenderableWidget(tracksTab);
 
-		Button conditionsTabButton = Button.builder(Component.literal("Conditions"), b -> {
+		Button conditionsTabButton = Button.builder(Component.translatable("mapmakermusic.gui.conditions"), b -> {
 			this.conditionsTab = true;
 			this.rebuildWidgets();
 		}).bounds(leftPos + PAD + colWidth + GAP, topPos + 30, colWidth, GuiLayout.BUTTON_HEIGHT).build();
@@ -118,39 +118,39 @@ public class MusicQueueScreen extends Screen {
 		this.channelButton = Button.builder(channelLabel(), b -> {
 			queue.setChannel(queue.getChannel() == MusicQueue.Channel.MUSIC ? MusicQueue.Channel.SOUND : MusicQueue.Channel.MUSIC);
 			this.channelButton.setMessage(channelLabel());
-		}).tooltip(Tooltip.create(Component.literal("Music: one track at a time, resumes after relog. Sound: overlapping one-shots.")))
+		}).tooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.channel_tip")))
 				.bounds(leftPos + PAD, topPos + 166, modeWidth, GuiLayout.BUTTON_HEIGHT).build();
 		addRenderableWidget(channelButton);
 
 		this.loopButton = Button.builder(loopLabel(), b -> {
 			queue.setLoop(!queue.isLoop());
 			this.loopButton.setMessage(loopLabel());
-		}).tooltip(Tooltip.create(Component.literal("Repeat the queue endlessly")))
+		}).tooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.loop_tip")))
 				.bounds(leftPos + PAD + modeWidth + GAP, topPos + 166, modeWidth, GuiLayout.BUTTON_HEIGHT).build();
 		addRenderableWidget(loopButton);
 
 		this.shuffleButton = Button.builder(shuffleLabel(), b -> {
 			queue.setShuffle(!queue.isShuffle());
 			this.shuffleButton.setMessage(shuffleLabel());
-		}).tooltip(Tooltip.create(Component.literal("Shuffle the order each time the playlist starts")))
+		}).tooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.shuffle_tip")))
 				.bounds(leftPos + PAD + 2 * (modeWidth + GAP), topPos + 166, modeWidth, GuiLayout.BUTTON_HEIGHT).build();
 		addRenderableWidget(shuffleButton);
 
-		this.fadeInButton = Button.builder(fadeLabel("Fade in", queue.isFadeIn()), b -> {
+		this.fadeInButton = Button.builder(fadeLabel(Component.translatable("mapmakermusic.gui.fade_in"), queue.isFadeIn()), b -> {
 			queue.setFadeIn(!queue.isFadeIn());
-			this.fadeInButton.setMessage(fadeLabel("Fade in", queue.isFadeIn()));
-		}).tooltip(Tooltip.create(Component.literal("Fade in when the queue starts")))
+			this.fadeInButton.setMessage(fadeLabel(Component.translatable("mapmakermusic.gui.fade_in"), queue.isFadeIn()));
+		}).tooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.fade_in_tip")))
 				.bounds(leftPos + PAD, topPos + 188, colWidth, GuiLayout.BUTTON_HEIGHT).build();
 		addRenderableWidget(fadeInButton);
 
-		this.fadeOutButton = Button.builder(fadeLabel("Fade out", queue.isFadeOut()), b -> {
+		this.fadeOutButton = Button.builder(fadeLabel(Component.translatable("mapmakermusic.gui.fade_out"), queue.isFadeOut()), b -> {
 			queue.setFadeOut(!queue.isFadeOut());
-			this.fadeOutButton.setMessage(fadeLabel("Fade out", queue.isFadeOut()));
-		}).tooltip(Tooltip.create(Component.literal("Fade out when the queue ends")))
+			this.fadeOutButton.setMessage(fadeLabel(Component.translatable("mapmakermusic.gui.fade_out"), queue.isFadeOut()));
+		}).tooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.fade_out_tip")))
 				.bounds(rightX, topPos + 188, colWidth, GuiLayout.BUTTON_HEIGHT).build();
 		addRenderableWidget(fadeOutButton);
 
-		addRenderableWidget(Button.builder(Component.literal("Done"), b -> backToParent())
+		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.done"), b -> backToParent())
 				.bounds(leftPos + PAD, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, colWidth * 2 + GAP, GuiLayout.BUTTON_HEIGHT).build());
 
 		this.treeList = null;
@@ -167,12 +167,12 @@ public class MusicQueueScreen extends Screen {
 
 		int buttonsTop = topPos + LIST_TOP + 118 + 4;
 		int halfButton = (listWidth - GAP) / 2;
-		addRenderableWidget(Button.builder(Component.literal("+ Filter"), b -> addCommandCondition(queue().getRuleRoot()))
+		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.add_filter"), b -> addCommandCondition(queue().getRuleRoot()))
 				.bounds(leftPos + PAD, buttonsTop, halfButton, GuiLayout.BUTTON_HEIGHT).build());
-		addRenderableWidget(Button.builder(Component.literal("+ Group"), b -> addInnerGroup(queue().getRuleRoot()))
+		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.add_group"), b -> addInnerGroup(queue().getRuleRoot()))
 				.bounds(leftPos + PAD + halfButton + GAP, buttonsTop, halfButton, GuiLayout.BUTTON_HEIGHT).build());
 
-		addRenderableWidget(Button.builder(Component.literal("Done"), b -> backToParent())
+		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.done"), b -> backToParent())
 				.bounds(leftPos + PAD, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, listWidth, GuiLayout.BUTTON_HEIGHT).build());
 
 		this.libraryList = null;
@@ -191,23 +191,25 @@ public class MusicQueueScreen extends Screen {
 
 	private Component channelLabel() {
 		boolean music = queue().getChannel() == MusicQueue.Channel.MUSIC;
-		return Component.literal("Channel: " + (music ? GuiIcons.NOTE_MUSIC + "Music" : GuiIcons.NOTE_SOUND + "Sound"));
+		Component name = Component.literal(music ? GuiIcons.NOTE_MUSIC : GuiIcons.NOTE_SOUND)
+				.append(Component.translatable(music ? "mapmakermusic.gui.channel.music" : "mapmakermusic.gui.channel.sound"));
+		return Component.translatable("mapmakermusic.gui.channel", name);
 	}
 
 	private Component loopLabel() {
-		return Component.literal("Looping " + bracket(queue().isLoop() ? "YES" : "NO", queue().isLoop()));
+		return Component.translatable("mapmakermusic.gui.looping", bracket(queue().isLoop() ? "mapmakermusic.gui.yes" : "mapmakermusic.gui.no", queue().isLoop()));
 	}
 
 	private Component shuffleLabel() {
-		return Component.literal("Shuffle " + bracket(queue().isShuffle() ? "YES" : "NO", queue().isShuffle()));
+		return Component.translatable("mapmakermusic.gui.shuffle", bracket(queue().isShuffle() ? "mapmakermusic.gui.yes" : "mapmakermusic.gui.no", queue().isShuffle()));
 	}
 
-	private static Component fadeLabel(String name, boolean value) {
-		return Component.literal(name + " " + bracket(value ? "ON" : "OFF", value));
+	private static Component fadeLabel(Component name, boolean value) {
+		return name.copy().append(" ").append(bracket(value ? "ON" : "OFF", value));
 	}
 
-	private static String bracket(String value, boolean good) {
-		return "[" + (good ? "\u00a7a" : "\u00a7c") + value + "\u00a7r]";
+	private static Component bracket(String key, boolean good) {
+		return Component.translatable(good ? "mapmakermusic.gui.bracket.on" : "mapmakermusic.gui.bracket.off", Component.translatable(key));
 	}
 
 	private void openMixEditor(int trackIndex) {
@@ -230,7 +232,7 @@ public class MusicQueueScreen extends Screen {
 			}
 		}
 		if (!stop) {
-			String reason = MusicLibrary.playlistBlockReason(track);
+			Component reason = MusicLibrary.playlistBlockReason(track);
 			if (reason != null) {
 				notifyPlayer(reason);
 				return;
@@ -241,9 +243,9 @@ public class MusicQueueScreen extends Screen {
 		refreshPlaylist();
 	}
 
-	private void notifyPlayer(String message) {
+	private void notifyPlayer(Component message) {
 		if (this.minecraft != null && this.minecraft.player != null) {
-			this.minecraft.player.displayClientMessage(Component.literal(message), true);
+			this.minecraft.player.displayClientMessage(message, true);
 		}
 	}
 
@@ -369,8 +371,8 @@ public class MusicQueueScreen extends Screen {
 
 		if (!conditionsTab) {
 			int rightX = leftPos + PAD + colWidth + GAP;
-			guiGraphics.drawString(this.font, "Library", leftPos + PAD + 2, topPos + 52, 0xE0E0E0, false);
-			guiGraphics.drawString(this.font, "Playlist", rightX + 2, topPos + 52, 0xE0E0E0, false);
+			guiGraphics.drawString(this.font, Component.translatable("mapmakermusic.gui.library"), leftPos + PAD + 2, topPos + 52, 0xE0E0E0, false);
+			guiGraphics.drawString(this.font, Component.translatable("mapmakermusic.gui.playlist"), rightX + 2, topPos + 52, 0xE0E0E0, false);
 			int divX = leftPos + PAD + colWidth + GAP / 2;
 			guiGraphics.fill(divX, topPos + LIST_TOP, divX + 1, topPos + LIST_TOP + LIST_HEIGHT, 0xFF6A6A6A);
 		} else {
@@ -514,7 +516,7 @@ public class MusicQueueScreen extends Screen {
 
 			private String label() {
 				if (index < 0) {
-					return "Playlist is empty";
+					return Component.translatable("mapmakermusic.gui.playlist_empty").getString();
 				}
 				MusicQueue.PlaylistItem item = queue().getTracks().get(index);
 				return (index + 1) + ". " + item.getTrack();
@@ -603,7 +605,7 @@ public class MusicQueueScreen extends Screen {
 			@Override
 			public Component getNarration() {
 				if (row.node() instanceof ConditionGroup group) {
-					return Component.literal(group.getOp().name() + " group");
+					return Component.translatable("mapmakermusic.gui.group_narration", Component.translatable(group.getOp() == ConditionGroup.Op.ALL ? "mapmakermusic.gui.op.all" : "mapmakermusic.gui.op.any"));
 				}
 				return Component.literal(((MusicCondition) row.node()).describe());
 			}
@@ -652,7 +654,7 @@ public class MusicQueueScreen extends Screen {
 						int sx = left + 4 + (row.depth() - 1) * INDENT;
 						guiGraphics.fill(sx, top + height / 2, cx + 2, top + height / 2 + 1, color);
 					}
-					String opName = group.getOp().name();
+					String opName = Component.translatable(group.getOp() == ConditionGroup.Op.ALL ? "mapmakermusic.gui.op.all" : "mapmakermusic.gui.op.any").getString();
 					this.pillX = cx + 2;
 					this.pillWidth = MusicQueueScreen.this.font.width(opName) + 10;
 					guiGraphics.fill(pillX, top + 4, pillX + pillWidth, top + 4 + PILL_HEIGHT, 0xFF141414);
@@ -663,13 +665,15 @@ public class MusicQueueScreen extends Screen {
 					guiGraphics.drawString(MusicQueueScreen.this.font, count, nx, top + 7, 0x9A9A9A, false);
 					nx += MusicQueueScreen.this.font.width(count) + 8;
 					this.filterX = nx;
-					this.filterWidth = MusicQueueScreen.this.font.width("+ Filter");
-					guiGraphics.drawString(MusicQueueScreen.this.font, "+ Filter", filterX, top + 7,
+					String filterText = Component.translatable("mapmakermusic.gui.add_filter").getString();
+					this.filterWidth = MusicQueueScreen.this.font.width(filterText);
+					guiGraphics.drawString(MusicQueueScreen.this.font, filterText, filterX, top + 7,
 							inBand(mouseX, mouseY, filterX, filterWidth) ? 0xFFFFFF : 0xFF7FB2FF, false);
 					nx += filterWidth + 8;
 					this.innerX = nx;
-					this.innerWidth = MusicQueueScreen.this.font.width("+ Group");
-					guiGraphics.drawString(MusicQueueScreen.this.font, "+ Group", innerX, top + 7,
+					String innerText = Component.translatable("mapmakermusic.gui.add_group").getString();
+					this.innerWidth = MusicQueueScreen.this.font.width(innerText);
+					guiGraphics.drawString(MusicQueueScreen.this.font, innerText, innerX, top + 7,
 							inBand(mouseX, mouseY, innerX, innerWidth) ? 0xFFFFFF : 0xFF7FB2FF, false);
 					if (row.parent() != null) {
 						int x4 = removeX(left, width);

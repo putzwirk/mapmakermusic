@@ -13,6 +13,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import net.minecraft.network.chat.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -152,16 +153,16 @@ public final class MusicLibrary {
 		return result;
 	}
 
-	public static String playlistBlockReason(String key) {
+	public static Component playlistBlockReason(String key) {
 		if (MusicQueue.PlaylistItem.isStop(key)) {
 			return null;
 		}
 		TrackInfo info = trackInfo().get(key);
 		if (info == null) {
-			return "Track not found: " + key;
+			return Component.translatable("mapmakermusic.chat.track_not_found", key);
 		}
 		if (info.durationSeconds() >= 0f && info.durationSeconds() > MAX_TRACK_SECONDS) {
-			return "Track too long (max 9:59:59): " + key;
+			return Component.translatable("mapmakermusic.chat.track_too_long", key);
 		}
 		return null;
 	}

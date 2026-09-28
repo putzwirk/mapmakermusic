@@ -9,8 +9,6 @@ public interface ConditionKind {
 
 	ResourceLocation id();
 
-	String displayName();
-
 	boolean evaluate(MusicCondition condition, ConditionContext ctx);
 
 	String describe(MusicCondition condition);

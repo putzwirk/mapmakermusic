@@ -28,11 +28,6 @@ public final class CommandConditionKind implements ConditionKind {
 	}
 
 	@Override
-	public String displayName() {
-		return "Command";
-	}
-
-	@Override
 	public boolean evaluate(MusicCondition condition, ConditionContext ctx) {
 		ServerPlayer player = ctx.player();
 		MinecraftServer server = player.getServer();
@@ -66,8 +61,8 @@ public final class CommandConditionKind implements ConditionKind {
 	@Override
 	public List<FieldSpec> editorFields() {
 		return List.of(
-				FieldSpec.longText(COMMAND_KEY, "Command", "command to test, without leading slash", "command"),
-				FieldSpec.action(TEST_ACTION, "Test"),
+				FieldSpec.longText(COMMAND_KEY, "mapmakermusic.gui.condition", "mapmakermusic.hint.command", "command"),
+				FieldSpec.action(TEST_ACTION, "mapmakermusic.gui.test"),
 				FieldSpec.presets());
 	}
 
@@ -89,19 +84,19 @@ public final class CommandConditionKind implements ConditionKind {
 	@Override
 	public List<Preset> editorPresets() {
 		return List.of(
-				new Preset("Health", "execute if data entity @s {Health:20.0f}", "Matches at full health (20)."),
-				new Preset("Hunger", "execute if data entity @s {foodLevel:0}", "Matches when starving (hunger 0)."),
-				new Preset("Name", "execute if entity @s[name=Steve]", "Matches the player named Steve. Edit the name."),
-				new Preset("Score", "execute if score @s kills matches 10..", "Matches kills score 10 or more. Edit objective and range."),
-				new Preset("Day", "mmcheck time day", "Matches during daytime."),
-				new Preset("Night", "mmcheck time night", "Matches during nighttime."),
-				new Preset("Weather", "mmcheck weather clear", "Matches in clear weather. Edit for rain or thunder."),
-				new Preset("Biome", "mmcheck biome minecraft:plains", "Matches in plains. Edit the biome id."),
-				new Preset("Entities", "execute if entity @e[type=minecraft:cow,distance=..30]", "Matches if a cow is within 30 blocks. Edit type and distance."),
-				new Preset("Item", "clear @s minecraft:diamond 0", "Matches if you carry any diamonds."),
-				new Preset("Gamemode", "execute if entity @s[gamemode=creative]", "Matches in creative mode."),
-				new Preset("Team", "execute if entity @s[team=Red]", "Matches team Red. Edit the team name."),
-				new Preset("Holding", "execute if data entity @s {SelectedItem:{id:\"minecraft:torch\"}}", "Matches with a torch in your main hand. Edit the item id."));
+				new Preset("mapmakermusic.preset.health", "execute if data entity @s {Health:20.0f}", "mapmakermusic.preset.health.hint"),
+				new Preset("mapmakermusic.preset.hunger", "execute if data entity @s {foodLevel:0}", "mapmakermusic.preset.hunger.hint"),
+				new Preset("mapmakermusic.preset.name", "execute if entity @s[name=Steve]", "mapmakermusic.preset.name.hint"),
+				new Preset("mapmakermusic.preset.score", "execute if score @s kills matches 10..", "mapmakermusic.preset.score.hint"),
+				new Preset("mapmakermusic.preset.day", "mmcheck time day", "mapmakermusic.preset.day.hint"),
+				new Preset("mapmakermusic.preset.night", "mmcheck time night", "mapmakermusic.preset.night.hint"),
+				new Preset("mapmakermusic.preset.weather", "mmcheck weather clear", "mapmakermusic.preset.weather.hint"),
+				new Preset("mapmakermusic.preset.biome", "mmcheck biome minecraft:plains", "mapmakermusic.preset.biome.hint"),
+				new Preset("mapmakermusic.preset.entities", "execute if entity @e[type=minecraft:cow,distance=..30]", "mapmakermusic.preset.entities.hint"),
+				new Preset("mapmakermusic.preset.item", "clear @s minecraft:diamond 0", "mapmakermusic.preset.item.hint"),
+				new Preset("mapmakermusic.preset.gamemode", "execute if entity @s[gamemode=creative]", "mapmakermusic.preset.gamemode.hint"),
+				new Preset("mapmakermusic.preset.team", "execute if entity @s[team=Red]", "mapmakermusic.preset.team.hint"),
+				new Preset("mapmakermusic.preset.holding", "execute if data entity @s {SelectedItem:{id:\"minecraft:torch\"}}", "mapmakermusic.preset.holding.hint"));
 	}
 
 	@Override

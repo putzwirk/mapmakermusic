@@ -107,14 +107,14 @@ public class CommandConditionKindTest {
 		assertTrue(KIND.editorFields().stream().anyMatch(spec -> spec.type() == FieldSpec.FieldType.LONG_TEXT && "command".equals(spec.suggest())));
 		assertTrue(KIND.editorNotes().isEmpty());
 		assertEquals(13, KIND.editorPresets().size());
-		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Day") && preset.command().equals("mmcheck time day")));
-		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Health") && preset.command().equals("execute if data entity @s {Health:20.0f}")));
-		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Hunger") && preset.command().equals("execute if data entity @s {foodLevel:0}")));
-		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Name") && preset.command().equals("execute if entity @s[name=Steve]")));
-		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Score") && preset.command().equals("execute if score @s kills matches 10..")));
-		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Gamemode") && preset.command().equals("execute if entity @s[gamemode=creative]")));
+		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("mapmakermusic.preset.day") && preset.command().equals("mmcheck time day")));
+		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("mapmakermusic.preset.health") && preset.command().equals("execute if data entity @s {Health:20.0f}")));
+		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("mapmakermusic.preset.hunger") && preset.command().equals("execute if data entity @s {foodLevel:0}")));
+		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("mapmakermusic.preset.name") && preset.command().equals("execute if entity @s[name=Steve]")));
+		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("mapmakermusic.preset.score") && preset.command().equals("execute if score @s kills matches 10..")));
+		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("mapmakermusic.preset.gamemode") && preset.command().equals("execute if entity @s[gamemode=creative]")));
 		assertTrue(KIND.editorPresets().stream().allMatch(preset -> preset.hint() != null && !preset.hint().isBlank()));
-		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Item") && preset.command().equals("clear @s minecraft:diamond 0")));
+		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("mapmakermusic.preset.item") && preset.command().equals("clear @s minecraft:diamond 0")));
 		assertTrue(KIND.editorFields().stream().anyMatch(spec -> spec.type() == FieldSpec.FieldType.PRESETS));
 		assertEquals(FieldSpec.FieldType.LONG_TEXT, KIND.editorFields().get(0).type());
 		assertEquals(FieldSpec.FieldType.ACTION, KIND.editorFields().get(1).type());
@@ -123,11 +123,6 @@ public class CommandConditionKindTest {
 			@Override
 			public net.minecraft.resources.ResourceLocation id() {
 				return new net.minecraft.resources.ResourceLocation("mapmakermusic", "plain");
-			}
-
-			@Override
-			public String displayName() {
-				return "plain";
 			}
 
 			@Override

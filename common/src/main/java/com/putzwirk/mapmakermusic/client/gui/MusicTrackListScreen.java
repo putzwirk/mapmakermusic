@@ -28,7 +28,7 @@ public class MusicTrackListScreen extends Screen {
 	private QueueList queueList;
 
 	public MusicTrackListScreen(Screen parent, MusicBlockEntity musicBlock) {
-		super(Component.literal("Queues"));
+		super(Component.translatable("mapmakermusic.gui.queues"));
 		this.parent = parent;
 		this.musicBlock = musicBlock;
 	}
@@ -43,23 +43,23 @@ public class MusicTrackListScreen extends Screen {
 		int content = panelWidth - 2 * PAD;
 
 		addRenderableWidget(Button.builder(Component.literal(GuiIcons.BACK), b -> backToParent())
-				.tooltip(Tooltip.create(Component.literal("Back"))).bounds(leftPos + PAD, topPos + GuiLayout.BACK_TOP, GuiLayout.BACK_SIZE, GuiLayout.BACK_SIZE).build());
+				.tooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.back"))).bounds(leftPos + PAD, topPos + GuiLayout.BACK_TOP, GuiLayout.BACK_SIZE, GuiLayout.BACK_SIZE).build());
 
 		this.queueList = new QueueList(this.minecraft, content, LIST_HEIGHT, topPos + LIST_TOP, topPos + LIST_TOP + LIST_HEIGHT, ROW_HEIGHT);
 		this.queueList.setLeftPos(leftPos + PAD);
 		refreshQueues();
 		addRenderableWidget(queueList);
 
-		addRenderableWidget(Button.builder(Component.literal("Add queue"), b -> {
+		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.add_queue"), b -> {
 			musicBlock.addQueue(new MusicQueue());
 			this.minecraft.setScreen(new MusicQueueScreen(this, musicBlock, musicBlock.getQueues().size() - 1));
-		}).tooltip(Tooltip.create(Component.literal("Add an empty queue"))).bounds(leftPos + PAD, topPos + 212, 100, GuiLayout.BUTTON_HEIGHT).build());
+		}).tooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.add_queue_tip"))).bounds(leftPos + PAD, topPos + 212, 100, GuiLayout.BUTTON_HEIGHT).build());
 
-		addRenderableWidget(Button.builder(Component.literal("Audio folder"), b -> openMusicFolder())
-				.tooltip(Tooltip.create(Component.literal("Open the folder that holds .ogg tracks")))
+		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.audio_folder"), b -> openMusicFolder())
+				.tooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.audio_folder_tip")))
 				.bounds(leftPos + PAD + 100 + GuiLayout.WIDGET_SPACING, topPos + 212, content - 100 - GuiLayout.WIDGET_SPACING, GuiLayout.BUTTON_HEIGHT).build());
 
-		addRenderableWidget(Button.builder(Component.literal("Done"), b -> {
+		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.done"), b -> {
 			MusicBlockScreen.sendUpdate(musicBlock);
 			this.minecraft.setScreen(parent);
 		}).bounds(leftPos + PAD, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, content, GuiLayout.BUTTON_HEIGHT).build());
@@ -131,7 +131,7 @@ public class MusicTrackListScreen extends Screen {
 		guiGraphics.fill(leftPos, topPos, leftPos + panelWidth, topPos + BG_HEIGHT, 0xF0101010);
 		guiGraphics.renderOutline(leftPos, topPos, panelWidth, BG_HEIGHT, GuiIcons.boxOutlineColor(musicBlock.getBlockPos(), musicBlock.getOutlineColor()));
 		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + GuiLayout.TITLE_TOP, 0xFFFFFF);
-		guiGraphics.drawString(this.font, clipped("Top to bottom, first match wins.", panelWidth - 2 * PAD), leftPos + PAD + 2, topPos + 40, 0x9A9A9A, false);
+		guiGraphics.drawString(this.font, clipped(Component.translatable("mapmakermusic.gui.queue_order_hint").getString(), panelWidth - 2 * PAD), leftPos + PAD + 2, topPos + 40, 0x9A9A9A, false);
 		super.render(guiGraphics, mouseX, mouseY, delta);
 	}
 
@@ -188,15 +188,15 @@ public class MusicTrackListScreen extends Screen {
 
 			private String[] lines() {
 				if (index < 0) {
-					return new String[] {"No queues yet"};
+					return new String[] {Component.translatable("mapmakermusic.gui.no_queues").getString()};
 				}
 				MusicQueue queue = musicBlock.getQueues().get(index);
 				String tracks = queue.getTrackNames().isEmpty()
-						? (index + 1) + ". <add tracks>"
+						? Component.translatable("mapmakermusic.gui.queue_empty", index + 1).getString()
 						: (index + 1) + ". " + String.join(" > ", queue.getTrackNames());
-				String channel = "Channel: " + (queue.getChannel() == MusicQueue.Channel.MUSIC ? "Music" : "Sound");
+				String channel = Component.translatable("mapmakermusic.gui.channel", Component.translatable(queue.getChannel() == MusicQueue.Channel.MUSIC ? "mapmakermusic.gui.channel.music" : "mapmakermusic.gui.channel.sound").getString()).getString();
 				if (queue.isLoop()) {
-					channel += ", Looping";
+					channel += Component.translatable("mapmakermusic.gui.looping_suffix").getString();
 				}
 				String rules = queue.getRuleRoot().describeRules();
 				return new String[] {tracks, channel, rules};
