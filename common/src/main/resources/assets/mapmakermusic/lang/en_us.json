@@ -66,6 +66,7 @@
   "mapmakermusic.gui.no": "NO",
   "mapmakermusic.gui.library": "Library",
   "mapmakermusic.gui.playlist": "Playlist",
+  "mapmakermusic.gui.playlist_empty": "Playlist is empty",
   "mapmakermusic.gui.volume": "Volume",
   "mapmakermusic.gui.volume_hint": "volume",
   "mapmakermusic.gui.pitch": "Pitch",
