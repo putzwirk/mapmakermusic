@@ -50,7 +50,7 @@ public class MusicBlockScreen extends Screen {
 	private EditBox priorityEdit;
 
 	public MusicBlockScreen(MusicBlockEntity musicBlock) {
-		super(Component.literal("Audiobox"));
+		super(Component.translatable("block.mapmakermusic.music_block"));
 		this.musicBlock = musicBlock;
 		this.triggerMode = musicBlock.getTriggerMode();
 		this.areaGate = musicBlock.isAreaGate();
@@ -68,83 +68,83 @@ public class MusicBlockScreen extends Screen {
 		boolean gateOn = isChain && this.areaGate;
 		boolean isGlobal = this.playbackMode == MusicBlockEntity.PlaybackMode.GLOBAL;
 
-		this.triggerButton = Button.builder(Component.literal("Trigger: " + label(this.triggerMode)), b -> {
+		this.triggerButton = Button.builder(Component.translatable("mapmakermusic.gui.trigger", label(this.triggerMode)), b -> {
 			this.triggerMode = this.triggerMode == MusicBlockEntity.TriggerMode.IMPULSE
 					? MusicBlockEntity.TriggerMode.CHAIN
 					: MusicBlockEntity.TriggerMode.IMPULSE;
 			this.rebuildWidgets();
-		}).tooltip(Tooltip.create(Component.literal("Impulse: one shot per signal. Chain: conditions checked every tick."))).bounds(leftPos + FIELD_X, topPos + 32, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT).build();
+		}).tooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.trigger_tip"))).bounds(leftPos + FIELD_X, topPos + 32, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT).build();
 		addRenderableWidget(triggerButton);
 
-		this.pos1Edit = new EditBox(this.font, leftPos + FIELD_X, topPos + 72, FIELD_WIDTH, 16, Component.literal("First area corner"));
+		this.pos1Edit = new EditBox(this.font, leftPos + FIELD_X, topPos + 72, FIELD_WIDTH, 16, Component.translatable("mapmakermusic.gui.first_corner"));
 		this.pos1Edit.setValue(formatPos(musicBlock.getPos1()));
 		this.pos1Edit.setEditable(gateOn);
 		addRenderableWidget(pos1Edit);
 
-		this.pos2Edit = new EditBox(this.font, leftPos + FIELD_X, topPos + 92, FIELD_WIDTH, 16, Component.literal("Second area corner"));
+		this.pos2Edit = new EditBox(this.font, leftPos + FIELD_X, topPos + 92, FIELD_WIDTH, 16, Component.translatable("mapmakermusic.gui.second_corner"));
 		this.pos2Edit.setValue(formatPos(musicBlock.getPos2()));
 		this.pos2Edit.setEditable(gateOn);
 		addRenderableWidget(pos2Edit);
 
-		this.gateButton = Button.builder(Component.literal("Area bounds: " + (this.areaGate ? "On" : "Off")), b -> {
+		this.gateButton = Button.builder(Component.translatable("mapmakermusic.gui.area_bounds", Component.translatable(this.areaGate ? "mapmakermusic.gui.on" : "mapmakermusic.gui.off")), b -> {
 			this.areaGate = !this.areaGate;
 			this.rebuildWidgets();
-		}).tooltip(Tooltip.create(Component.literal("bound chain audiobox to area corners."))).bounds(leftPos + FIELD_X, topPos + 52, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT).build();
+		}).tooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.area_bounds_tip"))).bounds(leftPos + FIELD_X, topPos + 52, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT).build();
 		this.gateButton.visible = isChain;
 		addRenderableWidget(gateButton);
 
-		addRenderableWidget(Button.builder(Component.literal("Audio track settings"), b -> {
+		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.audio_track_settings"), b -> {
 			applySetupFields();
 			this.minecraft.setScreen(new MusicTrackListScreen(this, musicBlock));
-		}).tooltip(Tooltip.create(Component.literal("Choose tracks, per-track mix, order, and rules")))
+		}).tooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.audio_track_settings_tip")))
 				.bounds(leftPos + GuiLayout.SCREEN_PADDING, topPos + 114, BG_WIDTH - 2 * GuiLayout.SCREEN_PADDING, GuiLayout.BUTTON_HEIGHT).build());
 
-		this.playbackButton = Button.builder(Component.literal("Playback: " + label(this.playbackMode)), b -> {
+		this.playbackButton = Button.builder(Component.translatable("mapmakermusic.gui.playback", label(this.playbackMode)), b -> {
 			this.playbackMode = this.playbackMode == MusicBlockEntity.PlaybackMode.GLOBAL
 					? MusicBlockEntity.PlaybackMode.POSITIONAL
 					: MusicBlockEntity.PlaybackMode.GLOBAL;
-			this.playbackButton.setMessage(Component.literal("Playback: " + label(this.playbackMode)));
+			this.playbackButton.setMessage(Component.translatable("mapmakermusic.gui.playback", label(this.playbackMode)));
 			boolean global = this.playbackMode == MusicBlockEntity.PlaybackMode.GLOBAL;
 			boolean impulse = this.triggerMode == MusicBlockEntity.TriggerMode.IMPULSE;
 			this.listenerEdit.setVisible(global && impulse);
 			this.playbackPosEdit.setVisible(!global);
 			this.radiusEdit.setVisible(!global);
-		}).tooltip(Tooltip.create(Component.literal("Click to switch playback positioning"))).bounds(leftPos + FIELD_X, topPos + 136, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT).build();
+		}).tooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.playback_tip"))).bounds(leftPos + FIELD_X, topPos + 136, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT).build();
 		addRenderableWidget(playbackButton);
 
-		this.listenerEdit = new EditBox(this.font, leftPos + FIELD_X, topPos + 168, FIELD_WIDTH, 16, Component.literal("Listener selector"));
+		this.listenerEdit = new EditBox(this.font, leftPos + FIELD_X, topPos + 168, FIELD_WIDTH, 16, Component.translatable("mapmakermusic.gui.listener_selector"));
 		this.listenerEdit.setValue(musicBlock.getListenerSelector());
 		this.listenerEdit.setVisible(isGlobal && this.triggerMode == MusicBlockEntity.TriggerMode.IMPULSE);
 		addRenderableWidget(listenerEdit);
 
-		this.playbackPosEdit = new EditBox(this.font, leftPos + 52, topPos + 168, 112, 16, Component.literal("Playback point"));
+		this.playbackPosEdit = new EditBox(this.font, leftPos + 52, topPos + 168, 112, 16, Component.translatable("mapmakermusic.gui.playback_point"));
 		this.playbackPosEdit.setValue(formatPos(musicBlock.getPlaybackPos()));
 		this.playbackPosEdit.setVisible(!isGlobal);
 		addRenderableWidget(playbackPosEdit);
 
-		this.radiusEdit = new EditBox(this.font, leftPos + 212, topPos + 168, 40, 16, Component.literal("Radius"));
+		this.radiusEdit = new EditBox(this.font, leftPos + 212, topPos + 168, 40, 16, Component.translatable("mapmakermusic.gui.radius"));
 		this.radiusEdit.setValue(String.valueOf(musicBlock.getRadius()));
 		this.radiusEdit.setVisible(!isGlobal);
 		addRenderableWidget(radiusEdit);
 
-		this.priorityEdit = new EditBox(this.font, leftPos + FIELD_X, topPos + 186, FIELD_WIDTH, 16, Component.literal("Priority"));
+		this.priorityEdit = new EditBox(this.font, leftPos + FIELD_X, topPos + 186, FIELD_WIDTH, 16, Component.translatable("mapmakermusic.gui.priority"));
 		this.priorityEdit.setValue(String.valueOf(musicBlock.getPriority()));
 		this.priorityEdit.setFilter(text -> text.matches("-?\\d*"));
-		this.priorityEdit.setTooltip(Tooltip.create(Component.literal("Higher priority wins. Scroll to adjust")));
+		this.priorityEdit.setTooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.priority_tip")));
 		addRenderableWidget(priorityEdit);
 
-		addRenderableWidget(Button.builder(Component.literal("Done"), b -> saveAndClose())
+		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.done"), b -> saveAndClose())
 				.bounds(leftPos + GuiLayout.SCREEN_PADDING, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, 116, GuiLayout.BUTTON_HEIGHT).build());
-		addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> onClose())
+		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.cancel"), b -> onClose())
 				.bounds(leftPos + GuiLayout.SCREEN_PADDING + 116 + GuiLayout.WIDGET_SPACING, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, 116, GuiLayout.BUTTON_HEIGHT).build());
 	}
 
-	private String label(MusicBlockEntity.TriggerMode mode) {
-		return mode == MusicBlockEntity.TriggerMode.CHAIN ? "Chain" : "Impulse";
+	private static Component label(MusicBlockEntity.TriggerMode mode) {
+		return Component.translatable(mode == MusicBlockEntity.TriggerMode.CHAIN ? "mapmakermusic.gui.trigger.chain" : "mapmakermusic.gui.trigger.impulse");
 	}
 
-	private String label(MusicBlockEntity.PlaybackMode mode) {
-		return mode == MusicBlockEntity.PlaybackMode.GLOBAL ? "Global" : "Positional";
+	private static Component label(MusicBlockEntity.PlaybackMode mode) {
+		return Component.translatable(mode == MusicBlockEntity.PlaybackMode.GLOBAL ? "mapmakermusic.gui.playback.global" : "mapmakermusic.gui.playback.positional");
 	}
 
 	private void applySetupFields() {
@@ -210,7 +210,7 @@ public class MusicBlockScreen extends Screen {
 		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, GuiIcons.boxOutlineColor(musicBlock.getBlockPos(), musicBlock.getOutlineColor()));
 		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + GuiLayout.TITLE_TOP, 0xFFFFFF);
 
-		guiGraphics.drawString(this.font, "Trigger", labelX, topPos + 37, labelColor, false);
+		guiGraphics.drawString(this.font, Component.translatable("mapmakermusic.gui.trigger_label"), labelX, topPos + 37, labelColor, false);
 		boolean gateOn = isChain && this.areaGate;
 		if (isChain) {
 			guiGraphics.drawString(this.font, "Bounds", labelX, topPos + 57, labelColor, false);
@@ -223,19 +223,19 @@ public class MusicBlockScreen extends Screen {
 					GuiIcons.boxOutlineColor(musicBlock.getBlockPos(), musicBlock.getOutlineColor()));
 			guiGraphics.renderOutline(swatchX, swatchY, 14, 14, 0xFFFFFFFF);
 		}
-		guiGraphics.drawString(this.font, "Pos1", labelX, topPos + 76, labelColor, false);
-		guiGraphics.drawString(this.font, "Pos2", labelX, topPos + 96, labelColor, false);
-		guiGraphics.drawString(this.font, "Playback", labelX, topPos + 141, labelColor, false);
+		guiGraphics.drawString(this.font, Component.translatable("mapmakermusic.gui.pos1"), labelX, topPos + 76, labelColor, false);
+		guiGraphics.drawString(this.font, Component.translatable("mapmakermusic.gui.pos2"), labelX, topPos + 96, labelColor, false);
+		guiGraphics.drawString(this.font, Component.translatable("mapmakermusic.gui.playback_label"), labelX, topPos + 141, labelColor, false);
 
 		if (isGlobal) {
 			if (this.triggerMode == MusicBlockEntity.TriggerMode.IMPULSE) {
-				guiGraphics.drawString(this.font, "Listener", labelX, topPos + 173, labelColor, false);
+				guiGraphics.drawString(this.font, Component.translatable("mapmakermusic.gui.listener"), labelX, topPos + 173, labelColor, false);
 			}
 		} else {
-			guiGraphics.drawString(this.font, "Point", labelX, topPos + 173, labelColor, false);
-			guiGraphics.drawString(this.font, "Radius", leftPos + 170, topPos + 173, labelColor, false);
+			guiGraphics.drawString(this.font, Component.translatable("mapmakermusic.gui.point"), labelX, topPos + 173, labelColor, false);
+			guiGraphics.drawString(this.font, Component.translatable("mapmakermusic.gui.radius"), leftPos + 170, topPos + 173, labelColor, false);
 		}
-		guiGraphics.drawString(this.font, "Priority", labelX, topPos + 190, labelColor, false);
+		guiGraphics.drawString(this.font, Component.translatable("mapmakermusic.gui.priority"), labelX, topPos + 190, labelColor, false);
 
 		super.render(guiGraphics, mouseX, mouseY, delta);
 
@@ -243,7 +243,7 @@ public class MusicBlockScreen extends Screen {
 			int swatchX = leftPos + FIELD_X - 20;
 			int swatchY = topPos + 54;
 			if (mouseX >= swatchX && mouseX < swatchX + 14 && mouseY >= swatchY && mouseY < swatchY + 14) {
-				guiGraphics.renderTooltip(this.font, Component.literal("Outline color"), mouseX, mouseY);
+				guiGraphics.renderTooltip(this.font, Component.translatable("mapmakermusic.gui.outline_color"), mouseX, mouseY);
 			}
 		}
 	}

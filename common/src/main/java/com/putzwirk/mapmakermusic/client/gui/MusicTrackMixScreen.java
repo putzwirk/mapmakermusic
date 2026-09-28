@@ -26,7 +26,7 @@ public class MusicTrackMixScreen extends Screen {
 	private EditBox pitchEdit;
 
 	public MusicTrackMixScreen(Screen parent, MusicBlockEntity block, int queueIndex, int trackIndex) {
-		super(Component.literal("Track mix"));
+		super(Component.translatable("mapmakermusic.gui.track_mix"));
 		this.parent = parent;
 		this.block = block;
 		this.queueIndex = queueIndex;
@@ -45,23 +45,23 @@ public class MusicTrackMixScreen extends Screen {
 		int topPos = (this.height - BG_HEIGHT) / 2;
 
 		addRenderableWidget(Button.builder(Component.literal(GuiIcons.BACK), b -> backToParent())
-				.tooltip(Tooltip.create(Component.literal("Back"))).bounds(leftPos + PAD, topPos + GuiLayout.BACK_TOP, GuiLayout.BACK_SIZE, GuiLayout.BACK_SIZE).build());
+				.tooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.back"))).bounds(leftPos + PAD, topPos + GuiLayout.BACK_TOP, GuiLayout.BACK_SIZE, GuiLayout.BACK_SIZE).build());
 
-		this.volumeEdit = new EditBox(this.font, leftPos + PAD, topPos + 44, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT, Component.literal("Volume"));
-		this.volumeEdit.setHint(Component.literal("volume"));
+		this.volumeEdit = new EditBox(this.font, leftPos + PAD, topPos + 44, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT, Component.translatable("mapmakermusic.gui.volume"));
+		this.volumeEdit.setHint(Component.translatable("mapmakermusic.gui.volume_hint"));
 		this.volumeEdit.setValue(String.valueOf(volumeValue()));
 		this.volumeEdit.setResponder(text -> item().setVolume(parseIntOrNull(text)));
-		this.volumeEdit.setTooltip(Tooltip.create(Component.literal("Scroll to adjust")));
+		this.volumeEdit.setTooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.scroll_hint")));
 		addRenderableWidget(volumeEdit);
 
-		this.pitchEdit = new EditBox(this.font, leftPos + PAD, topPos + 80, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT, Component.literal("Pitch"));
-		this.pitchEdit.setHint(Component.literal("pitch"));
+		this.pitchEdit = new EditBox(this.font, leftPos + PAD, topPos + 80, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT, Component.translatable("mapmakermusic.gui.pitch"));
+		this.pitchEdit.setHint(Component.translatable("mapmakermusic.gui.pitch_hint"));
 		this.pitchEdit.setValue(String.valueOf(pitchValue()));
 		this.pitchEdit.setResponder(text -> item().setPitch(parseFloatOrNull(text)));
-		this.pitchEdit.setTooltip(Tooltip.create(Component.literal("Scroll to adjust")));
+		this.pitchEdit.setTooltip(Tooltip.create(Component.translatable("mapmakermusic.gui.scroll_hint")));
 		addRenderableWidget(pitchEdit);
 
-		addRenderableWidget(Button.builder(Component.literal("Done"), b -> backToParent())
+		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.done"), b -> backToParent())
 				.bounds(leftPos + PAD, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, FIELD_WIDTH, GuiLayout.BUTTON_HEIGHT).build());
 	}
 
@@ -124,8 +124,8 @@ public class MusicTrackMixScreen extends Screen {
 		guiGraphics.fill(leftPos, topPos, leftPos + BG_WIDTH, topPos + BG_HEIGHT, 0xF0101010);
 		guiGraphics.renderOutline(leftPos, topPos, BG_WIDTH, BG_HEIGHT, GuiIcons.boxOutlineColor(block.getBlockPos(), block.getOutlineColor()));
 		guiGraphics.drawCenteredString(this.font, this.title, this.width / 2, topPos + GuiLayout.TITLE_TOP, 0xFFFFFF);
-		guiGraphics.drawString(this.font, "Volume", leftPos + PAD, topPos + 32, 0xE0E0E0, false);
-		guiGraphics.drawString(this.font, "Pitch", leftPos + PAD, topPos + 68, 0xE0E0E0, false);
+		guiGraphics.drawString(this.font, Component.translatable("mapmakermusic.gui.volume"), leftPos + PAD, topPos + 32, 0xE0E0E0, false);
+		guiGraphics.drawString(this.font, Component.translatable("mapmakermusic.gui.pitch"), leftPos + PAD, topPos + 68, 0xE0E0E0, false);
 		super.render(guiGraphics, mouseX, mouseY, delta);
 	}
 }

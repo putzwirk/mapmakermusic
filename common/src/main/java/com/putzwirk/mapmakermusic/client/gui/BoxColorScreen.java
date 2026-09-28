@@ -35,7 +35,7 @@ public class BoxColorScreen extends Screen {
 	private int presetY;
 
 	public BoxColorScreen(Screen parent, MusicBlockEntity block) {
-		super(Component.literal("Outline color"));
+		super(Component.translatable("mapmakermusic.gui.outline_color"));
 		this.parent = parent;
 		this.block = block;
 		Integer custom = block.getOutlineColor();
@@ -56,28 +56,28 @@ public class BoxColorScreen extends Screen {
 		int x = leftPos + GuiLayout.SCREEN_PADDING;
 		int contentWidth = BG_WIDTH - 2 * GuiLayout.SCREEN_PADDING;
 
-		this.hueSlider = new HsbSlider(x, topPos + 56, contentWidth, "Hue", 360, hue, v -> {
+		this.hueSlider = new HsbSlider(x, topPos + 56, contentWidth, "mapmakermusic.gui.hue", 360, hue, v -> {
 			hue = v;
 			auto = false;
 			syncHex();
 		});
 		addRenderableWidget(hueSlider);
 
-		this.saturationSlider = new HsbSlider(x, topPos + 56 + GuiLayout.SECTION_SPACING, contentWidth, "Saturation", 100, saturation, v -> {
+		this.saturationSlider = new HsbSlider(x, topPos + 56 + GuiLayout.SECTION_SPACING, contentWidth, "mapmakermusic.gui.saturation", 100, saturation, v -> {
 			saturation = v;
 			auto = false;
 			syncHex();
 		});
 		addRenderableWidget(saturationSlider);
 
-		this.brightnessSlider = new HsbSlider(x, topPos + 56 + 2 * GuiLayout.SECTION_SPACING, contentWidth, "Brightness", 100, brightness, v -> {
+		this.brightnessSlider = new HsbSlider(x, topPos + 56 + 2 * GuiLayout.SECTION_SPACING, contentWidth, "mapmakermusic.gui.brightness", 100, brightness, v -> {
 			brightness = v;
 			auto = false;
 			syncHex();
 		});
 		addRenderableWidget(brightnessSlider);
 
-		this.hexEdit = new EditBox(this.font, x, topPos + 126, 96, GuiLayout.BUTTON_HEIGHT, Component.literal("Hex"));
+		this.hexEdit = new EditBox(this.font, x, topPos + 126, 96, GuiLayout.BUTTON_HEIGHT, Component.translatable("mapmakermusic.gui.hex"));
 		this.hexEdit.setMaxLength(7);
 		this.hexEdit.setValue(toHex(packed()));
 		this.hexEdit.setResponder(text -> {
@@ -91,7 +91,7 @@ public class BoxColorScreen extends Screen {
 		addRenderableWidget(hexEdit);
 
 		int smallWidth = (contentWidth - 96 - 2 * GuiLayout.WIDGET_SPACING) / 2;
-		addRenderableWidget(Button.builder(Component.literal("Random"), b -> {
+		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.random"), b -> {
 			hue = this.minecraft.level.random.nextInt(360);
 			saturation = 85;
 			brightness = 100;
@@ -100,7 +100,7 @@ public class BoxColorScreen extends Screen {
 			syncHex();
 		}).bounds(x + 96 + GuiLayout.WIDGET_SPACING, topPos + 126, smallWidth, GuiLayout.BUTTON_HEIGHT).build());
 
-		addRenderableWidget(Button.builder(Component.literal("Auto"), b -> {
+		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.auto"), b -> {
 			auto = true;
 			setFromPacked(GuiIcons.boxOutlineColor(block.getBlockPos(), null));
 			syncSliders();
@@ -111,9 +111,9 @@ public class BoxColorScreen extends Screen {
 		this.presetY = topPos + 152;
 
 		int halfWidth = (contentWidth - GuiLayout.WIDGET_SPACING) / 2;
-		addRenderableWidget(Button.builder(Component.literal("Done"), b -> saveAndClose())
+		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.done"), b -> saveAndClose())
 				.bounds(x, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, halfWidth, GuiLayout.BUTTON_HEIGHT).build());
-		addRenderableWidget(Button.builder(Component.literal("Cancel"), b -> onClose())
+		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.cancel"), b -> onClose())
 				.bounds(x + halfWidth + GuiLayout.WIDGET_SPACING, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, halfWidth, GuiLayout.BUTTON_HEIGHT).build());
 	}
 
@@ -199,7 +199,7 @@ public class BoxColorScreen extends Screen {
 		guiGraphics.fill(leftPos + GuiLayout.SCREEN_PADDING, topPos + 28, leftPos + BG_WIDTH - GuiLayout.SCREEN_PADDING, topPos + 48, 0xFF000000);
 		guiGraphics.fill(leftPos + GuiLayout.SCREEN_PADDING + 1, topPos + 29, leftPos + BG_WIDTH - GuiLayout.SCREEN_PADDING - 1, topPos + 47, color);
 		if (auto) {
-			guiGraphics.drawString(this.font, "Auto", leftPos + 16, topPos + 34, 0xFFFFFF, false);
+			guiGraphics.drawString(this.font, Component.translatable("mapmakermusic.gui.auto"), leftPos + 16, topPos + 34, 0xFFFFFF, false);
 		}
 
 		for (int i = 0; i < PRESETS.length; i++) {
@@ -239,7 +239,7 @@ public class BoxColorScreen extends Screen {
 
 		@Override
 		protected void updateMessage() {
-			setMessage(Component.literal(name + ": " + current()));
+			setMessage(Component.translatable(name, current()));
 		}
 
 		@Override
