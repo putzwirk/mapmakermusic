@@ -159,18 +159,11 @@ public class MusicQueueScreen extends Screen {
 	private void initConditionsTab(int leftPos, int topPos) {
 		int listWidth = colWidth * 2 + GAP;
 
-		this.treeList = new TreeList(this.minecraft, listWidth, 118, topPos + LIST_TOP, topPos + LIST_TOP + 118, ROW_HEIGHT);
+		this.treeList = new TreeList(this.minecraft, listWidth, 146, topPos + LIST_TOP, topPos + LIST_TOP + 146, ROW_HEIGHT);
 		this.treeList.setLeftPos(leftPos + PAD);
 		this.treeList.setRenderSelection(false);
 		refreshTree();
 		addRenderableWidget(treeList);
-
-		int buttonsTop = topPos + LIST_TOP + 118 + 4;
-		int halfButton = (listWidth - GAP) / 2;
-		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.add_filter"), b -> addCommandCondition(queue().getRuleRoot()))
-				.bounds(leftPos + PAD, buttonsTop, halfButton, GuiLayout.BUTTON_HEIGHT).build());
-		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.add_group"), b -> addInnerGroup(queue().getRuleRoot()))
-				.bounds(leftPos + PAD + halfButton + GAP, buttonsTop, halfButton, GuiLayout.BUTTON_HEIGHT).build());
 
 		addRenderableWidget(Button.builder(Component.translatable("mapmakermusic.gui.done"), b -> backToParent())
 				.bounds(leftPos + PAD, topPos + BG_HEIGHT - GuiLayout.BOTTOM_OFFSET, listWidth, GuiLayout.BUTTON_HEIGHT).build());
