@@ -238,6 +238,9 @@ public class MusicBlockTicker {
 	private static void stepPlayer(ServerLevel level, BoxKey key, MusicBlockEntity musicBe, ServerPlayer player) {
 		UUID uuid = player.getUUID();
 		MusicQueue desired = matchMemo(level, key, musicBe, player);
+		if (desired != null && !audibleBox(musicBe, player)) {
+			desired = null;
+		}
 		Map<UUID, PlaybackState> states = STATES.computeIfAbsent(key, k -> new ConcurrentHashMap<>());
 		PlaybackState state = states.get(uuid);
 
@@ -586,11 +589,14 @@ public class MusicBlockTicker {
 					|| other.getTriggerMode() != MusicBlockEntity.TriggerMode.CHAIN || !boxHasTracks(other)) {
 				continue;
 			}
-			MusicQueue match = matchMemo(level, new BoxKey(key.dimension(), otherPos), other, player);
-			if (match == null || match.getChannel() != MusicQueue.Channel.MUSIC) {
-				continue;
-			}
-			boolean otherGate = other.isAreaGate() && areaOf(other).contains(player.getX(), player.getY(), player.getZ());
+		MusicQueue match = matchMemo(level, new BoxKey(key.dimension(), otherPos), other, player);
+		if (match == null || match.getChannel() != MusicQueue.Channel.MUSIC) {
+			continue;
+		}
+		if (!audibleBox(other, player)) {
+			continue;
+		}
+		boolean otherGate = other.isAreaGate() && areaOf(other).contains(player.getX(), player.getY(), player.getZ());
 			if (other.isAreaGate() && !otherGate) {
 				continue;
 			}
@@ -631,6 +637,9 @@ public class MusicBlockTicker {
 			if (matchMemo(level, new BoxKey(key.dimension(), otherPos), other, player) == null) {
 				continue;
 			}
+			if (!audibleBox(other, player)) {
+				continue;
+			}
 			if (isBlockedBy(musicBe.getPriority(), myVolume, key.pos(), other.getPriority(), areaVolume(other), otherPos)) {
 				return true;
 			}
@@ -643,6 +652,21 @@ public class MusicBlockTicker {
 			return false;
 		}
 		return otherVolume < myVolume || (otherVolume == myVolume && otherPos < myPos);
+	}
+
+	static boolean audible(boolean positional, BlockPos playbackPos, int radius, double x, double y, double z) {
+		if (!positional) {
+			return true;
+		}
+		double dx = x - (playbackPos.getX() + 0.5);
+		double dy = y - (playbackPos.getY() + 0.5);
+		double dz = z - (playbackPos.getZ() + 0.5);
+		return dx * dx + dy * dy + dz * dz <= (double) radius * radius;
+	}
+
+	private static boolean audibleBox(MusicBlockEntity musicBe, ServerPlayer player) {
+		return audible(musicBe.getPlaybackMode() == MusicBlockEntity.PlaybackMode.POSITIONAL,
+				musicBe.getPlaybackPos(), musicBe.getRadius(), player.getX(), player.getY(), player.getZ());
 	}
 
 	private static Set<Long> chainBoxesIn(String dimension) {
