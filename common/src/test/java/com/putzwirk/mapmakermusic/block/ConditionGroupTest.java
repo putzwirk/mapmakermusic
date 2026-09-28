@@ -1,6 +1,8 @@
 package com.putzwirk.mapmakermusic.block;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -201,5 +203,24 @@ public class ConditionGroupTest {
 		ConditionGroup loaded = ConditionGroup.load(root);
 		assertEquals(1, loaded.countLeaves());
 		assertEquals("When Run mmcheck weather clear", loaded.describeRules());
+	}
+
+	@Test
+	public void resolvePathFindsNestedNodes() {
+		ConditionGroup root = new ConditionGroup();
+		MusicCondition first = cmd("mmcheck time day");
+		ConditionGroup sub = new ConditionGroup();
+		MusicCondition nested = cmd("mmcheck weather clear");
+		root.getKids().add(first);
+		root.getKids().add(sub);
+		sub.getKids().add(nested);
+		assertSame(root, ConditionGroup.resolvePath(root, List.of()));
+		assertSame(first, ConditionGroup.resolvePath(root, List.of(0)));
+		assertSame(sub, ConditionGroup.resolvePath(root, List.of(1)));
+		assertSame(nested, ConditionGroup.resolvePath(root, List.of(1, 0)));
+		assertNull(ConditionGroup.resolvePath(root, List.of(2)));
+		assertNull(ConditionGroup.resolvePath(root, List.of(1, 1)));
+		assertNull(ConditionGroup.resolvePath(root, List.of(0, 0)));
+		assertNull(ConditionGroup.resolvePath(root, List.of(-1)));
 	}
 }

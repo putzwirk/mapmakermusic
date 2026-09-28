@@ -142,6 +142,20 @@ public class ConditionGroup {
 		return false;
 	}
 
+	public static Object resolvePath(ConditionGroup root, List<Integer> path) {
+		Object node = root;
+		for (int index : path) {
+			if (!(node instanceof ConditionGroup group)) {
+				return null;
+			}
+			if (index < 0 || index >= group.getKids().size()) {
+				return null;
+			}
+			node = group.getKids().get(index);
+		}
+		return node;
+	}
+
 	public CompoundTag save() {
 		CompoundTag tag = new CompoundTag();
 		tag.putString("Op", op.name());
