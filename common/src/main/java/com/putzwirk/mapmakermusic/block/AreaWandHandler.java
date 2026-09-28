@@ -39,7 +39,7 @@ public final class AreaWandHandler {
 		if (POS1.containsKey(id) && !isWandInMainHand(player)) {
 			POS1.remove(id);
 			sendSelection(player, null);
-			notify(player, "Selection cleared.");
+			notify(player, Component.translatable("mapmakermusic.chat.selection_cleared"));
 		}
 	}
 
@@ -90,9 +90,9 @@ public final class AreaWandHandler {
 
 	private static void clearSelection(ServerPlayer player) {
 		if (POS1.remove(player.getUUID()) != null) {
-			notify(player, "Selection cleared.");
+			notify(player, Component.translatable("mapmakermusic.chat.selection_cleared"));
 		} else {
-			notify(player, "Nothing selected.");
+			notify(player, Component.translatable("mapmakermusic.chat.nothing_selected"));
 		}
 		sendSelection(player, null);
 	}
@@ -114,7 +114,7 @@ public final class AreaWandHandler {
 		BlockPos pos1 = POS1.get(player.getUUID());
 		if (pos1 == null) {
 			POS1.put(player.getUUID(), pos);
-			notify(player, "Pos1 set.");
+			notify(player, Component.translatable("mapmakermusic.chat.pos1_set"));
 			sendSelection(player, pos);
 			return;
 		}
@@ -126,7 +126,7 @@ public final class AreaWandHandler {
 		boolean placed = level.setBlock(pos2, ModBlocks.MUSIC_BLOCK.get().defaultBlockState(), 3);
 		BlockEntity be = level.getBlockEntity(pos2);
 		if (!placed || !(be instanceof MusicBlockEntity musicBe)) {
-			notify(player, "Placement failed.");
+			notify(player, Component.translatable("mapmakermusic.chat.placement_failed"));
 			return;
 		}
 
@@ -139,7 +139,7 @@ public final class AreaWandHandler {
 
 		POS1.remove(player.getUUID());
 		sendSelection(player, null);
-		notify(player, "Audiobox placed.");
+		notify(player, Component.translatable("mapmakermusic.chat.audiobox_placed"));
 		MusicBlock.openConfigScreen(player, musicBe);
 	}
 
@@ -149,7 +149,7 @@ public final class AreaWandHandler {
 		}
 	}
 
-	private static void notify(ServerPlayer player, String message) {
-		player.displayClientMessage(Component.literal(message), true);
+	private static void notify(ServerPlayer player, Component message) {
+		player.displayClientMessage(message, true);
 	}
 }

@@ -213,7 +213,7 @@ public class MusicBlockScreen extends Screen {
 		guiGraphics.drawString(this.font, Component.translatable("mapmakermusic.gui.trigger_label"), labelX, topPos + 37, labelColor, false);
 		boolean gateOn = isChain && this.areaGate;
 		if (isChain) {
-			guiGraphics.drawString(this.font, "Bounds", labelX, topPos + 57, labelColor, false);
+			guiGraphics.drawString(this.font, Component.translatable("mapmakermusic.gui.bounds"), labelX, topPos + 57, labelColor, false);
 		}
 		if (gateOn) {
 			int swatchX = leftPos + FIELD_X - 20;

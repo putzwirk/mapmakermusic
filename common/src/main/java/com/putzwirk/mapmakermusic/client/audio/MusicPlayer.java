@@ -228,7 +228,7 @@ public final class MusicPlayer {
 		this.musicCache.clear();
 		this.musicCache.putAll(MusicLibrary.scanTracks());
 		if (notify) {
-			notifyPlayer("Rescanned custom music folder. Found " + this.musicCache.size() + " tracks.");
+			notifyPlayer(Component.translatable("mapmakermusic.chat.rescanned_found", this.musicCache.size()));
 		}
 	}
 
@@ -298,10 +298,10 @@ public final class MusicPlayer {
 				final Vec3 retryPosition = position;
 				this.queuePending(key, () -> playMusic(retryName, retryVolume, retryPitch, enableFadeIn, enableFadeOut, retryPosition, maxDistance, restart, loop, startOffsetSeconds));
 				requestTrack(key);
-				notifyPlayer("Downloading custom music: " + rawName);
+				notifyPlayer(Component.translatable("mapmakermusic.chat.downloading_music", rawName));
 			} else {
 				LOGGER.warn("Custom music not found: {}", rawName);
-				notifyPlayer("⚠ Custom music not found: " + rawName);
+				notifyPlayer(Component.translatable("mapmakermusic.chat.music_not_found", rawName));
 			}
 			return;
 		}
@@ -375,10 +375,10 @@ public final class MusicPlayer {
 				final String retryName = rawName;
 				this.queuePending(key, () -> playSound(retryName, volumePercent, pitch, position, maxDistance, fadeIn));
 				requestTrack(key);
-				notifyPlayer("Downloading custom sound: " + rawName);
+				notifyPlayer(Component.translatable("mapmakermusic.chat.downloading_sound", rawName));
 			} else {
 				LOGGER.warn("Custom sound not found: {}", rawName);
-				notifyPlayer("⚠ Custom sound not found: " + rawName);
+				notifyPlayer(Component.translatable("mapmakermusic.chat.sound_not_found", rawName));
 			}
 			return;
 		}
@@ -1058,10 +1058,10 @@ public final class MusicPlayer {
 		return client.options.getSoundSourceVolume(SoundSource.MASTER);
 	}
 
-	private void notifyPlayer(String message) {
+	private void notifyPlayer(Component message) {
 		Minecraft client = Minecraft.getInstance();
 		if (client != null && client.player != null) {
-			client.player.displayClientMessage(Component.literal(message), true);
+			client.player.displayClientMessage(message, true);
 		}
 	}
 

@@ -80,10 +80,10 @@ public final class MusicCommand {
 			MusicRemotes.getRemote().playMusic(player, name, volume, pitch, true, true, position, maxDistance, false, true, 0f);
 		}
 
-		String where = position == null
-				? "global"
-				: "at " + position.x + " " + position.y + " " + position.z + " (range " + maxDistance + ")";
-		source.sendSuccess(() -> Component.literal("Playing custom music '" + name + "' (Volume: " + volume + "%, Pitch: " + pitch + ", " + where + ") for " + describeTargets(targets)), true);
+		Component where = position == null
+				? Component.translatable("mapmakermusic.command.where_global")
+				: Component.translatable("mapmakermusic.command.where_at", position.x, position.y, position.z, maxDistance);
+		source.sendSuccess(() -> Component.translatable("mapmakermusic.command.play_music", name, volume, pitch, where, describeTargets(targets)), true);
 		return targets.size();
 	}
 
@@ -95,7 +95,7 @@ public final class MusicCommand {
 			MusicRemotes.getRemote().stopMusic(player, true);
 		}
 
-		source.sendSuccess(() -> Component.literal("Stopped custom music for " + describeTargets(targets)), true);
+		source.sendSuccess(() -> Component.translatable("mapmakermusic.command.stop_music", describeTargets(targets)), true);
 		return targets.size();
 	}
 
@@ -108,10 +108,10 @@ public final class MusicCommand {
 			MusicRemotes.getRemote().playSound(player, name, volume, pitch, position, maxDistance, false);
 		}
 
-		String where = position == null
-				? "global"
-				: "at " + position.x + " " + position.y + " " + position.z + " (range " + maxDistance + ")";
-		source.sendSuccess(() -> Component.literal("Playing custom sound '" + name + "' (Volume: " + volume + "%, Pitch: " + pitch + ", " + where + ") for " + describeTargets(targets)), true);
+		Component where = position == null
+				? Component.translatable("mapmakermusic.command.where_global")
+				: Component.translatable("mapmakermusic.command.where_at", position.x, position.y, position.z, maxDistance);
+		source.sendSuccess(() -> Component.translatable("mapmakermusic.command.play_sound", name, volume, pitch, where, describeTargets(targets)), true);
 		return targets.size();
 	}
 
@@ -123,7 +123,7 @@ public final class MusicCommand {
 			MusicRemotes.getRemote().stopSound(player, false);
 		}
 
-		source.sendSuccess(() -> Component.literal("Stopped custom sound effects for " + describeTargets(targets)), true);
+		source.sendSuccess(() -> Component.translatable("mapmakermusic.command.stop_sound", describeTargets(targets)), true);
 		return targets.size();
 	}
 
@@ -135,7 +135,7 @@ public final class MusicCommand {
 			MusicRemotes.getRemote().stopAll(player);
 		}
 
-		source.sendSuccess(() -> Component.literal("Stopped all custom audio for " + describeTargets(targets)), true);
+		source.sendSuccess(() -> Component.translatable("mapmakermusic.command.stop_all", describeTargets(targets)), true);
 		return targets.size();
 	}
 
@@ -148,14 +148,14 @@ public final class MusicCommand {
 			MusicRemotes.getRemote().syncLibrary(player, manifest);
 		}
 
-		source.sendSuccess(() -> Component.literal("Rescanned custom music folder."), true);
+		source.sendSuccess(() -> Component.translatable("mapmakermusic.command.rescanned"), true);
 		return 1;
 	}
 
-	private static String describeTargets(Collection<ServerPlayer> targets) {
+	private static Component describeTargets(Collection<ServerPlayer> targets) {
 		if (targets.size() == 1) {
-			return targets.iterator().next().getGameProfile().getName();
+			return Component.literal(targets.iterator().next().getGameProfile().getName());
 		}
-		return targets.size() + " players";
+		return Component.translatable("mapmakermusic.command.targets_many", targets.size());
 	}
 }

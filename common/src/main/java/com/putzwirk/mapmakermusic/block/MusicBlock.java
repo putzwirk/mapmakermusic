@@ -38,7 +38,7 @@ public class MusicBlock extends Block implements EntityBlock {
 
 	public static void openConfigScreen(ServerPlayer player, MusicBlockEntity blockEntity) {
 		if (!player.hasPermissions(2)) {
-			player.displayClientMessage(Component.literal("Only operators can configure music boxes").withStyle(ChatFormatting.RED), true);
+			player.displayClientMessage(Component.translatable("mapmakermusic.chat.operators_only").withStyle(ChatFormatting.RED), true);
 			return;
 		}
 		MusicRemotes.getRemote().openMusicScreen(player, blockEntity.getBlockPos(), blockEntity.getUpdateTag());
