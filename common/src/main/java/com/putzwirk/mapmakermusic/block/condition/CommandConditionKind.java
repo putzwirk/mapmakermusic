@@ -98,7 +98,7 @@ public final class CommandConditionKind implements ConditionKind {
 				new Preset("Weather", "mmcheck weather clear", "Matches in clear weather. Edit for rain or thunder."),
 				new Preset("Biome", "mmcheck biome minecraft:plains", "Matches in plains. Edit the biome id."),
 				new Preset("Entities", "execute if entity @e[type=minecraft:cow,distance=..30]", "Matches if a cow is within 30 blocks. Edit type and distance."),
-				new Preset("Item", "clear @s minecraft:diamond 0", "Matches if you carry any diamonds. Tests only, removes nothing."),
+				new Preset("Item", "clear @s minecraft:diamond 0", "Matches if you carry any diamonds."),
 				new Preset("Gamemode", "execute if entity @s[gamemode=creative]", "Matches in creative mode."),
 				new Preset("Team", "execute if entity @s[team=Red]", "Matches team Red. Edit the team name."),
 				new Preset("Holding", "execute if data entity @s {SelectedItem:{id:\"minecraft:torch\"}}", "Matches with a torch in your main hand. Edit the item id."));
