@@ -83,14 +83,14 @@ public class CommandConditionKindTest {
 	}
 
 	@Test
-	public void describeShowsTruncatedCommand() {
+	public void describeShowsFullCommand() {
 		assertEquals("Command", KIND.describe(KIND.newDefault()));
 		MusicCondition shortCommand = KIND.newDefault();
 		shortCommand.params().putString(CommandConditionKind.COMMAND_KEY, "test_pass");
 		assertEquals("Run test_pass", KIND.describe(shortCommand));
 		MusicCondition longCommand = KIND.newDefault();
 		longCommand.params().putString(CommandConditionKind.COMMAND_KEY, "execute if score @s objective matches 1.. run test_pass");
-		assertEquals("Run execute if score @s obje...", KIND.describe(longCommand));
+		assertEquals("Run execute if score @s objective matches 1.. run test_pass", KIND.describe(longCommand));
 	}
 
 	@Test
@@ -112,6 +112,8 @@ public class CommandConditionKindTest {
 		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Hunger") && preset.command().equals("execute if data entity @s {foodLevel:0}")));
 		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Name") && preset.command().equals("execute if entity @s[name=Steve]")));
 		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Score") && preset.command().equals("execute if score @s kills matches 10..")));
+		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Gamemode") && preset.command().equals("execute if entity @s[gamemode=creative]")));
+		assertTrue(KIND.editorPresets().stream().allMatch(preset -> preset.hint() != null && !preset.hint().isBlank()));
 		assertTrue(KIND.editorPresets().stream().anyMatch(preset -> preset.label().equals("Item") && preset.command().equals("clear @s minecraft:diamond 0")));
 		assertTrue(KIND.editorFields().stream().anyMatch(spec -> spec.type() == FieldSpec.FieldType.PRESETS));
 		assertEquals(FieldSpec.FieldType.LONG_TEXT, KIND.editorFields().get(0).type());

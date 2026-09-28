@@ -45,7 +45,7 @@ public class ConditionGroupTest {
 		rain.getKids().add(time);
 		root.getKids().add(rain);
 
-		assertEquals("When Run mmcheck weather clear or (Run mmcheck weather rain and Run mmcheck time range 100 5...)", root.describeRules());
+		assertEquals("When Run mmcheck weather clear or (Run mmcheck weather rain and Run mmcheck time range 100 500)", root.describeRules());
 		assertEquals(3, root.countLeaves());
 	}
 
@@ -97,7 +97,7 @@ public class ConditionGroupTest {
 		ConditionGroup loaded = ConditionGroup.load(root.save());
 		assertEquals(ConditionGroup.Op.ANY, loaded.getOp());
 		assertEquals(2, loaded.countLeaves());
-		assertEquals("When Run mmcheck time day or Run execute if score @s kill...", loaded.describeRules());
+		assertEquals("When Run mmcheck time day or Run execute if score @s kills matches 0..100", loaded.describeRules());
 	}
 
 	@Test

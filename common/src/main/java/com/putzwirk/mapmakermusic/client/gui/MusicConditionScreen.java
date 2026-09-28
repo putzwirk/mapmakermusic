@@ -267,6 +267,7 @@ public class MusicConditionScreen extends Screen {
 			int bx = x + (i % cols) * (buttonWidth + GuiLayout.WIDGET_SPACING);
 			int by = gridTop + (i / cols) * GuiLayout.SECTION_SPACING;
 			addRenderableWidget(Button.builder(Component.literal(preset.label()), b -> applyPreset(preset))
+					.tooltip(Tooltip.create(Component.literal(preset.hint())))
 					.bounds(bx, by, buttonWidth, GuiLayout.BUTTON_HEIGHT).build());
 		}
 		return 3 + (presets.size() + cols - 1) / cols;

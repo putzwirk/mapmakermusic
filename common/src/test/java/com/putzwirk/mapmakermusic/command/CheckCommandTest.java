@@ -1,9 +1,12 @@
 package com.putzwirk.mapmakermusic.command;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.suggestion.Suggestion;
 import java.util.List;
 import net.minecraft.commands.CommandSource;
@@ -57,6 +60,16 @@ public class CheckCommandTest {
 		assertTrue(CheckCommand.biomeMatches("minecraft:plains", "MINECRAFT:PLAINS"));
 		assertFalse(CheckCommand.biomeMatches("minecraft:plains", "minecraft:desert"));
 		assertFalse(CheckCommand.biomeMatches("minecraft:plains", ""));
+	}
+
+	@Test
+	public void rangeCommandBindsMinAndMax() {
+		CommandDispatcher<CommandSourceStack> dispatcher = new CommandDispatcher<>();
+		CheckCommand.register(dispatcher);
+		CommandSourceStack source = new CommandSourceStack(CommandSource.NULL, Vec3.ZERO, Vec2.ZERO, null, 2, "", Component.literal("test"), null, null);
+		CommandContext<CommandSourceStack> context = dispatcher.parse("mmcheck time range 0 20000", source).getContext().build("mmcheck time range 0 20000");
+		assertEquals(0, IntegerArgumentType.getInteger(context, "min"));
+		assertEquals(20000, IntegerArgumentType.getInteger(context, "max"));
 	}
 
 	@Test

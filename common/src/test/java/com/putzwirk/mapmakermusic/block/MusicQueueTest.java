@@ -68,7 +68,7 @@ public class MusicQueueTest {
 		assertTrue(loaded.getTracks().get(1).isStop());
 		assertFalse(loaded.isLoop());
 		assertEquals(1, loaded.getRuleRoot().countLeaves());
-		assertEquals("Run mmcheck time range 10 10...", ((MusicCondition) loaded.getRuleRoot().getKids().get(0)).describe());
+		assertEquals("Run mmcheck time range 10 100", ((MusicCondition) loaded.getRuleRoot().getKids().get(0)).describe());
 	}
 
 	@Test
@@ -86,7 +86,7 @@ public class MusicQueueTest {
 		assertEquals(1, loaded.getQueues().get(0).getRuleRoot().countLeaves());
 		MusicCondition migrated = (MusicCondition) loaded.getQueues().get(0).getRuleRoot().getKids().get(0);
 		assertEquals(CommandConditionKind.ID, migrated.getKindId());
-		assertEquals("Run execute if entity @s[nam...", migrated.describe());
+		assertEquals("Run execute if entity @s[name=Steve]", migrated.describe());
 		MusicBlockEntity reloud = new MusicBlockEntity(null, BlockPos.ZERO, null);
 		reloud.load(loaded.getUpdateTag());
 		assertEquals(1, reloud.getQueues().get(0).getRuleRoot().countLeaves());

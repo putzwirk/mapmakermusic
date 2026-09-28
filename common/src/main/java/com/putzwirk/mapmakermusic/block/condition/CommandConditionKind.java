@@ -53,8 +53,7 @@ public final class CommandConditionKind implements ConditionKind {
 		if (command.isEmpty()) {
 			return "Command";
 		}
-		String shown = command.length() > 24 ? command.substring(0, 24) + "..." : command;
-		return "Run " + shown;
+		return "Run " + command;
 	}
 
 	@Override
@@ -90,19 +89,19 @@ public final class CommandConditionKind implements ConditionKind {
 	@Override
 	public List<Preset> editorPresets() {
 		return List.of(
-				new Preset("Health", "execute if data entity @s {Health:20.0f}"),
-				new Preset("Hunger", "execute if data entity @s {foodLevel:0}"),
-				new Preset("Name", "execute if entity @s[name=Steve]"),
-				new Preset("Score", "execute if score @s kills matches 10.."),
-				new Preset("Day", "mmcheck time day"),
-				new Preset("Night", "mmcheck time night"),
-				new Preset("Weather", "mmcheck weather clear"),
-				new Preset("Biome", "mmcheck biome minecraft:plains"),
-				new Preset("Entities", "execute if entity @e[type=minecraft:cow,distance=..30]"),
-				new Preset("Item", "clear @s minecraft:diamond 0"),
-				new Preset("GameMode", "execute if entity @s[gamemode=creative]"),
-				new Preset("Team", "execute if entity @s[team=Red]"),
-				new Preset("Holding", "execute if data entity @s {SelectedItem:{id:\"minecraft:torch\"}}"));
+				new Preset("Health", "execute if data entity @s {Health:20.0f}", "Matches at full health (20)."),
+				new Preset("Hunger", "execute if data entity @s {foodLevel:0}", "Matches when starving (hunger 0)."),
+				new Preset("Name", "execute if entity @s[name=Steve]", "Matches the player named Steve. Edit the name."),
+				new Preset("Score", "execute if score @s kills matches 10..", "Matches kills score 10 or more. Edit objective and range."),
+				new Preset("Day", "mmcheck time day", "Matches during daytime."),
+				new Preset("Night", "mmcheck time night", "Matches during nighttime."),
+				new Preset("Weather", "mmcheck weather clear", "Matches in clear weather. Edit for rain or thunder."),
+				new Preset("Biome", "mmcheck biome minecraft:plains", "Matches in plains. Edit the biome id."),
+				new Preset("Entities", "execute if entity @e[type=minecraft:cow,distance=..30]", "Matches if a cow is within 30 blocks. Edit type and distance."),
+				new Preset("Item", "clear @s minecraft:diamond 0", "Matches holding any diamonds. Edit the item."),
+				new Preset("Gamemode", "execute if entity @s[gamemode=creative]", "Matches in creative mode."),
+				new Preset("Team", "execute if entity @s[team=Red]", "Matches team Red. Edit the team name."),
+				new Preset("Holding", "execute if data entity @s {SelectedItem:{id:\"minecraft:torch\"}}", "Matches holding a torch. Edit the item id."));
 	}
 
 	@Override
