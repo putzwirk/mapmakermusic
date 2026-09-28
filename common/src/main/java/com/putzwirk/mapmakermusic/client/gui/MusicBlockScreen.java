@@ -117,12 +117,12 @@ public class MusicBlockScreen extends Screen {
 		this.listenerEdit.setVisible(isGlobal && this.triggerMode == MusicBlockEntity.TriggerMode.IMPULSE);
 		addRenderableWidget(listenerEdit);
 
-		this.playbackPosEdit = new EditBox(this.font, leftPos + 52, topPos + 168, 84, 16, Component.literal("Playback point"));
+		this.playbackPosEdit = new EditBox(this.font, leftPos + 52, topPos + 168, 112, 16, Component.literal("Playback point"));
 		this.playbackPosEdit.setValue(formatPos(musicBlock.getPlaybackPos()));
 		this.playbackPosEdit.setVisible(!isGlobal);
 		addRenderableWidget(playbackPosEdit);
 
-		this.radiusEdit = new EditBox(this.font, leftPos + 194, topPos + 168, 58, 16, Component.literal("Radius"));
+		this.radiusEdit = new EditBox(this.font, leftPos + 212, topPos + 168, 40, 16, Component.literal("Radius"));
 		this.radiusEdit.setValue(String.valueOf(musicBlock.getRadius()));
 		this.radiusEdit.setVisible(!isGlobal);
 		addRenderableWidget(radiusEdit);
@@ -233,7 +233,7 @@ public class MusicBlockScreen extends Screen {
 			}
 		} else {
 			guiGraphics.drawString(this.font, "Point", labelX, topPos + 173, labelColor, false);
-			guiGraphics.drawString(this.font, "Radius", leftPos + 142, topPos + 173, labelColor, false);
+			guiGraphics.drawString(this.font, "Radius", leftPos + 170, topPos + 173, labelColor, false);
 		}
 		guiGraphics.drawString(this.font, "Priority", labelX, topPos + 190, labelColor, false);
 
