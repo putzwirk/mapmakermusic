@@ -157,6 +157,9 @@ public final class MusicLibrary {
 		if (MusicQueue.PlaylistItem.isStop(key)) {
 			return null;
 		}
+		if (hasServerTrack(key)) {
+			return null;
+		}
 		TrackInfo info = trackInfo().get(key);
 		if (info == null) {
 			return Component.translatable("mapmakermusic.chat.track_not_found", key);

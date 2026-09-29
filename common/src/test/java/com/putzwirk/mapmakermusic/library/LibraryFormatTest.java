@@ -1,9 +1,11 @@
 package com.putzwirk.mapmakermusic.library;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import com.putzwirk.mapmakermusic.block.MusicQueue;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 
 public class LibraryFormatTest {
@@ -31,6 +33,17 @@ public class LibraryFormatTest {
 	public void stopIsAlwaysAllowed() {
 		assertNull(MusicLibrary.playlistBlockReason("STOP"));
 		assertNull(MusicLibrary.playlistBlockReason("stop"));
+	}
+
+	@Test
+	public void manifestTracksAreAllowedWithoutDownload() {
+		MusicLibrary.setServerTracks(Map.of("evening", 12345L));
+		try {
+			assertNull(MusicLibrary.playlistBlockReason("evening"));
+			assertNotNull(MusicLibrary.playlistBlockReason("missing"));
+		} finally {
+			MusicLibrary.setServerTracks(null);
+		}
 	}
 
 	@Test
