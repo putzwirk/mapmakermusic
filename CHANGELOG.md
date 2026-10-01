@@ -1,5 +1,8 @@
 # MapMakerMusic changelog
 
+## [2.0.2]
+- Impulse retrigger no longer restarts a music track that is already playing from the start of the same queue. Sound queues still replay, so one-shots keep overlapping.
+
 ## [2.0.0] — queues, conditions, commands
 
 Old saves load. Boxes saved before queues existed gain one empty queue; pre-2.0 condition rows, if any, show as inert "Unknown condition" leaves — re-create them with the tools below.

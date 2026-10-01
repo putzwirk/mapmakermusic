@@ -36,7 +36,7 @@ public class MusicBlockTicker {
 		MusicQueue queue;
 	}
 
-	private static final class PlaybackState {
+	static final class PlaybackState {
 		int queueIndex;
 		int trackIndex;
 		long startedTick;
@@ -121,8 +121,40 @@ public class MusicBlockTicker {
 			if (queue == null) {
 				continue;
 			}
-			startFresh(serverLevel, key, musicBe, player, musicBe.getQueues().indexOf(queue), true);
+			int queueIndex = musicBe.getQueues().indexOf(queue);
+			if (queue.getChannel() == MusicQueue.Channel.MUSIC
+					&& impulseRestartSkipped(queue.getTracks(), queueIndex, startTrackIndex(queue),
+							impulseState(key, player))) {
+				continue;
+			}
+			startFresh(serverLevel, key, musicBe, player, queueIndex, true);
 		}
+	}
+
+	private static PlaybackState impulseState(BoxKey key, ServerPlayer player) {
+		Map<UUID, PlaybackState> states = STATES.get(key);
+		return states == null ? null : states.get(player.getUUID());
+	}
+
+	static boolean impulseRestartSkipped(List<MusicQueue.PlaylistItem> tracks, int queueIndex, int first, PlaybackState state) {
+		if (state == null || state.stopped || state.queueIndex != queueIndex) {
+			return false;
+		}
+		return sameTrack(tracks, state.trackIndex, first);
+	}
+
+	static boolean sameTrack(List<MusicQueue.PlaylistItem> tracks, int a, int b) {
+		if (a < 0 || b < 0 || a >= tracks.size() || b >= tracks.size()) {
+			return false;
+		}
+		return normalizeTrack(tracks.get(a).getTrack()).equals(normalizeTrack(tracks.get(b).getTrack()));
+	}
+
+	private static int startTrackIndex(MusicQueue queue) {
+		if (queue.isShuffle() && queue.getTracks().size() > 1) {
+			return MusicQueue.shuffledOrder(queue.getTracks().size()).get(0);
+		}
+		return 0;
 	}
 
 	public static void onTrackFinished(ServerPlayer player, String trackKey) {
@@ -436,7 +468,7 @@ public class MusicBlockTicker {
 	private static void startFresh(ServerLevel level, BoxKey key, MusicBlockEntity musicBe, ServerPlayer player, int queueIndex, boolean stealClaim) {
 		MusicQueue queue = musicBe.getQueues().get(queueIndex);
 		List<Integer> order = null;
-		int first = 0;
+		int first = startTrackIndex(queue);
 		if (queue.isShuffle() && queue.getTracks().size() > 1) {
 			order = MusicQueue.shuffledOrder(queue.getTracks().size());
 			first = order.get(0);
